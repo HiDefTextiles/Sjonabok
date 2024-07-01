@@ -29,5 +29,11 @@ The project uses a simple Python program for converting the patterns. The requir
 ## File Format
 To ensure efficient storage, the patterns are stored as matrices of 1s and 0s in text files. This format is chosen for its simplicity and small file size.
 
+## Usage
+With the path to the Sjonabok folder the program can be run with the following line:
+```
+python3 pattern_processing.py ~/your/path/to/Sjonabok/folder
+```
+
 ## License
 This project is licensed under the [GNU General Public License v3.0](LICENSE), allowing for open collaboration and distribution.
