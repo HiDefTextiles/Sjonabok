@@ -6,6 +6,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import cv2
 from pathlib import Path
+from separate_patterns import *
 
 
 
@@ -174,13 +175,26 @@ def main():
     '''
     provided with the path to the folder for the Islensk Sjonabok the function creates two folders
     under each chapter where each pattern in the chapter is converted to a matrix saved as a text file and
-    a png file.
+    a png file. Then if more than one pattern is found in a file a folder is created under the same chapter with the
+    original pattern name and in the folder each pattern in the file is isolated from the others and saved individually
+    enumerated from 0 and up with the top left most pattern having the number 0 and then numbered by occurance, first from 
+    top to bottom and then from left to right.
     '''
     parser = argparse.ArgumentParser(
-        description="convert EPS patterns to PNG and txt files")
-    parser.add_argument("sjonabok_path", help="Path to the Sjonabok folder")
+        description="convert EPS patterns to PNG and txt files and store individual componen")
+    parser.add_argument("sjonabok_path", help="Absolute path to the Sjonabok folder")
 
     args = parser.parse_args()
+
+    complex_separate = ["þjms5898_180","þjms5898_246","þjms1997-123_446","þjms2008-14_524","þjms-14_546","natmus453_706","þjms5898_286.png"]
+    vertical_separate = "þjms5898_254.png"
+    alphabetic_separate = ["þjms5898_232","þjms5898_234","þjms5898_236","þjms5898_238","þjms5898_240","þjms5898_306"] #chapter 2
+    alphabetic_separate.extend(["þjms1985-235_404","þjms1985-235_406","þjms1985-235_408"]) #chapter 5
+    alphabetic_separate.extend(["þjms1997-123_416","þjms1997-123_426"]) #chapter 6
+    alphabetic_separate.extend(["þjms2007-45_494","þjms2007-45_496","þjms2007-45_498","þjms2007-45_508"]) #chapter 7
+    alphabetic_separate.extend(["þjms2008-14_544","þjms2008-14_550","þjms2008-14_552","þjms2008-14_554","þjms2008-14_556","þjms2008-14_558","þjms2008-14_562","þjms2008-14_564","þjms2008-14_570"]) #chapter 8
+    alphabetic_separate.extend(["þjmsþ_þth116_588","þjmsþ_þth116_628","þjmsþ_þth116_638","þjmsþ_þth116_644","þjmsþ_þth116_646","þjmsþ_þth116_648","þjmsþ_þth116_670"]) #chapter 9
+    alphabetic_separate.extend(["natmus453_702","natmus453_704","natmus453_708","natmus453_712","natmus453_756","natmus453_758","natmus453_760"]) #chapter 10
 
     #list all folders/chapters in the Sjonabok folder
     chapters = []
@@ -193,7 +207,7 @@ def main():
         print(f"Error: {e}")
 
 
-    # go through each eps file in each chapter and save a png file
+    # go through each eps file in each chapter and save a png and txt file
     for chapter in chapters:
         print(f"starting on chapter {chapter.name}")
         png_path = chapter/"png"
@@ -218,12 +232,48 @@ def main():
                     npy_file_path = npy_path/npy_file_name
                     cv2.imwrite(png_file_path, (1-matrix) * 255)
                     np.savetxt(npy_file_path, matrix, fmt='%d')
+
+
+                    patterns = [] #initiate patterns
+                    #If more than one pattern in file, separate them
+                    if file_path.stem in complex_separate:
+                        patterns = separate_patterns_complex(matrix,patterns=[])
+                    elif file_path.stem == vertical_separate:
+                        patterns = separate_patterns_simple(matrix,axis=1)
+                    elif file_path.stem in alphabetic_separate:
+                        patterns = separate_patterns_complex(matrix,patterns =[],DISTANCE_BETWEEN_PATTERNS=2)
+                    else:       #most patterns are separated row-wise
+                        patterns = separate_patterns_simple(matrix,axis=0)
+
+                    if patterns: # if seperate patterns found
+                        png_dir = png_path/file_path.stem #make directories to store individual patterns
+                        npy_dir = npy_path/file_path.stem
+                        if not os.path.exists(png_dir):
+                            os.makedirs(png_dir)
+                        else:
+                            for file in png_dir.iterdir(): #remove files in directory if any
+                                os.remove(file)
+                        
+                        if not os.path.exists(npy_dir):
+                            os.makedirs(npy_dir)
+                        else:
+                            for file in npy_dir.iterdir():
+                                os.remove(file)
+                        
+                        for i in range(len(patterns)): # iterate through patterns and store them by number of occurance
+                            png_file_name_separated = file_path.stem + "_" + str(i) + ".png"
+                            npy_file_name_separated = file_path.stem + "_" + str(i) + ".txt"
+                            png_file_path_separated = png_dir/png_file_name_separated
+                            npy_file_path_separated = npy_dir/npy_file_name_separated
+                            cv2.imwrite(png_file_path_separated, (1-patterns[i]) * 255)
+                            np.savetxt(npy_file_path_separated, patterns[i], fmt='%d')
         
         except Exception as e:
             print(f"Error: {e}")
-
+    
 
 
 if __name__ == "__main__":
     main()
 
+#python3 pattern_processing.py ~/Documents/Islensk-Sjonabok
