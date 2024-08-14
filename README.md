@@ -32,8 +32,16 @@ To ensure efficient storage, the patterns are stored as matrices of 1s and 0s in
 ## Usage
 With the path to the Sjonabok folder the program can be run with the following line:
 ```
-python3 pattern_processing.py ~/your/path/to/Sjonabok/folder
+python3 convert_to_txt.py <path_to_eps_file> <path_to_txt_file>
+python3 convert_to_png.py <path_to_txt_file> <path_to_png_file>
+python3 seperate_patterns.py <path_to_txt_file> <path_to_folder>
 ```
+use `--help` to see the options for each program. To convert all files in a folder:
+```
+make init
+make all 
+```
+Note, you might need to rename the path of the `EPS_DIR` folder in the Makefile.
 
 ## License
 This project is licensed under the [GNU General Public License v3.0](LICENSE), allowing for open collaboration and distribution.

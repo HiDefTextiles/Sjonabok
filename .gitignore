@@ -162,5 +162,5 @@ cython_debug/
 .idea/
 
 # Original files from the CD
-CD/
+images/eps/
 images/png/
