@@ -1,5 +1,5 @@
 # Define directories and file patterns
-PARENT_DIR = images
+PARENT_DIR = patterns
 EPS_DIR = $(PARENT_DIR)/eps
 TXT_DIR = $(PARENT_DIR)/txt
 PNG_DIR = $(PARENT_DIR)/png
