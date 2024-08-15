@@ -32,21 +32,28 @@ def apply_color_palette(matrix, palette):
     return color_image
 
 
-def convert_txt_to_png(input_txt, output_png):
+def convert_txt_to_png(input_txt, output_png, zoom_factor=1):
     """
     Converts a TXT file containing a binary matrix to a PNG image with transparency.
 
     :param input_txt: Path to the input TXT file
     :param output_png: Path to the output PNG file
+    :param zoom_factor: Factor to zoom in the image by repeating pixels
     :return: Saves the PNG file at the specified path
     """
+    assert isinstance(zoom_factor, int) and zoom_factor > 0, "Zoom factor must be a positive integer."
+
     matrix = read_txt_to_matrix(input_txt)
 
     # Apply color palette
-    colored_image = apply_color_palette(matrix, COLOR_PALETTE)
+    image = apply_color_palette(matrix, COLOR_PALETTE)
+
+    # Apply the zoom factor by repeating pixels
+    if zoom_factor > 1:
+        image = np.kron(image, np.ones((zoom_factor, zoom_factor, 1), dtype=np.uint8))
 
     # Convert the image array to a Pillow Image object
-    image = Image.fromarray(colored_image, mode='RGBA')
+    image = Image.fromarray(image, mode='RGBA')
 
     # Save the image as PNG with transparency
     image.save(output_png)

@@ -33,14 +33,15 @@ alphabet:
 $(TXT_DIR)/%.txt: $(EPS_DIR)/%.eps convert_to_txt.py pattern_processing/eps_to_pattern.py
 	python3 convert_to_txt.py $< $@
 
-%_p1.txt: ROWS_DISTANCE=5
-%_p1.txt: COLS_DISTANCE=5
-%_p1.txt: %.txt split_patterns.py pattern_processing/separate_patterns.py
+$(TXT_DIR)/%_p1.txt: ROWS_DISTANCE=5
+$(TXT_DIR)/%_p1.txt: COLS_DISTANCE=5
+$(TXT_DIR)/%_p1.txt: $(TXT_DIR)/%.txt $(EPS_DIR)/%.eps split_patterns.py pattern_processing/separate_patterns.py
 	python3 split_patterns.py $< --cols_distance $(COLS_DISTANCE) --rows_distance $(ROWS_DISTANCE)
 
 # Rule to convert .txt to .png
+$(PNG_DIR)/%.png: ZOOM_FACTOR=10
 $(PNG_DIR)/%.png: $(TXT_DIR)/%.txt convert_to_png.py pattern_processing/pattern_to_png.py
-	python3 convert_to_png.py $< $@
+	python3 convert_to_png.py $< $@ --zoom_factor $(ZOOM_FACTOR)
 
 # Clean all generated files
 clean:
