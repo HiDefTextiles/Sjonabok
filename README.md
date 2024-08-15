@@ -34,7 +34,7 @@ With the path to the Sjonabok folder the program can be run with the following l
 ```
 python3 convert_to_txt.py <path_to_eps_file> <path_to_txt_file>
 python3 convert_to_png.py <path_to_txt_file> <path_to_png_file>
-python3 seperate_patterns.py <path_to_txt_file> <path_to_folder>
+python3 split_pattern.py --cols_distance <int> --rows_distance <int> <path_to_txt_file> 
 ```
 use `--help` to see the options for each program. To convert all files in a folder:
 ```

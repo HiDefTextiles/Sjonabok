@@ -162,5 +162,6 @@ cython_debug/
 .idea/
 
 # Original files from the CD
-images/eps/
-images/png/
+*.eps
+# Derivative files from the txt
+*.png
