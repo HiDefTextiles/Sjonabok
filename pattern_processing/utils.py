@@ -15,4 +15,17 @@ def read_txt_to_matrix(txt_file):
         data = [list(line) for line in lines]
         matrix = np.array(data, dtype=int)
 
+    height, width = get_matrix_size(matrix)
+    print(f"Loaded pattern {txt_file} of size: {height}x{width} px")
+
     return matrix
+
+
+def get_matrix_size(matrix):
+    """
+    Determines the size of the pattern matrix.
+
+    :param matrix: Binary matrix (numpy array)
+    :return: Tuple of the size (height, width) of the pattern matrix
+    """
+    return matrix.shape
