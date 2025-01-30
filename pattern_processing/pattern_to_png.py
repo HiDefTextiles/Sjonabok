@@ -1,6 +1,6 @@
 from PIL import Image
 import numpy as np
-from .utils import read_txt_to_matrix
+from .utils import read_txt_to_matrix, get_matrix_size
 
 COLOR_PALETTE = [
     (0, 0, 0, 0),  # Transparent (RGBA) for 0
