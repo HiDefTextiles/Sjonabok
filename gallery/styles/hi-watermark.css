@@ -1,0 +1,33 @@
+/* Faint HÍ watermark in the empty right-hand area on wide screens.
+   SVG path is relative to this CSS file (styles/ -> ../img/hi/…). */
+
+body::after {
+  content: "";
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 210px;
+  height: 210px;
+  background-color: rgba(16, 9, 159, 0.06); /* faint HÍ blue */
+  mask-image: url("../img/hi/hi_logo.svg");
+  -webkit-mask-image: url("../img/hi/hi_logo.svg");
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep the watermark behind the page content. */
+#quarto-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Only show it when there is spare room to the right of the content column. */
+@media (max-width: 1500px) {
+  body::after { display: none; }
+}

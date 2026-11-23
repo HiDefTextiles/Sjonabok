@@ -1,0 +1,373 @@
+// HÍ site look for Quarto books and websites, as in the IDN302G course book
+// and the skemman-harvester docs (HI-IDN). Blue navbar with white logo and
+// centred title, sidebar with teal section headings, blue footer, HÍ palette.
+// Used by book/ and package/ (copied in by scripts/render-examples.ts).
+
+/*-- scss:defaults --*/
+
+// HÍ Palette (honnun.hi.is)
+$hi-blue:    #10099F;
+$hi-teal:    #2DD2C0;
+$hi-green:   #00FFBA;
+$hi-yellow:  #FAC55B;
+$hi-orange:  #FFA05F;
+$hi-red:     #FC8484;
+$hi-pink:    #d61f69;
+$hi-paper:   #F5F5F5;
+$hi-panel:   #EEEEEE;
+$hi-ink:     #262626;
+$hi-white:   #ffffff;
+
+$hi-blue-dark:  darken($hi-blue, 8%);
+$hi-teal-dark:  darken($hi-teal, 15%);
+
+// Bootstrap/Quarto overrides
+$grid-sidebar-width:        375px;
+$grid-docked-sidebar-width: 375px;
+$font-family-sans-serif: "Jost", system-ui, sans-serif;
+$font-family-monospace:  "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+$headings-font-weight:   800;
+$headings-color:         $hi-blue;
+$body-color:             $hi-ink;
+$body-bg:                $hi-white;
+$link-color:             $hi-blue;
+$link-hover-color:       $hi-blue-dark;
+$primary:                $hi-blue;
+$secondary:              $hi-teal;
+$code-color:             $hi-pink;
+$code-bg:                rgba($hi-pink, 0.07);
+$border-radius:          0;
+
+/*-- scss:rules --*/
+
+:root {
+  --quarto-sidebar-width: 375px;
+  --hi-blue:    #{$hi-blue};
+  --hi-teal:    #{$hi-teal};
+  --hi-yellow:  #{$hi-yellow};
+  --hi-orange:  #{$hi-orange};
+  --hi-red:     #{$hi-red};
+  --hi-paper:   #{$hi-paper};
+  --hi-panel:   #{$hi-panel};
+  --hi-ink:     #{$hi-ink};
+}
+
+// ── Navbar ────────────────────────────────────────────────────────────────────
+.navbar {
+  background: $hi-blue !important;
+  border-bottom: 3px solid $hi-teal;
+
+  .navbar-brand {
+    img { height: 30px; filter: brightness(0) invert(1); }
+    &:hover { opacity: 0.85; }
+  }
+
+  .navbar-brand, .nav-link, .navbar-nav .nav-link {
+    color: $hi-white !important;
+    font-weight: 600;
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+  }
+
+  .nav-link:hover { color: $hi-teal !important; }
+
+  .quarto-navbar-tools .nav-link { color: rgba($hi-white, 0.75) !important; }
+
+  // Logo left, title absolutely centred in the bar
+  .navbar-container { position: relative; }
+
+  // Reset brand-container so logo sits naturally on the left
+  .navbar-brand-container {
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+    margin: 0 !important;
+  }
+
+  // Logo link — left-aligned, no centering
+  .navbar-brand-logo {
+    pointer-events: auto;
+    img { height: 30px; filter: brightness(0) invert(1); }
+  }
+
+  // Title link — absolutely centred across the full navbar
+  .navbar-brand:not(.navbar-brand-logo) {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    pointer-events: auto;
+    white-space: nowrap;
+  }
+
+  .navbar-title {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    color: $hi-white !important;
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+.sidebar {
+  border-right: 1px solid $hi-panel;
+  font-size: 0.87rem;
+
+  .sidebar-title a {
+    color: $hi-blue;
+    font-weight: 800;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sidebar-item-section > .sidebar-item-container > .sidebar-item-text {
+    font-weight: 800;
+    color: $hi-teal !important;
+    font-size: 0.85rem;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    margin-top: 0.6em;
+
+    .menu-text { color: $hi-teal; font-weight: 800; }
+  }
+
+  .sidebar-item-section .sidebar-section-item {
+    font-weight: 700;
+    color: $hi-blue;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-left: 3px solid $hi-teal;
+    padding-left: 0.5em;
+    margin-top: 0.8em;
+  }
+
+  .chapter-number { display: none; }
+
+  .chapter-title {
+    color: $hi-ink !important;
+    font-weight: 400 !important;
+  }
+
+  .sidebar-item.active > .sidebar-item-text a,
+  .sidebar-item.active > a {
+    color: $hi-blue !important;
+    font-weight: 700;
+    background: rgba($hi-teal, 0.12);
+    border-radius: 2px;
+  }
+
+  a { color: #{rgba($hi-ink, 0.75)}; }
+  a:hover { color: $hi-blue; }
+}
+
+// ── Main content ──────────────────────────────────────────────────────────────
+#quarto-content main {
+  max-width: 860px;
+}
+
+// ── Headings ──────────────────────────────────────────────────────────────────
+h1 {
+  color: $hi-blue;
+  font-weight: 900;
+  border-bottom: 3px solid $hi-teal;
+  padding-bottom: 0.25em;
+  margin-bottom: 0.75em;
+}
+
+h2 {
+  color: $hi-blue;
+  font-weight: 800;
+  border-bottom: 1px solid $hi-panel;
+  padding-bottom: 0.15em;
+  margin-top: 1.8em;
+}
+
+h3 {
+  color: $hi-blue;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-top: 1.4em;
+}
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+a {
+  color: $hi-blue;
+  text-decoration-color: rgba($hi-teal, 0.5);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+
+  &:hover {
+    color: $hi-blue-dark;
+    text-decoration-color: $hi-teal;
+  }
+}
+
+// ── Code ─────────────────────────────────────────────────────────────────────
+code {
+  color: $hi-pink;
+  background: rgba($hi-pink, 0.07);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.88em;
+}
+
+pre.sourceCode, div.sourceCode {
+  background: $hi-paper;
+  border: none;
+  border-left: 4px solid $hi-teal;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+
+  pre { padding: 1em 1.2em; margin: 0; }
+  code { color: $hi-ink; background: none; padding: 0; }
+}
+
+.code-with-filename .code-with-filename-file {
+  background: $hi-blue;
+  color: $hi-white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25em 1em;
+  border-radius: 0;
+}
+
+// ── Callouts ──────────────────────────────────────────────────────────────────
+.callout {
+  border-radius: 0;
+  border-left-width: 4px;
+
+  &.callout-note {
+    border-left-color: $hi-blue !important;
+    background: rgba($hi-blue, 0.05);
+    .callout-title { color: $hi-blue; }
+  }
+
+  &.callout-tip {
+    border-left-color: $hi-teal !important;
+    background: rgba($hi-teal, 0.05);
+    opacity: 0.7;
+    .callout-title { color: $hi-teal-dark; font-style: italic; }
+  }
+
+  &.callout-warning {
+    border-left-color: $hi-yellow !important;
+    background: rgba($hi-yellow, 0.1);
+    .callout-title { color: darken($hi-yellow, 25%); }
+  }
+
+  &.callout-important {
+    border-left-color: $hi-red !important;
+    background: rgba($hi-red, 0.07);
+    .callout-title { color: darken($hi-red, 20%); }
+  }
+}
+
+// ── Blockquote ────────────────────────────────────────────────────────────────
+blockquote {
+  border-left: 4px solid $hi-blue;
+  background: rgba($hi-blue, 0.04);
+  padding: 0.75em 1.2em;
+  color: #{rgba($hi-ink, 0.8)};
+  font-style: italic;
+  margin: 1.2em 0;
+}
+// ── Tables ────────────────────────────────────────────────────────────────────
+table {
+  font-size: 0.9rem;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+
+  th {
+    background: $hi-blue;
+    color: $hi-white;
+    font-weight: 700;
+    padding: 0.6em 0.9em;
+    text-align: left;
+  }
+
+  td {
+    padding: 0.5em 0.9em;
+    border-bottom: 1px solid $hi-panel;
+  }
+
+  tbody tr:nth-child(even) td { background: $hi-paper; }
+  tbody tr:hover td { background: rgba($hi-teal, 0.07); }
+}
+// ── Page navigation ───────────────────────────────────────────────────────────
+.page-navigation {
+  margin-top: 3rem;
+  border-top: 2px solid $hi-panel;
+  padding-top: 1.2rem;
+
+  .nav-page a {
+    color: $hi-blue;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+
+    &:hover { color: $hi-teal-dark; }
+  }
+
+  .nav-page-text { color: #{rgba($hi-ink, 0.5)}; font-size: 0.78rem; }
+}
+// ── Footer ────────────────────────────────────────────────────────────────────
+.nav-footer {
+  background: $hi-blue;
+  color: $hi-white;
+  padding: 0.35em 0;
+  min-height: 0;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  a { color: $hi-teal; &:hover { color: $hi-white; } }
+  .nav-footer-left, .nav-footer-right, .nav-footer-center { color: rgba($hi-white, 0.85); }
+}
+// ── Search ────────────────────────────────────────────────────────────────────
+.aa-DetachedSearchButton {
+  border-color: rgba($hi-white, 0.4) !important;
+  color: $hi-white !important;
+}
+// ── Repo-actions: hide everywhere except margin sidebar ───────────────────────
+#quarto-document-content .quarto-other-links,
+.nav-footer .quarto-other-links,
+.page-navigation .quarto-other-links { display: none !important; }
+// ── Margin sidebar — repo-actions pinned to bottom ────────────────────────────
+#quarto-margin-sidebar {
+  display: flex !important;
+  flex-direction: column;
+
+  nav#TOC { flex: 1; }
+
+  .quarto-other-links {
+    margin-top: auto;
+    padding-top: 0.8rem;
+    border-top: 1px solid $hi-panel;
+    font-size: 0.82rem;
+
+    a { color: #{rgba($hi-ink, 0.6)}; font-weight: 500; }
+    a:hover { color: $hi-blue; }
+  }
+}
+// ── Misc ──────────────────────────────────────────────────────────────────────
+.quarto-title-block .quarto-title { padding-top: 0.5em; }
+
+hr {
+  border: none;
+  border-top: 2px solid $hi-panel;
+  margin: 2em 0;
+}
+
+img { max-width: 100%; height: auto; }
+
+// ── Sidebar dividers ─────────────────────────────────────────────────────────
+// A line between a part/section and a top-level page that follows it
+// (e.g. between "Fyrsti hluti" and "Heimildir"), as in the IDN302G book.
+#quarto-sidebar .sidebar-menu-container > ul > li.sidebar-item-section + li.sidebar-item:not(.sidebar-item-section) {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba($hi-ink, 0.14);
+}

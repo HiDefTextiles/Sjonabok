@@ -1,0 +1,419 @@
+// HiDef textíll additions on top of the HÍ site look (styles/hi-site.scss,
+// from HI-IDN/quarto-hi). Hero, cards, step lists, source boxes, pixel patterns.
+
+/*-- scss:rules --*/
+
+// ── Hero on the front page ───────────────────────────────────────────────────
+.hero {
+  background:
+    linear-gradient(135deg, rgba($hi-blue, 0.96), rgba(darken($hi-blue, 12%), 0.96)),
+    repeating-linear-gradient(45deg, transparent 0 14px, rgba($hi-teal, 0.5) 14px 16px);
+  color: $hi-white;
+  padding: 2.6rem 2rem 2.2rem;
+  margin: 0 0 2rem;
+  border-bottom: 6px solid $hi-teal;
+
+  h1, h2, p { color: $hi-white; border: none; }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    margin: 0 0 0.4rem;
+    padding: 0;
+    letter-spacing: -0.01em;
+  }
+  .lead { font-size: 1.2rem; font-weight: 500; max-width: 46rem; margin-bottom: 1.2rem; }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: $hi-teal;
+    margin-bottom: 0.6rem;
+  }
+  a.btn {
+    border-radius: 0;
+    font-weight: 700;
+    margin: 0 0.5rem 0.5rem 0;
+    text-decoration: none;
+  }
+  a.btn-hero { background: $hi-teal; color: $hi-blue; border: 2px solid $hi-teal; }
+  a.btn-hero:hover { background: $hi-white; border-color: $hi-white; }
+  a.btn-ghost { background: transparent; color: $hi-white; border: 2px solid rgba($hi-white, 0.7); }
+  a.btn-ghost:hover { border-color: $hi-teal; color: $hi-teal; }
+}
+
+// ── Card grid ────────────────────────────────────────────────────────────────
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0 2rem;
+}
+
+.card-hi {
+  border: 1px solid $hi-panel;
+  border-top: 5px solid $hi-blue;
+  background: $hi-white;
+  padding: 1rem 1.1rem 0.9rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+
+  h3, h4 { margin-top: 0; font-size: 1.08rem; font-weight: 800; color: $hi-blue; }
+  p { font-size: 0.93rem; margin-bottom: 0.5rem; }
+  p:last-child { margin-bottom: 0; }
+  .num {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: $hi-pink;
+    text-transform: uppercase;
+  }
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba($hi-blue, 0.12);
+    border-top-color: $hi-teal;
+  }
+  &.teal { border-top-color: $hi-teal; }
+  &.pink { border-top-color: $hi-pink; }
+  &.dashed { border-style: dashed; border-top-style: solid; background: $hi-paper; }
+}
+
+// ── Facts strip ──────────────────────────────────────────────────────────────
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0 1.8rem;
+
+  > div {
+    background: $hi-paper;
+    border-left: 4px solid $hi-teal;
+    padding: 0.7rem 0.9rem;
+  }
+  p { margin: 0; font-size: 0.86rem; line-height: 1.35; }
+  strong {
+    display: block;
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: $hi-blue;
+    line-height: 1.1;
+  }
+}
+
+// ── Author box (.hofundur, "Unnið af") and general source box (.heimild) ──────
+.hofundur, .heimild {
+  border: 1px solid $hi-panel;
+  border-left: 4px solid $hi-pink;
+  background: rgba($hi-pink, 0.04);
+  padding: 0.7rem 1rem;
+  margin: 1.2rem 0 1.6rem;
+  font-size: 0.88rem;
+
+  p { margin: 0 0 0.3rem; }
+  p:last-child { margin: 0; }
+  p:first-child::before {
+    content: "Unnið af";
+    display: inline-block;
+    font-weight: 800;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $hi-white;
+    background: $hi-pink;
+    padding: 0.05rem 0.5rem;
+    margin-right: 0.6rem;
+  }
+}
+
+// ── In short box ─────────────────────────────────────────────────────────────
+.hnotskurn {
+  background: rgba($hi-teal, 0.12);
+  border-left: 4px solid $hi-teal;
+  padding: 0.9rem 1.1rem;
+  margin: 1.2rem 0 1.6rem;
+
+  p:first-child strong:first-child {
+    color: $hi-blue;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+  }
+  p:last-child, ul:last-child { margin-bottom: 0; }
+}
+
+// ── Numbered steps ───────────────────────────────────────────────────────────
+.skref > ol {
+  list-style: none;
+  counter-reset: skref;
+  padding-left: 0;
+
+  > li {
+    counter-increment: skref;
+    position: relative;
+    padding: 0.2rem 0 1rem 3.2rem;
+    border-left: 2px solid $hi-panel;
+    margin-left: 1.1rem;
+
+    &::before {
+      content: counter(skref);
+      position: absolute;
+      left: -1.15rem;
+      top: 0;
+      width: 2.2rem;
+      height: 2.2rem;
+      background: $hi-blue;
+      color: $hi-white;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 3px solid $hi-white;
+      box-shadow: 0 0 0 2px $hi-teal;
+    }
+    &:last-child { border-left-color: transparent; }
+    > p:first-child { margin-top: 0.25rem; }
+  }
+}
+
+// ── Timeline ─────────────────────────────────────────────────────────────────
+.timalina {
+  border-left: 3px solid $hi-teal;
+  margin: 1rem 0 1.5rem 0.4rem;
+  padding-left: 1.2rem;
+
+  h4 {
+    position: relative;
+    color: $hi-blue;
+    font-weight: 800;
+    margin-top: 1.2rem;
+    &::before {
+      content: "";
+      position: absolute;
+      left: calc(-1.2rem - 9px);
+      top: 0.3em;
+      width: 15px;
+      height: 15px;
+      background: $hi-pink;
+      border: 3px solid $hi-white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px $hi-teal;
+    }
+  }
+}
+
+// ── Pixel patterns: keep the stitches crisp when enlarged ────────────────────
+img.pixel, .pixel img {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100%;
+  max-width: 260px;
+  border: 1px solid $hi-panel;
+  background: $hi-white;
+}
+
+.par {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin: 1rem 0 1.5rem;
+
+  figure { margin: 0; }
+  img { width: 100%; max-width: none; }
+  p { margin: 0; }
+}
+
+figure figcaption, .figure-caption {
+  font-size: 0.84rem;
+  color: rgba($hi-ink, 0.7);
+  margin-top: 0.4rem;
+}
+
+// ── Protocol string illustration ─────────────────────────────────────────────
+.strengur {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-family: $font-family-monospace;
+  margin: 0.4rem 0 1rem;
+
+  span {
+    padding: 0.35rem 0.6rem;
+    font-weight: 700;
+    background: $hi-paper;
+    border-bottom: 4px solid $hi-panel;
+  }
+  .f { border-bottom-color: $hi-pink; }
+  .u { border-bottom-color: $hi-blue; }
+  .m { border-bottom-color: $hi-teal; }
+}
+
+// ── Repo cards ───────────────────────────────────────────────────────────────
+.repo {
+  border: 1px solid $hi-panel;
+  border-left: 5px solid $hi-blue;
+  padding: 1rem 1.2rem 0.6rem;
+  margin: 1.4rem 0;
+  background: $hi-white;
+
+  h2 { margin-top: 0; border: none; padding: 0; font-size: 1.3rem; }
+  .slod { font-family: $font-family-monospace; font-size: 0.85rem; }
+}
+
+// ── Navbar translate link / EU widget ────────────────────────────────────────
+.navbar .website-translator { margin-left: 0.5rem; }
+
+// Full-width hero needs no page title block above it
+.forsida #title-block-header { display: none; }
+
+// ── Small screens: long URLs and wide tables must not push the page wide ─────
+.csl-entry, .repo .slod, .hofundur, .heimild, #refs a { overflow-wrap: anywhere; word-break: break-word; }
+main table { display: block; overflow-x: auto; }
+main pre { max-width: 100%; }
+
+// ── Topic cards on the front page ────────────────────────────────────────────
+.topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.2rem;
+  margin: 1.2rem 0 2rem;
+}
+
+.topic {
+  display: flex;
+  flex-direction: column;
+  background: $hi-white;
+  border: 1px solid $hi-panel;
+  border-bottom: 5px solid $hi-blue;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:nth-child(2) { border-bottom-color: $hi-teal; }
+  &:nth-child(3) { border-bottom-color: $hi-pink; }
+  &:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba($hi-blue, 0.14); }
+
+  > p { margin: 0; }
+  > p img, > img, .quarto-figure img {
+    width: 100%;
+    max-width: none;
+    height: 190px;
+    object-fit: cover;
+    display: block;
+    border: none;
+  }
+  .quarto-figure { margin: 0; }
+
+  .topic-body {
+    padding: 1rem 1.2rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+
+    h3 { margin: 0.2rem 0 0.4rem; font-size: 1.4rem; font-weight: 900; }
+    h3 a { text-decoration: none; }
+    p { font-size: 0.95rem; }
+    p:last-child { margin: auto 0 0; font-weight: 700; }
+    p:last-child a { text-decoration: none; color: $hi-blue; }
+    .num {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: $hi-pink;
+      text-transform: uppercase;
+    }
+  }
+}
+
+.card-hi h4 a, .card-hi h3 a { text-decoration: none; }
+
+// Sidebar: the topic title reads as a book title
+.sidebar .sidebar-title { margin-bottom: 0.6rem; }
+
+// ── Fyrri / Næsta: stórir hnappar með heiti síðunnar ──────────────────────────
+nav.page-navigation {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+  padding-top: 1.2rem;
+  border-top: 2px solid $hi-panel;
+
+  .nav-page { flex: 1 1 0; min-width: 0; }
+  .nav-page:empty { display: none; }
+  .nav-page-next { text-align: right; }
+
+  .nav-page a {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 100%;
+    min-height: 3.6rem;
+    padding: 0.7rem 0.9rem;
+    border: 2px solid rgba($hi-blue, 0.18);
+    border-radius: 0.6rem;
+    background: $hi-white;
+    color: $hi-blue;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover, &:focus-visible { border-color: $hi-teal; background: rgba($hi-teal, 0.08); color: $hi-blue; }
+    i { font-size: 1.6rem; line-height: 1; flex: none; }
+  }
+  .nav-page-next a { justify-content: flex-end; }
+
+  .nav-page-text {
+    color: $hi-blue;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+
+    &::before {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba($hi-ink, 0.55);
+      margin-bottom: 0.15rem;
+    }
+  }
+  .nav-page-previous .nav-page-text::before { content: "Fyrri"; }
+  .nav-page-next .nav-page-text::before { content: "Næsta"; }
+  .nav-page-topic.nav-page-next .nav-page-text::before { content: "Næsta viðfangsefni"; }
+  .nav-page-topic.nav-page-previous .nav-page-text::before { content: "Fyrra viðfangsefni"; }
+
+  @media (max-width: 575.98px) {
+    flex-direction: column;
+    .nav-page-next { order: -1; }
+  }
+}
+
+.heimild p:first-child::before { content: "Heimild"; }
+
+// ── Instagram gallery (scripts/instagram.py) ─────────────────────────────────
+.instagram {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+
+  figure { margin: 0; }
+  img, video {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    background: $hi-panel;
+  }
+  iframe {
+    width: 100%;
+    aspect-ratio: 9 / 16;   // reels are vertical
+    border: 0;
+    display: block;
+    border-radius: 6px;
+    background: $hi-panel;
+  }
+  figcaption { font-size: 0.8rem; }
+}

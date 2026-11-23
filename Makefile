@@ -47,3 +47,26 @@ $(PNG_DIR)/%.png: $(TXT_DIR)/%.txt convert_to_png.py pattern_processing/pattern_
 clean:
 	find $(TXT_DIR) -name '*.txt' -delete
 	find $(PNG_DIR) -name '*.png' -delete
+
+# ── Gallery website (gallery/, Quarto) ───────────────────────────────────────
+# make gallery-data : measure every pattern and draw PNGs in the HI palette
+# make gallery      : build the static site into gallery/_site
+# make gallery-preview : live preview while editing
+GALLERY = gallery
+GALLERY_DATA = $(GALLERY)/patterns/patterns.json
+
+$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py
+	python3 $(GALLERY)/scripts/build_gallery.py $(TXT_DIR) $(GALLERY)/patterns
+
+gallery-data: $(GALLERY_DATA)
+
+gallery: $(GALLERY_DATA)
+	cd $(GALLERY) && quarto render
+
+gallery-preview: $(GALLERY_DATA)
+	cd $(GALLERY) && quarto preview
+
+gallery-clean:
+	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
+
+.PHONY: gallery gallery-data gallery-preview gallery-clean

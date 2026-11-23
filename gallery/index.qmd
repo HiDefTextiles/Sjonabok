@@ -1,0 +1,62 @@
+---
+title: "Sjónabók pattern gallery"
+subtitle: "About 600 Icelandic embroidery patterns, digitised as 0/1 charts. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
+page-layout: full
+toc: false
+include-after-body:
+  - text: <script src="js/gallery.js"></script>
+---
+
+```{=html}
+<div id="gallery" class="gallery">
+<aside class="filters" aria-label="Filters">
+<div class="filter-head">
+<input id="q" type="search" placeholder="Search by name, e.g. 5898_246" aria-label="Search patterns">
+<button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
+</div>
+<details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
+<details open><summary>Symmetry</summary><div id="f-sym" class="chips"></div></details>
+<details><summary>Symmetry group</summary><div id="f-group" class="chips"></div></details>
+<details open><summary>Source</summary><div id="f-source" class="chips"></div></details>
+<details open><summary>Size and density</summary><div id="f-range" class="ranges"></div></details>
+<label class="sort">Sort by
+<select id="sort">
+<option value="name">Source and number</option>
+<option value="cells">Size, large first</option>
+<option value="cells-asc">Size, small first</option>
+<option value="density">Density, dense first</option>
+<option value="density-asc">Density, light first</option>
+<option value="pieces">Pieces, most first</option>
+<option value="float">Longest float, first</option>
+</select>
+</label>
+</aside>
+<section class="results">
+<p id="count" class="count" aria-live="polite">Loading patterns…</p>
+<div id="grid" class="tiles"></div>
+</section>
+</div>
+<dialog id="detail" class="detail" aria-labelledby="d-title">
+<form method="dialog" class="d-close"><button aria-label="Close">×</button></form>
+<div class="d-body">
+<div class="d-view">
+<div class="d-tools">
+<label>Zoom <input id="d-zoom" type="range" min="2" max="24" value="8"></label>
+<label><input id="d-grid" type="checkbox" checked> Grid</label>
+<span id="d-colours" class="swatches" aria-label="Colours"></span>
+<label title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
+</div>
+<div class="d-canvas"><canvas id="d-canvas"></canvas></div>
+<p id="d-cell" class="d-cell">Hover a cell to see its row and column.</p>
+</div>
+<div class="d-info">
+<p class="eyebrow" id="d-source"></p>
+<h2 id="d-title"></h2>
+<dl id="d-facts" class="facts-list"></dl>
+<p class="d-dl"><a id="d-txt" download>0/1 chart (.txt)</a> · <a id="d-png" download>Image (.png)</a> · <a id="d-link">Link to this pattern</a></p>
+<h3>Similar patterns</h3>
+<div id="d-similar" class="similar"></div>
+</div>
+</div>
+</dialog>
+```
