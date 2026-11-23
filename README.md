@@ -43,5 +43,25 @@ make all
 ```
 Note, you might need to rename the path of the `EPS_DIR` folder in the Makefile.
 
+## Gallery website
+The `gallery/` folder holds a [Quarto](https://quarto.org) website for browsing and inspecting the patterns,
+with the same look as the [HiDef textíll site](https://hideftextiles.github.io/). It is published at
+<https://hideftextiles.github.io/Sjonabok/> by the GitHub Action in `.github/workflows/gallery.yml`.
+
+```
+make gallery-data      # measure each pattern, draw PNGs in the HI palette (gallery/patterns/)
+make gallery           # build the site into gallery/_site
+make gallery-preview   # live preview while editing
+```
+
+`gallery/scripts/build_gallery.py` computes the attributes used by the filters (type, mirror and turn
+symmetry, frieze or point group, repeat, size, density, pieces, longest float). Generated files are not
+committed. `gallery/scripts/sync-theme.sh` refreshes the shared styles from the main site.
+
+![Gallery](gallery/preview/gallery.webp)
+
+The patterns are centuries old and in the public domain. Please credit *Íslensk sjónabók*
+(Heimilisiðnaðarfélag Íslands, Listaháskóli Íslands, Þjóðminjasafn Íslands, 2009) and HiDef Textiles.
+
 ## License
 This project is licensed under the [GNU General Public License v3.0](LICENSE), allowing for open collaboration and distribution.

@@ -1,0 +1,65 @@
+---
+title: "About the patterns"
+---
+
+## Íslensk sjónabók
+
+*Íslensk sjónabók: Ornaments and Patterns Found in Iceland* (2009) was published jointly by
+[Heimilisiðnaðarfélag Íslands](https://www.heimilisidnadur.is/) (the Icelandic Handcraft
+Association), [Listaháskóli Íslands](https://www.lhi.is/) (Iceland University of the Arts) and
+[Þjóðminjasafn Íslands](https://www.thjodminjasafn.is/) (the National Museum of Iceland). It
+reproduces embroidery patterns from Icelandic pattern books of the 16th to 18th centuries, and
+it comes with a CD of the charts as `.eps` figures.
+
+::: {.heimild}
+The patterns are centuries old and in the **public domain**. Please credit the source when you use
+them: *Patterns from Íslensk sjónabók (Heimilisiðnaðarfélag Íslands, Listaháskóli Íslands,
+Þjóðminjasafn Íslands, 2009), digitised by HiDef Textiles.* Where you can, also name the
+manuscript or museum number shown with each pattern.
+:::
+
+## The digital charts
+
+[HiDef Textiles](https://hideftextiles.github.io/), a research project at the University of
+Iceland, converted the CD figures into plain text matrices so they can be used on knitting
+machines and in other design work. Each pattern is a text file with one line per row, `1` for a
+filled cell and `0` for an empty one. Pages with several patterns were split automatically, and
+those parts carry a `_p1`, `_p2`, … suffix. The splitting is heuristic and sometimes cuts or merges
+a motif.
+
+The file name starts with the source: the manuscript or museum number the pattern comes from,
+for example `thjms5898` for Þjms. 5898 at the National Museum of Iceland. The number after it
+identifies the figure on the CD.
+
+The charts, the converters and this gallery live in the
+[HiDefTextiles/Sjonabok](https://github.com/HiDefTextiles/Sjonabok) repository. Every pattern in
+the gallery can be downloaded as its `.txt` chart or as a PNG image.
+
+## How the gallery is made
+
+On every change to the repository a GitHub Action:
+
+1. reads all charts in `patterns/txt/`,
+2. measures each one (size, density, symmetry, repeat, separate pieces, longest float) and
+   sorts it into a type: border band, narrow edging, rosette / star, motif or vertical band,
+3. draws PNG images in the colours of the University of Iceland
+   ([HÍ palette](https://honnun.hi.is/)): HI blue on a transparent background,
+4. renders this site with [Quarto](https://quarto.org/) and publishes it on GitHub Pages.
+
+You can run the same steps locally with `make gallery` (or `make gallery-preview`). The measures
+are computed, not curated, so treat them as a guide for browsing.
+
+## Measures in brief
+
+| Measure | Meaning |
+|---|---|
+| Pattern size | Width × height after the empty margin is trimmed |
+| Density | Share of filled cells within the trimmed pattern |
+| Left–right / top–bottom mirror | The pattern matches its mirror image (at least 98% of cells) |
+| Half-turn, quarter-turn | The pattern matches itself turned 180° or 90° |
+| Diagonal mirror | A square pattern matches its mirror across a diagonal |
+| Glide | A band matches itself flipped top to bottom and shifted half a repeat |
+| Repeat | Smallest horizontal shift after which a band repeats |
+| Symmetry group | Frieze group for bands (p1, p11g, p1m1, p2, p2mg, p11m, p2mm), point group for motifs (C1, D1, C2, D2, C4, D4) |
+| Separate pieces | Number of shapes of filled cells; cells touching at a corner count as joined |
+| Longest float | Longest run of filled (or empty) cells in one row |

@@ -1,0 +1,143 @@
+---
+title: "Explore the collection"
+subtitle: "The whole Sjónabók corpus at a glance: where the patterns come from, what shapes they take and how they are built. Click a bar or a dot to open the matching patterns in the gallery."
+toc: true
+---
+
+```{ojs}
+//| echo: false
+db = FileAttachment("patterns/patterns.json").json()
+P = db.patterns
+kinds = new Map([["border", "Border band"], ["edging", "Narrow edging"], ["rosette", "Rosette / star"], ["motif", "Motif"], ["vertical band", "Vertical band"]])
+hi = ({domain: [...kinds.values()], range: ["#10099F", "#2DD2C0", "#d61f69", "#FAC55B", "#FFA05F"]})
+rows = P.map(p => ({...p, type: kinds.get(p.kind), group: p.frieze ?? p.point ?? "none"}))
+```
+
+## Every pattern on one sheet
+
+::: {.overview-sheet}
+![All patterns in file order, from Natmus 453 to Þjms. Th 116. Each cell is one chart, shrunk to fit.](patterns/overview.png){fig-alt="A sheet of about 600 small blue embroidery patterns"}
+:::
+
+## Sources and types
+
+Each file name starts with the manuscript or museum number it was taken from. Borders (long bands) dominate most sources; rosettes and figurative motifs cluster in a few.
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  marginLeft: 110, height: 340, width,
+  x: {label: "Patterns", grid: true},
+  y: {label: null},
+  color: {...hi, legend: true},
+  marks: [
+    Plot.barX(rows, Plot.groupY({x: "count"}, {
+      y: "source_label", fill: "type", sort: {y: "-x"},
+      href: d => `index.html?source=${d.source}`, tip: true
+    })),
+    Plot.ruleX([0])
+  ]
+})
+```
+
+## Shape
+
+Pattern width against height, after the empty margin is trimmed. Bands lie along the bottom, rosettes on the diagonal. Hover a dot for its name, click to open it.
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  height: 460, width, grid: true,
+  x: {label: "Width (cells) →"},
+  y: {label: "↑ Height (cells)"},
+  color: {...hi, legend: true},
+  marks: [
+    Plot.line([[0, 0], [130, 130]], {stroke: "#ccc", strokeDasharray: "4 4"}),
+    Plot.dot(rows, {
+      x: "trim_width", y: "trim_height", fill: "type", r: 3.5, fillOpacity: 0.75,
+      href: d => `index.html#${d.id}`,
+      channels: {pattern: "id", source: "source_label", density: d => `${Math.round(d.density * 100)}%`},
+      tip: {format: {x: true, y: true, fill: true}}
+    })
+  ]
+})
+```
+
+## Symmetry
+
+Symmetry is measured automatically: a mirror or turn counts when at least `{ojs} Math.round(db.tolerance * 100)`% of the cells match. Bands are classified into the seven **frieze groups**, using one repeat of the band. Motifs and rosettes get a **point group**: D4 is the eightfold symmetry of a square star, D1 a single mirror, C1 none.
+
+```{ojs}
+//| echo: false
+bands = rows.filter(d => d.frieze)
+motifs = rows.filter(d => d.point)
+friezeNames = ({p1: "translation only", p11g: "glide reflection", p1m1: "vertical mirrors", p2: "half-turns", p2mg: "vertical mirrors + glide", p11m: "horizontal mirror", p2mm: "both mirrors"})
+html`<div class="pair" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem">
+<div><h4>Bands: frieze groups (${bands.length})</h4>${
+Plot.plot({
+  marginLeft: 170, height: 260, width: Math.min(width, 560),
+  x: {label: "Patterns", grid: true}, y: {label: null},
+  marks: [
+    Plot.barX(bands, Plot.groupY({x: "count"}, {
+      y: d => `${d.frieze} · ${friezeNames[d.frieze]}`, fill: "#10099F", sort: {y: "-x"},
+      href: d => `index.html?group=${d.frieze}`, tip: true
+    })),
+    Plot.ruleX([0])
+  ]
+})}</div>
+<div><h4>Motifs and rosettes: point groups (${motifs.length})</h4>${
+Plot.plot({
+  marginLeft: 60, height: 260, width: Math.min(width, 560),
+  x: {label: "Patterns", grid: true}, y: {label: null},
+  color: {...hi, legend: true},
+  marks: [
+    Plot.barX(motifs, Plot.groupY({x: "count"}, {
+      y: "point", fill: "type", sort: {y: "-x"},
+      href: d => `index.html?group=${d.point}`, tip: true
+    })),
+    Plot.ruleX([0])
+  ]
+})}</div></div>`
+```
+
+## Repeats in the borders
+
+How many cells wide one repeat of a border is. Short repeats are small running motifs; long repeats are large meanders. `{ojs} rows.filter(d => (d.kind === "border" || d.kind === "edging") && !d.period).length` bands have no clear repeat within their length.
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  height: 260, width,
+  x: {label: "Repeat width (cells) →"},
+  y: {label: "↑ Bands", grid: true},
+  marks: [
+    Plot.rectY(rows.filter(d => d.period), Plot.binX({y: "count"}, {x: "period", fill: "#2DD2C0", thresholds: 30, tip: true})),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+## Density and floats
+
+Density is the share of filled cells. The longest float is the longest run of filled cells in one row, which matters when a chart is knitted on a machine (long floats snag).
+
+```{ojs}
+//| echo: false
+html`<div class="pair" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem"><div>${
+Plot.plot({
+  marginLeft: 110, height: 320, width: Math.min(width, 560),
+  x: {label: "Density →", tickFormat: "%", grid: true}, y: {label: null},
+  marks: [Plot.boxX(rows, {x: "density", y: "source_label", fill: "#F4B8CE", stroke: "#10099F"})]
+})}</div><div>${
+Plot.plot({
+  height: 320, width: Math.min(width, 560), grid: true,
+  x: {label: "Density →", tickFormat: "%"}, y: {label: "↑ Longest float (cells)"},
+  color: {...hi},
+  marks: [Plot.dot(rows, {x: "density", y: "float_fg", fill: "type", r: 3, fillOpacity: 0.7,
+    href: d => `index.html#${d.id}`, channels: {pattern: "id"}, tip: true})]
+})}</div></div>`
+```
+
+::: {.legend-note}
+All measures come from `gallery/scripts/build_gallery.py`, which runs on every build. They describe the digitised charts and can be off where a chart was split or cleaned imperfectly.
+:::
