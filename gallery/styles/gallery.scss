@@ -330,3 +330,11 @@ dialog.detail {
     .facts-list dd { overflow-wrap: anywhere; }
   }
 }
+
+// ── Embedded in the main HiDef site (gallery.js adds .embedded in an iframe) ──
+html.embedded {
+  #quarto-header, .nav-footer, #title-block-header, body::after { display: none !important; }
+  body { padding-top: 0 !important; }
+  #quarto-content { margin-top: 0.5rem !important; }
+  .filters { top: 0.5rem; }
+}

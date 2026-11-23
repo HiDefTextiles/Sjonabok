@@ -330,5 +330,9 @@
     if (location.hash.length > 1) openDetail(decodeURIComponent(location.hash.slice(1)));
   }
 
+  // inside an iframe (e.g. on hideftextiles.github.io) drop the site chrome
+  try { if (window.self !== window.top) document.documentElement.classList.add("embedded"); }
+  catch (e) { document.documentElement.classList.add("embedded"); }
+
   document.addEventListener("DOMContentLoaded", init);
 })();
