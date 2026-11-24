@@ -139,7 +139,7 @@ class MotifPacker:
         # from the start: pairs close together in the starting layout; the
         # rest only when they clash
         for i, j in itertools.combinations(range(n), 2):
-            if self.overlap(i, j, self.x0, self.y0, self.near):
+            if self.near < 0 or self.overlap(i, j, self.x0, self.y0, self.near):
                 separate(i, j)
         best = (self.x0, self.y0)
         for k in range(rounds):
@@ -152,7 +152,7 @@ class MotifPacker:
             xs = [round(x[i].X) for i in range(n)]
             ys = [round(y[i].X) for i in range(n)]
             bad = [(i, j) for i, j in itertools.combinations(range(n), 2)
-                   if (i, j) not in added and self.overlap(i, j, xs, ys, self.near // 4)]
+                   if (i, j) not in added and self.overlap(i, j, xs, ys, self.near)]
             clash = sum(self.overlap(i, j, xs, ys) for i, j in bad)
             print(f"round {k + 1}: height {max(a + b for a, b in zip(ys, self.h))}, {clash} overlaps")
             if not clash:
@@ -176,13 +176,15 @@ def main():
     ap.add_argument("--columns", type=int, default=8, help="columns on the band sheet")
     ap.add_argument("--width", type=int, default=949, help="motif sheet width in cells (= band sheet)")
     ap.add_argument("--group", type=float, default=0.0, help="weight on each source's vertical span; >0 also keeps sources in order")
+    ap.add_argument("--near", type=int, default=-1,
+                    help="motifs: separate only pairs this close in the start, more lazily; -1 = all pairs at once")
     ap.add_argument("--rounds", type=int, default=15, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
     items = read(args.items)
     if args.sheet == "bands":
         BandPacker(items, args.columns).run(args.out, args.time)
     else:
-        MotifPacker(items, args.width, args.group).run(args.out, args.time, args.rounds)
+        MotifPacker(items, args.width, args.group, args.near).run(args.out, args.time, args.rounds)
 
 
 if __name__ == "__main__":
