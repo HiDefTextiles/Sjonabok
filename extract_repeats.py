@@ -19,6 +19,10 @@ Output (committed; pattern-synthesis and the gallery read these):
                   none  (no repeat found; full chart kept)
         mismatch  share of the full chart's cells that differ from the
                   ideal repeat (0 for unit)
+        close     for a unit: columns (rows for axis y) of the unit's start to
+                  add after whole units so the strip is exactly mirrored end
+                  to end: 0, 1, or empty when the band has no mirror. Use it
+                  to make frame sides that meet a corner the same way.
 
 A unit is cut where the band has a mirror axis in its middle, otherwise
 where it is lightest, so motifs are not split.
@@ -32,10 +36,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "gallery" / "scripts"))
 from build_gallery import Pattern  # noqa: E402  (shared type classification)
-from pattern_processing.repeat_unit import RepeatUnit  # noqa: E402
+from pattern_processing.repeat_unit import RepeatUnit, mirror_close  # noqa: E402
 
 BANDS = {"border": "x", "edging": "x", "vertical band": "y"}
-FIELDS = ["name", "kind", "axis", "period", "status", "mismatch"]
+FIELDS = ["name", "kind", "axis", "period", "status", "mismatch", "close"]
 
 
 class RepeatManifest:
@@ -75,10 +79,13 @@ class RepeatManifest:
         row = {"name": pattern.id, "kind": pattern.kind, "axis": axis}
         ru = RepeatUnit.from_band(pattern.trim, axis)
         if ru is None:
-            row.update(period="", status="none", mismatch="")
+            row.update(period="", status="none", mismatch="", close="")
         else:
-            row.update(period=ru.period, status="unit" if ru.mismatch == 0 else "near",
-                       mismatch=f"{ru.mismatch:.4f}", _unit=ru.unit)
+            exact = ru.mismatch == 0
+            close = mirror_close(ru.horizontal()) if exact else None
+            row.update(period=ru.period, status="unit" if exact else "near",
+                       mismatch=f"{ru.mismatch:.4f}", close="" if close is None else close,
+                       _unit=ru.unit)
         return row
 
     @staticmethod

@@ -43,6 +43,16 @@ def cut_links(u):
     return links
 
 
+def mirror_close(u):
+    """Columns to add after whole units so the strip is its own mirror image:
+    0 when the unit is symmetric, 1 when the unit plus its first column is
+    (the mirror axis runs through the cut column), None when neither."""
+    if np.array_equal(u, u[:, ::-1]):
+        return 0
+    c = np.concatenate([u, u[:, :1]], axis=1)
+    return 1 if np.array_equal(c, c[:, ::-1]) else None
+
+
 def edge_fragments(u, tiny=TINY_FRAGMENT):
     """Shapes of at most `tiny` cells touching the ends of two copies of the
     unit side by side: what is left of a motif when a border is clipped."""
@@ -108,15 +118,15 @@ class RepeatUnit:
         """Where to cut a cyclic unit so that a band clipped at unit edges ends
         cleanly. In order of priority:
           1. no tiny fragment (a few cells cut off a motif) at either end,
-          2. as few connections between filled cells cut as possible,
-          3. a mirror axis in the middle of the unit, when there is one,
+          2. ends that mirror each other exactly, so a frame side closes
+             symmetrically (see mirror_close),
+          3. as few connections between filled cells cut as possible,
           4. as little ink in the edge columns as possible."""
         best, best_score = 0, None
         for s in range(unit.shape[1]):
             u = np.roll(unit, -s, axis=1)
-            mirrored = agreement(u, u[:, ::-1]) >= MIRROR_TOLERANCE
             cut_ink = int(u[:, 0].sum()) + int(u[:, -1].sum())
-            score = (edge_fragments(u), cut_links(u), not mirrored, cut_ink, s)   # lower is better
+            score = (edge_fragments(u), mirror_close(u) is None, cut_links(u), cut_ink, s)   # lower is better
             if best_score is None or score < best_score:
                 best, best_score = s, score
         return best
