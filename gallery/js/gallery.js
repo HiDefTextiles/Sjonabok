@@ -274,7 +274,8 @@
       fact("Type", KIND_LABELS[p.kind]) +
       fact("Chart size", `${p.width} × ${p.height} cells`) +
       fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
-      fact("Repeat", p.period ? `every ${p.period} cells` : null) +
+      fact("Repeat", p.period ? `every ${p.period} cells` + (p.repeat_status
+        ? ` (${p.repeat_status === "ok" ? "checked" : "check"}: ${(p.repeat_mismatch * 100).toFixed(1)}% of cells differ)` : "") : null) +
       fact("Filled cells", `${p.ones} (${pct(p.density)})`) +
       fact("Symmetry", syms) +
       fact("Symmetry group", grp) +

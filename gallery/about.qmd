@@ -8,7 +8,7 @@ title: "About the patterns"
 [Heimilisiðnaðarfélag Íslands](https://www.heimilisidnadur.is/) (the Icelandic Handcraft
 Association), [Listaháskóli Íslands](https://www.lhi.is/) (Iceland University of the Arts) and
 [Þjóðminjasafn Íslands](https://www.thjodminjasafn.is/) (the National Museum of Iceland). It
-reproduces embroidery patterns from Icelandic pattern books of the 16th to 18th centuries, and
+reproduces embroidery patterns from ten Icelandic pattern books of the 17th to 19th centuries, and
 it comes with a CD of the charts as `.eps` figures.
 
 ::: {.heimild}
@@ -59,7 +59,41 @@ are computed, not curated, so treat them as a guide for browsing.
 | Half-turn, quarter-turn | The pattern matches itself turned 180° or 90° |
 | Diagonal mirror | A square pattern matches its mirror across a diagonal |
 | Glide | A band matches itself flipped top to bottom and shifted half a repeat |
-| Repeat | Smallest horizontal shift after which a band repeats |
+| Repeat | Smallest shift along a band after which it repeats; *checked* means up to 2% of cells differ from a perfect repeat |
 | Symmetry group | Frieze group for bands (p1, p11g, p1m1, p2, p2mg, p11m, p2mm), point group for motifs (C1, D1, C2, D2, C4, D4) |
 | Separate pieces | Number of shapes of filled cells; cells touching at a corner count as joined |
 | Longest float | Longest run of filled (or empty) cells in one row |
+
+## Repeat units {#repeats}
+
+Every band with a repeat also has its **repeat unit** in the repository: `patterns/repeat/<name>.txt`
+holds one repeat, and `patterns/repeats.csv` lists each band's direction, repeat length, *phase*
+(the column or row in the chart where a clean unit starts), number of full copies, and how many
+cells differ from a perfect repeat. The unit is a majority vote over all copies in the chart, so a
+slip in one copy does not end up in the unit. Where a band has mirror symmetry the unit is cut so
+that a mirror axis sits in its middle, otherwise where the band is lightest, so motifs are not
+split. Run `make repeats` to rebuild them.
+
+In the pattern view, *Repeat* shows the chart as drawn, with its own starting edge, and then
+continues it from the last full repeat; the dashed line marks where the original chart ends.
+
+## How "similar patterns" are chosen {#similar}
+
+The similar patterns are picked by a computer from the shapes alone. It does not know what a
+motif depicts, so a bird may sit next to a flower that has a similar outline. Treat the list as a
+way to browse, not as a classification.
+
+1. **What is compared.** For a band, one repeat unit; for any other pattern, the whole chart with
+   its empty margin trimmed. Each is shrunk to a 16 × 16 grey picture.
+2. **What is ignored.** A band is tried in all positions along its repeat and mirrored left–right
+   and top–bottom, so two bands that start at different places in the repeat, run the other way
+   or are mirror images still match. A motif is tried in all eight turned and mirrored positions.
+   Vertical bands are laid horizontally first, so they can match horizontal ones.
+3. **Score.** The best match over those positions (a correlation between the two pictures), with
+   small deductions when the overall shape (width to height of the unit) or the share of filled
+   cells differs, and a small bonus for the same family (bands with bands, motifs with motifs).
+4. **Result.** The eight highest scores are shown.
+
+Known limits: the repeat length itself is not compared, so a small unit and a large unit with
+the same outline look alike; the 16 × 16 picture loses fine detail; and a filled/empty swap of the
+same pattern is not matched.

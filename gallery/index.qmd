@@ -57,6 +57,7 @@ include-after-body:
 <dl id="d-facts" class="facts-list"></dl>
 <p class="d-dl"><a id="d-txt" download>0/1 chart (.txt)</a> · <a id="d-png" download>Image (.png)</a> · <a id="d-link">Link to this pattern</a></p>
 <h3>Similar patterns</h3>
+<p class="hint">Similar in shape, wherever a band starts and however it is mirrored. <a href="about.html#similar">How they are chosen</a></p>
 <div id="d-similar" class="similar"></div>
 </div>
 </div>

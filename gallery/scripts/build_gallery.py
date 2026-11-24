@@ -30,9 +30,9 @@ from PIL import Image
 # Reuse the palette of the existing converter so there is one source of truth.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from pattern_processing.pattern_to_png import COLOR_PALETTE  # noqa: E402
+from pattern_processing.repeat_unit import RepeatUnit, find_period  # noqa: E402
 
 TOLERANCE = 0.98          # share of cells that must agree for a symmetry
-PERIOD_TOLERANCE = 0.97   # share of cells that must agree for a repeat
 THUMB_PX = 240            # target size of the longest thumbnail side
 FULL_ZOOM = 10            # pixels per cell in the full PNG
 
@@ -91,6 +91,7 @@ class Pattern:
         self.number = int(m["number"]) if m else 0
         self.part = int(m["part"]) if m and m["part"] else None
         self.period = None
+        self.repeat = None
         self.frieze = None
         self.point = None
         self.sym = {}
@@ -161,18 +162,11 @@ class Pattern:
         else:
             self.point = "C1"
 
-    def find_period(self, t):
-        """Smallest horizontal repeat that occurs at least twice."""
-        w = t.shape[1]
-        for p in range(2, w // 2 + 1):
-            if agreement(t[:, :-p], t[:, p:]) >= PERIOD_TOLERANCE:
-                return p
-        return None
-
     def measure_band(self, t, vertical=False):
         """Symmetry of a frieze, measured on one repeat treated as cyclic."""
-        p = self.find_period(t)
+        p = find_period(t)
         self.period = p
+        self.repeat = RepeatUnit.from_band(t) if p else None   # t is already horizontal
         tile = t[:, :p] if p else t
         n = tile.shape[1]
         flip = tile[::-1, :]
@@ -242,13 +236,41 @@ class Pattern:
                 best = max(best, run)
         return best
 
-    def signature(self, n=16):
-        """Small fixed-size picture of the trimmed chart, for similarity."""
-        img = Image.fromarray(self.trim * 255).resize((n, n), Image.BILINEAR)
-        v = np.asarray(img, dtype=float).ravel()
-        v -= v.mean()
-        norm = np.linalg.norm(v)
-        return v / norm if norm else v
+    def signature_variants(self, n=16):
+        """Small n×n pictures of the pattern for similarity, in every
+        position the comparison should ignore.
+
+        Bands are compared on one repeat unit, laid horizontally, in all n
+        cyclic shifts and with left–right and top–bottom flips, so a band
+        that starts elsewhere in its repeat, runs the other way or is
+        mirrored still matches. Motifs use the whole chart in its eight
+        turned and mirrored positions. Each picture is centred and scaled
+        to length 1, so a dot product is a correlation.
+        """
+        if self.repeat is not None:
+            base = self.small(self.repeat.horizontal(), n)
+            flips = [base, base[:, ::-1], base[::-1, :], base[::-1, ::-1]]
+            pics = [np.roll(f, k, axis=1) for f in flips for k in range(n)]
+        else:
+            t = self.trim.T if self.kind == "vertical band" else self.trim
+            base = self.small(t, n)
+            pics = [np.rot90(b, k) for b in (base, base[:, ::-1]) for k in range(4)]
+            pics = pics * (4 * n // len(pics))   # same count as for bands
+        v = np.array([p.ravel() for p in pics], dtype=float)
+        v -= v.mean(axis=1, keepdims=True)
+        norm = np.linalg.norm(v, axis=1, keepdims=True)
+        return np.divide(v, norm, out=np.zeros_like(v), where=norm > 0)
+
+    @staticmethod
+    def small(a, n):
+        return np.asarray(Image.fromarray(a * 255).resize((n, n), Image.BILINEAR), dtype=float)
+
+    def shape_ratio(self):
+        """Width to height of what is compared (one repeat for bands)."""
+        t = self.repeat.horizontal() if self.repeat is not None else self.trim
+        if self.repeat is None and self.kind == "vertical band":
+            t = t.T
+        return t.shape[1] / t.shape[0]
 
     # ── images ───────────────────────────────────────────────────────────
     def rgba(self, zoom):
@@ -282,6 +304,8 @@ class Pattern:
             "density": round(ones / (tw * th), 3),
             "kind": self.kind,
             "period": self.period,
+            "repeat_status": self.repeat.status if self.repeat else None,
+            "repeat_mismatch": self.repeat.mismatch if self.repeat else None,
             "frieze": self.frieze,
             "frieze_name": FRIEZE_NAMES.get(self.frieze),
             "point": self.point,
@@ -333,15 +357,21 @@ class Gallery:
         return dict(sorted(counts.items()))
 
     def add_similar(self, records, k=8):
-        """Nearest neighbours by shape signature, aspect ratio, density and type."""
-        sig = np.array([p.signature() for p in self.patterns])
-        aspect = np.log([p.trim.shape[1] / p.trim.shape[0] for p in self.patterns])
+        """Nearest neighbours: best correlation over shifts, flips and turns
+        (see Pattern.signature_variants), minus small penalties for a
+        different shape and density, plus a bonus for the same family."""
+        variants = np.stack([p.signature_variants() for p in self.patterns])   # N × V × n²
+        canon = variants[:, 0, :]
+        corr = np.max(np.einsum("id,jvd->ijv", canon, variants), axis=2)
+        corr = np.maximum(corr, corr.T)
+        ratio = np.log([p.shape_ratio() for p in self.patterns])
         density = np.array([p.trim.mean() for p in self.patterns])
-        kind = np.array([p.kind for p in self.patterns])
-        score = (sig @ sig.T
-                 - 0.5 * np.abs(aspect[:, None] - aspect[None, :])
+        family = np.array(["band" if p.kind in ("border", "edging", "vertical band") else p.kind
+                           for p in self.patterns])
+        score = (corr
+                 - 0.3 * np.abs(ratio[:, None] - ratio[None, :])
                  - 1.0 * np.abs(density[:, None] - density[None, :])
-                 + 0.2 * (kind[:, None] == kind[None, :]))
+                 + 0.1 * (family[:, None] == family[None, :]))
         np.fill_diagonal(score, -np.inf)
         for i, r in enumerate(records):
             r["similar"] = [records[j]["id"] for j in np.argsort(-score[i])[:k]]
