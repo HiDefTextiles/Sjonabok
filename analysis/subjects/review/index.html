@@ -1,0 +1,336 @@
+<title>Sjónabók subject review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one column of pile cards, sticky progress bar; thumbnails drawn from the 0/1 charts. */
+:root {
+  --bg: #f6f6fb; --card: #ffffff; --fg: #17163a; --muted: #5d5b7a; --line: #dcdbe8;
+  --ink: #10099F; --accent: #d61f69; --chip: #ecebf7; --chip-on: #10099F; --chip-on-fg: #ffffff;
+  --ok: #1f7a4d; --warn: #a65a00;
+  --font: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12112a; --card: #1c1b3a; --fg: #eceaff; --muted: #a9a7c9; --line: #34325a;
+  --ink: #b7b2ff; --accent: #ff6fa7; --chip: #2a2850; --chip-on: #b7b2ff; --chip-on-fg: #12112a;
+  --ok: #6fd3a0; --warn: #ffb35c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12112a; --card: #1c1b3a; --fg: #eceaff; --muted: #a9a7c9; --line: #34325a;
+  --ink: #b7b2ff; --accent: #ff6fa7; --chip: #2a2850; --chip-on: #b7b2ff; --chip-on-fg: #12112a;
+  --ok: #6fd3a0; --warn: #ffb35c; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 16px/1.45 var(--font); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+h1 { font-size: 1.35rem; margin: 0; font-weight: 700; color: var(--ink); text-wrap: balance; }
+.intro { color: var(--muted); margin: 12px 0 4px; font-size: .95rem; }
+.bar { height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.status { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.status .save { margin-left: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { border: 0; background: none; color: var(--fg); font: inherit; font-size: .85rem; padding: 4px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--chip-on-fg); }
+.piles { display: grid; gap: 16px; margin-top: 16px; }
+.pile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 12px; }
+.pile.done { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.pile h2 { margin: 0; font-size: 1.05rem; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.pile h2 small { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.pile h2 .tag { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--ok); }
+.pile h2 .tag.mixed { color: var(--warn); }
+.charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.chart { position: relative; aspect-ratio: 1; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 4px; cursor: pointer; display: grid; place-items: center; font: inherit; color: inherit; }
+.chart canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+.chart .ex { position: absolute; left: 2px; right: 2px; bottom: 2px; font-size: .62rem; line-height: 1.2; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chart.is-ex { border-color: var(--accent); border-width: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid transparent; background: var(--chip); color: var(--fg); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: .9rem; cursor: pointer; min-height: 36px; }
+.chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-fg); }
+.chip.mixed[aria-pressed="true"] { background: var(--warn); color: #fff; }
+.label { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 4px; }
+.hint { font-size: .85rem; color: var(--muted); margin: 0; }
+.hint.warn { color: var(--warn); margin-top: 8px; }
+textarea { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; font-size: .9rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+dialog { border: 0; border-radius: 16px 16px 0 0; padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)); width: 100%; max-width: 560px; margin: auto auto 0; background: var(--card); color: var(--fg); box-sizing: border-box; }
+dialog::backdrop { background: rgb(0 0 0 / .45); }
+dialog .big { display: grid; place-items: center; background: var(--bg); border-radius: 10px; padding: 12px; margin-block: 10px; }
+dialog .big canvas { max-width: 100%; max-height: 40vh; image-rendering: pixelated; }
+dialog h3 { margin: 0; font-size: 1rem; word-break: break-all; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--chip-on-fg); border-color: var(--ink); }
+.notice { border: 1px solid var(--warn); color: var(--fg); border-radius: 8px; padding: 10px 12px; font-size: .9rem; margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Sjónabók subject review</h1>
+    <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+    <div class="status">
+      <span id="progress">Loading piles…</span>
+      <span class="seg" role="group" aria-label="Show">
+        <button id="show-todo" type="button" aria-pressed="true">To do</button>
+        <button id="show-all" type="button" aria-pressed="false">All</button>
+      </span>
+      <span id="save" class="save" aria-live="polite"></span>
+    </div>
+  </header>
+  <p class="intro">Each pile holds charts the image model found alike. Tap the subject (or several) for the pile. Tap a chart that does not fit to give it its own subject. Mark <b>Mixed</b> if the pile should be split in the next round. Answers save as you go.</p>
+  <div id="notice" class="notice" hidden></div>
+  <div id="piles" class="piles"></div>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <h3 id="sheet-title"></h3>
+  <div class="big"><canvas id="sheet-canvas"></canvas></div>
+  <p class="label">This chart is</p>
+  <div id="sheet-chips" class="chips"></div>
+  <div class="row">
+    <button id="sheet-reset" class="btn" type="button">Same as the pile</button>
+    <button id="sheet-done" class="btn primary" type="button">Done</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let data = null, vocab = [], db = null, canWrite = false, local = false;
+  const answers = {};          // pile key -> {subjects, exceptions, mixed, note}
+  let showAll = false, sheetFor = null;
+
+  const key = (n) => "p" + String(n).padStart(2, "0");
+  const blank = () => ({ subjects: [], exceptions: {}, mixed: false, note: "" });
+  const isDone = (a) => a && (a.mixed || a.subjects.length > 0);
+
+  function ink() { return getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#10099F"; }
+
+  function draw(canvas, rows, box) {
+    const h = rows.length, w = rows[0].length;
+    const z = Math.max(1, Math.floor(box / Math.max(w, h)));
+    canvas.width = w * z; canvas.height = h * z;
+    const g = canvas.getContext("2d");
+    g.fillStyle = ink();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (rows[y][x] === "1") g.fillRect(x * z, y * z, z, z);
+  }
+
+  function chip(label, pressed, onClick, cls) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip" + (cls ? " " + cls : "");
+    b.textContent = label; b.setAttribute("aria-pressed", pressed ? "true" : "false");
+    b.disabled = !canWrite && db !== null;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // ── saving ──
+  const timers = {}, busy = {}, pending = {}, dirty = {};
+  function setStatus(t) { $("save").textContent = t; }
+  function storeKey() { return "sjonabok-review-" + data.run; }
+  function exportCsv() {
+    const q = (s) => /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    const lines = ["cluster,n,ids,subject,exceptions,note"];
+    for (const p of data.piles) {
+      const a = answers[key(p.pile)] || blank();
+      const ex = Object.entries(a.exceptions).map(([id, s]) => id + "=" + s.join("|")).join(" ");
+      lines.push([p.pile, p.charts.length, p.charts.map((c) => c.id).join(" "), a.mixed ? "mixed" : a.subjects.join("|"), ex, a.note || ""].map((v) => q(String(v))).join(","));
+    }
+    const url = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "review.csv"; document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function save(k) {
+    if (local) {
+      try { localStorage.setItem(storeKey(), JSON.stringify(answers)); setStatus("Saved in this browser"); }
+      catch (e) { setStatus("Not saved: this browser blocks storage. Export before you close the page."); }
+      return;
+    }
+    if (!db || !canWrite) return;
+    dirty[k] = true;
+    clearTimeout(timers[k]);
+    timers[k] = setTimeout(() => flush(k), 500);
+  }
+  async function flush(k) {
+    if (busy[k]) { pending[k] = true; return; }
+    busy[k] = true; dirty[k] = false; setStatus("Saving…");
+    const a = answers[k];
+    try {
+      await db.doc("piles/" + k).set({ pile: +k.slice(1), subjects: a.subjects, exceptions: a.exceptions, mixed: a.mixed, note: a.note, ids: data.piles.find((p) => key(p.pile) === k).charts.map((c) => c.id), saved_at: new Date().toISOString() });
+      setStatus("Saved");
+    } catch (e) {
+      dirty[k] = true;
+      setStatus("Not saved: " + (e && e.code === "permission_denied" ? "you can view but not edit this review" : "connection problem, try again"));
+    }
+    busy[k] = false;
+    if (pending[k]) { pending[k] = false; flush(k); }
+  }
+
+  // ── render ──
+  function progress() {
+    const n = data.piles.length;
+    const done = data.piles.filter((p) => isDone(answers[key(p.pile)])).length;
+    $("progress").textContent = `${done} of ${n} piles done`;
+    $("bar").style.width = (100 * done / n) + "%";
+  }
+
+  function renderPile(p) {
+    const k = key(p.pile), a = answers[k] || (answers[k] = blank());
+    const el = document.createElement("section");
+    el.className = "pile" + (isDone(a) ? " done" : "");
+    el.id = "pile-" + p.pile;
+    const h = document.createElement("h2");
+    h.textContent = "Pile " + p.pile + " ";
+    const sm = document.createElement("small"); sm.textContent = p.charts.length + (p.charts.length === 1 ? " chart" : " charts");
+    h.appendChild(sm);
+    if (isDone(a)) {
+      const t = document.createElement("span");
+      t.className = "tag" + (a.mixed ? " mixed" : "");
+      t.textContent = a.mixed ? "Mixed" : a.subjects.map((s) => (vocab.find((v) => v.key === s) || { label: s }).label).join(", ");
+      h.appendChild(t);
+    }
+    el.appendChild(h);
+
+    const grid = document.createElement("div"); grid.className = "charts";
+    for (const c of p.charts) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chart" + (a.exceptions[c.id] ? " is-ex" : "");
+      b.title = c.id; b.setAttribute("aria-label", "Chart " + c.id + (a.exceptions[c.id] ? ", set apart" : ""));
+      const cv = document.createElement("canvas"); draw(cv, c.rows, 68); b.appendChild(cv);
+      if (a.exceptions[c.id]) {
+        const ex = document.createElement("span"); ex.className = "ex";
+        ex.textContent = a.exceptions[c.id].map((s) => (vocab.find((v) => v.key === s) || { label: s }).label).join(", ");
+        b.appendChild(ex);
+      }
+      b.addEventListener("click", () => openSheet(p, c));
+      grid.appendChild(b);
+    }
+    el.appendChild(grid);
+
+    const lab = document.createElement("p"); lab.className = "label"; lab.textContent = "This pile is";
+    const chips = document.createElement("div"); chips.className = "chips";
+    for (const v of vocab) {
+      chips.appendChild(chip(v.label, a.subjects.includes(v.key), () => {
+        a.subjects = a.subjects.includes(v.key) ? a.subjects.filter((s) => s !== v.key) : [...a.subjects, v.key];
+        if (a.subjects.length) a.mixed = false;
+        rerender(p); save(k);
+      }));
+    }
+    chips.appendChild(chip("Mixed", a.mixed, () => {
+      a.mixed = !a.mixed; if (a.mixed) a.subjects = [];
+      rerender(p); save(k);
+    }, "mixed"));
+    const wrap = document.createElement("div"); wrap.append(lab, chips);
+    if (a.subjects.length > 1) {
+      const warn = document.createElement("p"); warn.className = "hint warn";
+      warn.textContent = "Every chart in this pile gets all of these subjects. If only one or two charts differ, keep the main subject here and tap those charts to label them on their own.";
+      wrap.appendChild(warn);
+    }
+    el.appendChild(wrap);
+
+    const note = document.createElement("textarea");
+    note.id = "note-" + p.pile; note.placeholder = "Note (optional)"; note.value = a.note || "";
+    note.setAttribute("aria-label", "Note for pile " + p.pile);
+    note.disabled = !canWrite && db !== null;
+    note.addEventListener("input", () => { a.note = note.value; save(k); });
+    el.appendChild(note);
+    return el;
+  }
+
+  function rerender(p) {
+    const old = $("pile-" + p.pile);
+    if (old) old.replaceWith(renderPile(p));
+    progress();
+  }
+
+  function render() {
+    const list = $("piles");
+    const frag = document.createDocumentFragment();
+    const shown = data.piles.filter((p) => showAll || !isDone(answers[key(p.pile)]));
+    for (const p of shown) frag.appendChild(renderPile(p));
+    if (!shown.length) {
+      const d = document.createElement("p"); d.className = "hint";
+      d.textContent = "All piles are done. Switch to All to look them over, or tell Claude the review is finished.";
+      frag.appendChild(d);
+    }
+    list.replaceChildren(frag);
+    progress();
+  }
+
+  // ── exception sheet ──
+  function openSheet(p, c) {
+    sheetFor = { p, c };
+    const a = answers[key(p.pile)];
+    $("sheet-title").textContent = c.id;
+    draw($("sheet-canvas"), c.rows, 320);
+    const box = $("sheet-chips"); box.replaceChildren();
+    const cur = a.exceptions[c.id] || [];
+    for (const v of vocab) box.appendChild(chip(v.label, cur.includes(v.key), (e) => {
+      const a = answers[key(p.pile)];
+      const list = a.exceptions[c.id] || [];
+      a.exceptions[c.id] = list.includes(v.key) ? list.filter((s) => s !== v.key) : [...list, v.key];
+      if (!a.exceptions[c.id].length) delete a.exceptions[c.id];
+      e.currentTarget.setAttribute("aria-pressed", (a.exceptions[c.id] || []).includes(v.key) ? "true" : "false");
+      save(key(p.pile));
+    }));
+    $("sheet").showModal();
+  }
+  $("sheet-reset").addEventListener("click", () => {
+    if (!sheetFor) return;
+    const k = key(sheetFor.p.pile);
+    delete answers[k].exceptions[sheetFor.c.id]; save(k);
+    $("sheet").close();
+  });
+  $("sheet-done").addEventListener("click", () => $("sheet").close());
+  $("sheet").addEventListener("close", () => { if (sheetFor) rerender(sheetFor.p); sheetFor = null; });
+  $("sheet").addEventListener("click", (e) => { if (e.target === $("sheet")) $("sheet").close(); });
+
+  $("show-todo").addEventListener("click", () => { showAll = false; $("show-todo").setAttribute("aria-pressed", "true"); $("show-all").setAttribute("aria-pressed", "false"); render(); });
+  $("show-all").addEventListener("click", () => { showAll = true; $("show-all").setAttribute("aria-pressed", "true"); $("show-todo").setAttribute("aria-pressed", "false"); render(); });
+
+  // ── start ──
+  async function start() {
+    try { data = await fetch("piles.json").then((r) => r.json()); }
+    catch (e) { $("progress").textContent = "Could not load the piles."; return; }
+    vocab = data.vocabulary;
+    render();
+
+    db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    const notice = $("notice");
+    if (!db) {
+      // Opened from the repository (make review): keep answers in this browser and export review.csv.
+      local = true;
+      try { Object.assign(answers, JSON.parse(localStorage.getItem(storeKey()) || "{}")); } catch (e) { /* storage blocked */ }
+      notice.hidden = false;
+      notice.replaceChildren();
+      const t = document.createElement("span");
+      t.textContent = "Answers are kept in this browser only. When you are done, export them and save the file as analysis/subjects/review.csv. ";
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "btn primary"; b.textContent = "Export review.csv";
+      b.addEventListener("click", exportCsv);
+      notice.append(t, b);
+      render(); return;
+    }
+    let first = true;
+    const timer = setTimeout(() => { notice.hidden = false; notice.textContent = "Saved answers can't be reached yet. Check your connection."; }, 10000);
+    db.collection("piles").onSnapshot((snap) => {
+      if (!snap.metadata || !snap.metadata.fromCache) { clearTimeout(timer); if (notice.textContent.startsWith("Saved answers")) notice.hidden = true; }
+      for (const d of snap.docs) {
+        // keep this viewer's own unsaved or open edits; take everything else from the store
+        if (dirty[d.id] || busy[d.id] || (sheetFor && key(sheetFor.p.pile) === d.id)) continue;
+        const v = d.data();
+        // update in place, so open handlers keep pointing at the same answer
+        Object.assign(answers[d.id] || (answers[d.id] = blank()), { subjects: v.subjects || [], exceptions: v.exceptions || {}, mixed: !!v.mixed, note: v.note || "" });
+      }
+      if (first) { first = false; render(); }
+      else progress();
+    }, () => { clearTimeout(timer); notice.hidden = false; notice.textContent = "Saved answers could not be loaded. Reload the page later."; });
+    canWrite = true;
+    render();
+  }
+  start();
+})();
+</script>

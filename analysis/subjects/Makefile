@@ -3,6 +3,7 @@
 #
 #   make            units, shape distance, clusters and review sheets
 #   make embed      add the image-model distance (needs PyTorch + network)
+#   make review     the phone-friendly review page at http://localhost:8000
 #   make labels REVIEWER="Helga Ingimundardóttir"   review.csv -> subjects.csv
 #   make suggest    suggestions for charts not yet labelled
 #
@@ -33,6 +34,13 @@ work/clusters.csv: cluster.R $(DISTS) Makefile
 sheets: work/clusters.csv
 	$(PY) subjects.py sheets --txt $(TXT)
 
+work/review/index.html: work/clusters.csv review/index.html vocabulary.csv
+	$(PY) subjects.py page --txt $(TXT)
+
+review: work/review/index.html
+	@echo "Open http://localhost:8000 (Ctrl+C to stop)"
+	$(PY) -m http.server 8000 -d work/review
+
 labels:
 	$(PY) subjects.py labels --reviewer "$(REVIEWER)"
 
@@ -42,4 +50,4 @@ suggest: work/clusters.csv subjects.csv
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets labels suggest clean
+.PHONY: all embed sheets review labels suggest clean

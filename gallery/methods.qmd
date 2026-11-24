@@ -96,14 +96,18 @@ of one, so we changed to Ward's method, which keeps piles of similar size (large
 
 ## Step 5: the review {#review}
 
-The reviewer gets one contact sheet per pile, with every chart and its file name, and a form,
-`review.csv`, with one row per pile. For each pile they fill in:
+The reviewer opens a review page that works on a phone: one card per pile, with every chart drawn
+from its 0/1 file. For each pile they tap:
 
 - **subject**: one word from the [subject list](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/vocabulary.csv)
   (bird, flower, tree, deer, other animal, human figure, heart, star, cross, letters, geometric,
   not sure). A chart can have several subjects, for example a bird on a flowering branch.
-- **exceptions**: charts in the pile that do not fit, each with its own subject.
+- **exceptions**: tap a chart that does not fit to see it large and give it its own subject.
 - **mixed**: if the pile is too varied, it is left for a finer cut in the next round.
+
+The answers are exported as `review.csv`, one row per pile. The page is in the repository
+(`analysis/subjects/review/`, started with `make review`), so the next round, or another collection,
+can be reviewed the same way. In our pilot one person reviewed 34 piles in about eight minutes.
 
 `make labels` then writes one row per chart into `subjects.csv`: the chart, its subjects, the
 reviewer's name, the date and any note. This file is the result of the whole method, and it is the

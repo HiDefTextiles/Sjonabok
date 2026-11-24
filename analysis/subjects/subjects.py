@@ -8,6 +8,9 @@ Steps (run through the Makefile in this folder, see README.md):
     (embed.py: image-model distance, optional)                        -> work/embed_dist.csv
     (cluster.R: hierarchical clustering of the distances)             -> work/clusters.csv
     sheets   one contact sheet per cluster and a review form          -> work/sheets/, review.csv
+    page     the phone-friendly review page with this run's piles     -> work/review/
+    answers  answers saved by the review page on claude.ai (JSON)
+             turned into the review form                              -> review.csv
     labels   turn the filled review form into one row per pattern     -> subjects.csv
     suggest  nearest labelled neighbours for charts not yet labelled  -> work/suggestions.csv
 
@@ -17,6 +20,7 @@ Everything under work/ is rebuilt from the charts.
 
 import argparse
 import csv
+import json
 import datetime as dt
 import sys
 from pathlib import Path
@@ -218,6 +222,57 @@ class Review:
         print(f"{len(new)} new labels, {len(rows)} in subjects.csv")
 
 
+class ReviewPage:
+    """The review page (review/index.html) with this run's piles beside it.
+
+    Open work/review/index.html through a local web server (make review).
+    Answers are kept in the browser and exported as review.csv. The same
+    page published on claude.ai keeps answers in its database instead;
+    those come back through `subjects.py answers`.
+    """
+
+    HEAD = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+            '<style>:root{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}'
+            'body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>')
+
+    def __init__(self, txt_dir):
+        self.txt_dir = Path(txt_dir)
+
+    def write(self, clusters, out):
+        out.mkdir(parents=True, exist_ok=True)
+        piles = []
+        for c, ids in clusters.items():
+            charts = []
+            for i in ids:
+                m = Pattern.trimmed(Pattern.read(self.txt_dir / f"{i}.txt"))
+                charts.append({"id": i, "rows": ["".join(map(str, r)) for r in m]})
+            piles.append({"pile": c, "charts": charts})
+        vocab = [{"key": r["subject"], "label": r["label"]} for r in read_csv(VOCABULARY)]
+        run = dt.datetime.fromtimestamp((WORK / "clusters.csv").stat().st_mtime).strftime("%Y-%m-%dT%H%M")
+        (out / "piles.json").write_text(json.dumps({"run": run, "piles": piles, "vocabulary": vocab},
+                                                   ensure_ascii=False, separators=(",", ":")))
+        page = (HERE / "review" / "index.html").read_text(encoding="utf-8")
+        (out / "index.html").write_text(self.HEAD + page + "</body></html>", encoding="utf-8")
+
+
+def answers_to_form(folder, path=REVIEW):
+    """Answers saved by the claude.ai review page (one JSON file per pile,
+    as exported from its database) -> review.csv."""
+    rows = []
+    for f in sorted(Path(folder).glob("p*.json")):
+        d = json.loads(f.read_text())
+        d = d.get("data", d)
+        ex = " ".join(f"{i}={'|'.join(s)}" for i, s in sorted(d.get("exceptions", {}).items()))
+        subject = "mixed" if d.get("mixed") else "|".join(d.get("subjects", []))
+        rows.append([d["pile"], len(d["ids"]), " ".join(d["ids"]), subject, ex, d.get("note", "").strip()])
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["cluster", "n", "ids", "subject", "exceptions", "note"])
+        w.writerows(sorted(rows))
+    print(f"{len(rows)} piles -> {path}")
+
+
 class Suggestions:
     """Majority subject of the k nearest labelled charts. Never shown as fact."""
 
@@ -253,10 +308,11 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "sheets", "labels", "suggest"])
+    ap.add_argument("step", choices=["units", "shape", "sheets", "page", "answers", "labels", "suggest"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--reviewer", default="", help="name written into subjects.csv")
+    ap.add_argument("--from", dest="src", default="", help="answers: folder of pile JSON files")
     a = ap.parse_args()
     WORK.mkdir(exist_ok=True)
 
@@ -279,6 +335,11 @@ def main():
             sheet.draw(c, ids, out / f"cluster_{c:02d}.png")
         Review().write_form(clusters)
         print(f"{len(clusters)} sheets -> {out}")
+    elif a.step == "page":
+        ReviewPage(a.txt).write(read_clusters(WORK / "clusters.csv"), WORK / "review")
+        print(f"review page -> {WORK / 'review'}")
+    elif a.step == "answers":
+        answers_to_form(a.src)
     elif a.step == "labels":
         if not a.reviewer:
             raise SystemExit("Give --reviewer (or REVIEWER=... to make).")
