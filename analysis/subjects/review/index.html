@@ -328,7 +328,8 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       for (const d of snap.docs) {
         // keep this viewer's own unsaved or open edits; take everything else from the store
         if (dirty[d.id] || busy[d.id] || (sheetFor && key(sheetFor.p.pile) === d.id)) continue;
-        const v = d.data();
+        // the store hands out read-only objects: copy before the page edits them
+        const v = JSON.parse(JSON.stringify(d.data() || {}));
         // update in place, so open handlers keep pointing at the same answer
         Object.assign(answers[d.id] || (answers[d.id] = blank()), { subjects: v.subjects || [], exceptions: v.exceptions || {}, mixed: !!v.mixed, note: v.note || "" });
       }
