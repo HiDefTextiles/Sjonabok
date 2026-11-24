@@ -81,7 +81,9 @@ abroad <- places |> filter(role == "held")
 
 # ── Map ───────────────────────────────────────────────────────────────────────
 m <- leaflet(options = leafletOptions(zoomSnap = 0.25, scrollWheelZoom = FALSE)) |>
-  addProviderTiles(providers$CartoDB.Positron) |>
+  # OpenStreetMap's own tiles: no API key (CARTO now answers "API key required").
+  # Greyed with CSS below so the motif icons stand out.
+  addTiles(attribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors') |>
   fitBounds(-24.4, 63.3, -13.4, 66.6)
 
 # dashed line from a book's main place to its other places
@@ -161,6 +163,7 @@ page <- m |>
      .timeline h4, .not-mapped h4 { font: 600 14px sans-serif; color: %1$s; margin: 0 0 4px; }
      .timeline { margin-bottom: 6px; }
      .leaflet-container { width: 100%% !important; height: min(75vw, 75vh) !important; }
+     .leaflet-tile-pane { filter: grayscale(1) contrast(0.85) brightness(1.08); }
      .key { margin: 2px 0 6px; font-size: 13px; color: #333; }
      .key span { display: inline-block; width: 11px; height: 11px; border: 2px solid; border-radius: 3px; margin: 0 4px 0 10px; vertical-align: -2px; }
      .key span:first-child { margin-left: 0; }
