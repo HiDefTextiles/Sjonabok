@@ -10,6 +10,8 @@ include-after-body:
 ```{=html}
 <div id="gallery" class="gallery">
 <aside class="filters" aria-label="Filters">
+<button id="toggle-filters" class="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-body">Filters <span id="active-n" class="active-n"></span></button>
+<div id="filter-body" class="filter-body">
 <div class="filter-head">
 <input id="q" type="search" placeholder="Search by name, e.g. 5898_246" aria-label="Search patterns">
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
@@ -30,6 +32,7 @@ include-after-body:
 <option value="float">Longest float, first</option>
 </select>
 </label>
+</div>
 </aside>
 <section class="results">
 <p id="count" class="count" aria-live="polite">Loading patterns…</p>
@@ -47,7 +50,7 @@ include-after-body:
 <label title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
 </div>
 <div class="d-canvas"><canvas id="d-canvas"></canvas></div>
-<p id="d-cell" class="d-cell">Hover a cell to see its row and column.</p>
+<p id="d-cell" class="d-cell">Tap or hover a cell to see its row and column.</p>
 </div>
 <div class="d-info">
 <p class="eyebrow" id="d-source"></p>

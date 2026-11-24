@@ -140,6 +140,8 @@
     counts($("f-source"), "source", (p) => p.source);
     counts($("f-group"), "group", group);
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
+    const active = ["kind", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
 
@@ -241,11 +243,17 @@
     $("d-similar").innerHTML = p.similar
       .map((s) => `<a href="#${s}" title="${s}"><img loading="lazy" src="${BASE}thumb/${s}.png" alt="${s}"></a>`)
       .join("");
-    const longest = Math.max(p.width, p.height);
-    view.zoom = Math.max(2, Math.min(24, Math.floor(560 / longest)));
+    const room = Math.min(560, $("detail").clientWidth ? $("detail").clientWidth - 70 : innerWidth - 70);
+    view.zoom = Math.max(2, Math.min(24, Math.floor(Math.max(room, 200) / p.width), Math.floor(560 / p.height)));
     $("d-zoom").value = view.zoom;
     view.matrix = null;
-    if (!$("detail").open) $("detail").showModal();
+    if (!$("detail").open) {
+      $("detail").showModal();
+      const fit = $("detail").clientWidth - 70;  // re-fit now the dialog has its real size
+      view.zoom = Math.max(2, Math.min(24, Math.floor(Math.min(fit, 560) / p.width), Math.floor(560 / p.height)));
+    }
+    $("d-zoom").value = view.zoom;
+    $("detail").scrollTop = 0;
     const txt = await fetch(`${BASE}txt/${p.id}.txt`).then((r) => r.text());
     if (current !== p) return;
     view.matrix = txt.split(/\r?\n/).filter((r) => r.trim());
@@ -272,7 +280,7 @@
     $("d-zoom").addEventListener("input", (e) => { view.zoom = +e.target.value; draw(); });
     $("d-grid").addEventListener("change", (e) => { view.grid = e.target.checked; draw(); });
     $("d-tile").addEventListener("change", (e) => { view.tile = e.target.checked; draw(); });
-    $("d-canvas").addEventListener("mousemove", (e) => {
+    const cellAt = (e) => {
       if (!view.matrix) return;
       const r = e.target.getBoundingClientRect();
       const scale = e.target.width / r.width;
@@ -280,7 +288,9 @@
       const x = Math.floor(((e.clientX - r.left) * scale) / view.zoom) % w;
       const y = Math.floor(((e.clientY - r.top) * scale) / view.zoom) % h;
       if (view.matrix[y]) $("d-cell").textContent = `Row ${y + 1} of ${h}, column ${x + 1} of ${w}: ${view.matrix[y][x] === "1" ? "filled" : "empty"}`;
-    });
+    };
+    $("d-canvas").addEventListener("pointermove", cellAt);
+    $("d-canvas").addEventListener("pointerdown", cellAt);
     $("detail").addEventListener("close", () => {
       current = null;
       history.replaceState(null, "", location.pathname + location.search);
@@ -311,10 +321,18 @@
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();
     });
+    $("toggle-filters").addEventListener("click", (e) => {
+      const open = document.querySelector(".filters").classList.toggle("open");
+      e.currentTarget.setAttribute("aria-expanded", open);
+    });
     setupDetail();
     update();
     if (location.hash.length > 1) openDetail(decodeURIComponent(location.hash.slice(1)));
   }
+
+  // inside an iframe (e.g. on hideftextiles.github.io) drop the site chrome
+  try { if (window.self !== window.top) document.documentElement.classList.add("embedded"); }
+  catch (e) { document.documentElement.classList.add("embedded"); }
 
   document.addEventListener("DOMContentLoaded", init);
 })();
