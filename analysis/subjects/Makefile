@@ -12,6 +12,7 @@ PY      ?= python3
 TXT     ?= ../../patterns/txt
 KINDS   ?= motif,rosette
 K       ?= 50
+WEIGHTS ?= 0 1        # shape, image model (shape alone if embed has not run)
 REVIEWER ?=
 DISTS   = work/shape_dist.csv $(wildcard work/embed_dist.csv)
 
@@ -26,8 +27,8 @@ work/shape_dist.csv: work/units.csv
 embed: work/units.csv embed.py
 	$(PY) embed.py --txt $(TXT)
 
-work/clusters.csv: cluster.R $(DISTS)
-	Rscript cluster.R $(K) $(DISTS)
+work/clusters.csv: cluster.R $(DISTS) Makefile
+	Rscript cluster.R $(K) $(WEIGHTS) work/shape_dist.csv work/embed_dist.csv
 
 sheets: work/clusters.csv
 	$(PY) subjects.py sheets --txt $(TXT)

@@ -9,8 +9,9 @@ turned positions, so orientation does not count, and the distance is
 
     python3 embed.py --txt ../../patterns/txt
 
-Needs PyTorch and network access to github.com and dl.fbaipublicfiles.com
-the first time (the model, about 85 MB, is then cached by torch.hub).
+Needs PyTorch and timm (pip install torch timm) and, the first time, network
+access to huggingface.co, where timm fetches the published DINOv2 weights
+(about 85 MB, then cached).
 The run is on CPU in deterministic mode, so it gives the same numbers
 every time on the same machine. The model name and the SHA-256 of its
 weights are written to work/embed_model.txt.
@@ -18,15 +19,12 @@ weights are written to work/embed_model.txt.
 
 import argparse
 import hashlib
-from pathlib import Path
-
 import numpy as np
 from PIL import Image
 
 from subjects import BAND_KINDS, PILOT_KINDS, WORK, Corpus, write_matrix
 
-MODEL_REPO = "facebookresearch/dinov2"
-MODEL_NAME = "dinov2_vits14"
+MODEL_NAME = "vit_small_patch14_dinov2.lvd142m"   # DINOv2 ViT-S/14 as published by Meta, via timm
 SIZE = 224
 MEAN = np.array([0.485, 0.456, 0.406])   # ImageNet normalisation used by DINOv2
 STD = np.array([0.229, 0.224, 0.225])
@@ -35,19 +33,25 @@ STD = np.array([0.229, 0.224, 0.225])
 class Embedder:
     """Wraps the model so the rest of the code sees numpy arrays only."""
 
-    def __init__(self, repo=MODEL_REPO, name=MODEL_NAME, seed=1):
-        import torch  # imported here so the other steps run without it
+    def __init__(self, name=MODEL_NAME, seed=1):
+        import timm   # imported here so the other steps run without them
+        import torch
         torch.manual_seed(seed)
         torch.use_deterministic_algorithms(True)
         torch.set_num_threads(1)
         self.torch = torch
         self.name = name
-        self.model = torch.hub.load(repo, name).eval()
+        # img_size=224 resamples the position table of the 518 px original;
+        # num_classes=0 returns the 384-number image description (class token).
+        self.model = timm.create_model(name, pretrained=True, img_size=SIZE, num_classes=0).eval()
 
     def weights_hash(self):
-        ckpt = Path(self.torch.hub.get_dir()) / "checkpoints"
-        files = sorted(ckpt.glob(f"{self.name}*.pth"))
-        return hashlib.sha256(files[0].read_bytes()).hexdigest() if files else "unknown"
+        """SHA-256 of the weights as loaded, so a run can be checked later."""
+        h = hashlib.sha256()
+        for k, v in sorted(self.model.state_dict().items()):
+            h.update(k.encode())
+            h.update(v.detach().cpu().numpy().tobytes())
+        return h.hexdigest()
 
     @staticmethod
     def render(cells):
@@ -82,7 +86,7 @@ def main():
     d = np.clip(1.0 - v @ v.T, 0.0, 2.0)
     np.fill_diagonal(d, 0.0)
     write_matrix(WORK / "embed_dist.csv", [u.id for u in units], d)
-    (WORK / "embed_model.txt").write_text(f"{MODEL_REPO}:{MODEL_NAME}\nsha256 {e.weights_hash()}\n")
+    (WORK / "embed_model.txt").write_text(f"timm:{MODEL_NAME}\nsha256 {e.weights_hash()}\n")
     print(f"{len(units)} embeddings with {MODEL_NAME}")
 
 

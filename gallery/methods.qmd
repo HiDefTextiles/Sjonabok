@@ -61,7 +61,7 @@ one with lowered wings can be far apart.
 An *image model* is a neural network that has already learnt, from millions of pictures, to
 describe an image as a list of numbers (an *embedding*). Pictures that look alike to people get
 similar lists. We use [DINOv2](https://arxiv.org/abs/2304.07193), an openly published model, in
-its smallest size (ViT-S/14), which describes each picture with 384 numbers and runs on an
+its smallest size (ViT-S/14, loaded with the `timm` library from Hugging Face), which describes each picture with 384 numbers and runs on an
 ordinary laptop without a graphics card. We do not train or change the model.
 
 For each chart we:
@@ -77,8 +77,12 @@ result is only a proposal.
 
 ## Step 4: clusters {#clusters}
 
-The two distances have different scales, so each is first turned into ranks between 0 and 1 and
-the two are averaged with equal weight. The charts are then grouped with
+The charts are grouped by the image-model distance from step 3. We also tried averaging it with
+the shape distance from step 2 (each first turned into ranks between 0 and 1 so they share a
+scale). On the pilot that mixed deer, stars and flowers in the same piles, while the image model
+alone kept the animals together, so the shape distance now gets weight 0. It is kept in the
+code, because it is used when the image model cannot be run and it may help other collections.
+The charts are then grouped with
 [hierarchical clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html)
 in R (Ward's method). This builds a family tree of the charts, joining the most alike first,
 and the tree is cut into 50 piles.
@@ -88,7 +92,7 @@ large piles mix subjects and have to be sorted chart by chart. Two piles of bird
 they get the same label. The piles are numbered along the tree, so neighbouring numbers look alike.
 
 We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
-of one, so we changed to Ward's method, which keeps piles of similar size (largest 16 in the pilot).
+of one, so we changed to Ward's method, which keeps piles of similar size (largest 18 in the pilot).
 
 ## Step 5: the review {#review}
 
@@ -135,15 +139,14 @@ as *Not yet sorted*.
 ## Try it on your own collection {#guide}
 
 The method works for any set of small images: other pattern books, stamps, logos, fossils. What
-you need: Python 3 with NumPy and Pillow, R with the tidyverse, and for step 3 PyTorch (the model,
-about 85 MB, downloads itself the first time).
+you need: Python 3 with NumPy and Pillow, R with the tidyverse, and for step 3 PyTorch and timm
+(`pip install torch timm`; the model, about 85 MB, downloads itself the first time).
 
 ```bash
 git clone https://github.com/HiDefTextiles/Sjonabok
 cd Sjonabok/analysis/subjects
-make                      # steps 1, 2, 4 and the contact sheets (shape distance only)
-make embed                # step 3: add the image model, then
-make -B sheets            # redo the piles with both distances
+make embed                # steps 1 and 3: units and the image model
+make                      # steps 2 and 4 and the contact sheets
 # ... fill in review.csv ...
 make labels REVIEWER="Your Name"
 make suggest              # suggestions for the next round

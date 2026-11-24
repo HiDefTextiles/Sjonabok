@@ -1,10 +1,13 @@
 # Hierarchical clustering of Sjónabók units (see README.md).
 #
-#   Rscript cluster.R K work/shape_dist.csv [work/embed_dist.csv]
+#   Rscript cluster.R K W_SHAPE W_EMBED work/shape_dist.csv [work/embed_dist.csv]
 #
 # Each distance matrix is turned into ranks scaled to 0..1, so the two
-# measures count equally whatever their units. With one matrix it is used
-# alone. Ward linkage (ward.D2): it keeps clusters of even size, where
+# measures are on the same scale whatever their units, and then averaged
+# with the weights given. The Makefile default is 0 for shape and 1 for the
+# image model: on the pilot, mixing in the shape distance put deer, stars
+# and flowers in the same piles, while the image model alone kept the
+# animals together. A missing matrix is left out. Ward linkage (ward.D2): it keeps clusters of even size, where
 # average linkage chained most charts into one large cluster; the tree is cut into K clusters on purpose more
 # than there are subjects, so that each cluster is likely to hold one
 # subject. Clusters are numbered in the order of the tree, so neighbouring
@@ -17,7 +20,9 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 k <- as.integer(args[1])
-files <- args[-1]
+weights <- as.numeric(args[2:3])
+files <- args[-(1:3)]
+weights <- weights[file.exists(files)]
 files <- files[file.exists(files)]
 
 read_dist <- function(path) {
@@ -40,7 +45,7 @@ rank_scale <- function(m) {
 mats <- lapply(files, read_dist)
 ids <- rownames(mats[[1]])
 mats <- lapply(mats, function(m) m[ids, ids])
-d <- Reduce(`+`, lapply(mats, rank_scale)) / length(mats)
+d <- Reduce(`+`, Map(function(m, w) w * rank_scale(m), mats, weights)) / sum(weights)
 
 tree <- hclust(as.dist(d), method = "ward.D2")
 raw <- cutree(tree, k = k)
@@ -54,4 +59,4 @@ write_csv(as_tibble(d, rownames = "id"), "work/dist.csv")
 sizes <- count(clusters, cluster)
 cat(sprintf("%d units, %d clusters (sizes %d to %d), from %s\n",
             length(ids), k, min(sizes$n), max(sizes$n),
-            paste(basename(files), collapse = " + ")))
+            paste(sprintf("%g x %s", weights, basename(files)), collapse = " + ")))
