@@ -65,13 +65,14 @@ Plot.plot({
 
 ## Symmetry
 
-Symmetry is measured automatically: a mirror or turn counts when at least `{ojs} Math.round(db.tolerance * 100)`% of the cells match. Bands are classified into the seven **frieze groups**, using one repeat of the band. Motifs and rosettes get a **point group**: D4 is the eightfold symmetry of a square star, D1 a single mirror, C1 none.
+Symmetry is measured automatically: a mirror or turn counts when at least `{ojs} Math.round(db.tolerance * 100)`% of the cells match. Bands are classified into the seven **frieze groups**, using one repeat of the band. Motifs and rosettes get a **point group**: D4 is the eightfold symmetry of a square star, D1 a single mirror, C1 none. [What the codes mean, with pictures](about.qmd#symmetry).
 
 ```{ojs}
 //| echo: false
 bands = rows.filter(d => d.frieze)
 motifs = rows.filter(d => d.point)
-friezeNames = ({p1: "translation only", p11g: "glide reflection", p1m1: "vertical mirrors", p2: "half-turns", p2mg: "vertical mirrors + glide", p11m: "horizontal mirror", p2mm: "both mirrors"})
+friezeNames = ({p1: "repeats only", p11g: "glide", p1m1: "mirrors across", p2: "half-turns", p2mg: "mirrors across + glide", p11m: "mirror along", p2mm: "mirrors across + along"})
+pointNames = ({C1: "none", D1: "one mirror", C2: "half-turn", D2: "two mirrors", C4: "pinwheel", D4: "square star"})
 html`<div class="pair" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem">
 <div><h4>Bands: frieze groups (${bands.length})</h4>${
 Plot.plot({
@@ -87,12 +88,12 @@ Plot.plot({
 })}</div>
 <div><h4>Motifs and rosettes: point groups (${motifs.length})</h4>${
 Plot.plot({
-  marginLeft: 60, height: 260, width: Math.min(width, 560),
+  marginLeft: 120, height: 260, width: Math.min(width, 560),
   x: {label: "Patterns", grid: true}, y: {label: null},
   color: {...hi, legend: true},
   marks: [
     Plot.barX(motifs, Plot.groupY({x: "count"}, {
-      y: "point", fill: "type", sort: {y: "-x"},
+      y: d => `${d.point} · ${pointNames[d.point]}`, fill: "type", sort: {y: "-x"},
       href: d => `index.html?group=${d.point}`, tip: true
     })),
     Plot.ruleX([0])

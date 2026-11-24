@@ -20,14 +20,31 @@
     "vertical band": "Vertical band",
   };
   const SYM = [
-    ["mirror_lr", "Left–right mirror"],
-    ["mirror_tb", "Top–bottom mirror"],
-    ["turn180", "Half-turn"],
-    ["turn90", "Quarter-turn"],
-    ["diagonal", "Diagonal mirror"],
-    ["glide", "Glide (bands)"],
-    ["none", "No symmetry"],
+    ["mirror_lr", "Left–right mirror", "The left half mirrors the right half"],
+    ["mirror_tb", "Top–bottom mirror", "The top half mirrors the bottom half"],
+    ["turn180", "Half-turn", "Looks the same turned upside down (180°)"],
+    ["turn90", "Quarter-turn", "Looks the same turned on its side (90°)"],
+    ["diagonal", "Diagonal mirror", "A square pattern mirrors across a diagonal"],
+    ["glide", "Glide (bands)", "Flipped top to bottom and moved half a repeat along, like footprints"],
+    ["none", "No symmetry", "No mirror, turn or glide found"],
   ];
+  // Symmetry group codes in plain words; pictures on about.html#symmetry
+  const GROUP_INFO = {
+    p1: "Band: repeats only, every copy faces the same way",
+    p11g: "Band: glide, copies flip top to bottom as they repeat, like footprints",
+    p1m1: "Band: mirror lines across the band",
+    p2: "Band: half-turns, same upside down, no mirror",
+    p2mg: "Band: mirror lines across the band, and a glide",
+    p11m: "Band: one mirror line along the middle, top mirrors bottom",
+    p2mm: "Band: mirror lines across and along the band",
+    C1: "Motif: no symmetry",
+    D1: "Motif: one mirror line",
+    C2: "Motif: half-turn only, same upside down, no mirror",
+    D2: "Motif: two mirror lines at right angles",
+    C4: "Motif: quarter-turns, no mirror (pinwheel)",
+    D4: "Motif: quarter-turns and four mirror lines (square star)",
+    "—": "No group: a band without a clear repeat",
+  };
   const RANGES = [
     ["trim_width", "Width (cells)"],
     ["trim_height", "Height (cells)"],
@@ -46,12 +63,13 @@
   // ── filter controls ────────────────────────────────────────────────────
   function chips(el, key, entries) {
     el.innerHTML = "";
-    for (const [value, label] of entries) {
+    for (const [value, label, title] of entries) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip";
       b.dataset.value = value;
       b.setAttribute("aria-pressed", "false");
+      if (title) b.title = title;
       b.innerHTML = `${label} <span class="n"></span>`;
       b.addEventListener("click", () => {
         state[key].has(value) ? state[key].delete(value) : state[key].add(value);
@@ -302,7 +320,7 @@
         ? ` (${p.repeat_status === "ok" ? "checked" : "check"}: ${(p.repeat_mismatch * 100).toFixed(1)}% of cells differ)` : "") : null) +
       fact("Filled cells", `${p.ones} (${pct(p.density)})`) +
       fact("Symmetry", syms) +
-      fact("Symmetry group", grp) +
+      fact("Symmetry group", `${grp} <a class="what" href="about.html#symmetry" title="What the symmetry codes mean">what is this?</a>`) +
       fact("Separate pieces", p.pieces) +
       fact("Longest float", `${p.float_fg} filled, ${p.float_bg} empty cells in a row`);
     $("d-txt").href = `${BASE}txt/${p.id}.txt`;
@@ -386,7 +404,7 @@
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
     chips($("f-sym"), "sym", SYM);
     const groups = [...new Set(data.map(group))].sort();
-    chips($("f-group"), "group", groups.map((g) => [g, g]));
+    chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
     chips($("f-source"), "source", sources);
     ranges($("f-range"));
