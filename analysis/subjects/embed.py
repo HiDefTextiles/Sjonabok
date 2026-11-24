@@ -80,16 +80,19 @@ def main():
     ap.add_argument("--txt", default="../../patterns/txt")
     ap.add_argument("--all", action="store_true",
                     help="every chart, bands by their repeat unit -> work/embed_all_dist.csv (for features)")
+    ap.add_argument("--tile", action="store_true",
+                    help="with --all: embed each chart repeated (2 x 2, or 3 repeats of a band) -> work/embed_tiled_dist.csv")
     a = ap.parse_args()
     units = Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units
     if not a.all:
         keep = set(Corpus.read_ids(WORK / "units.csv"))
         units = [u for u in units if u.id in keep]
     e = Embedder()
-    v = np.stack([e.embed(u.cells) for u in units])
+    v = np.stack([e.embed(u.tiled() if a.tile else u.cells) for u in units])
     d = np.clip(1.0 - v @ v.T, 0.0, 2.0)
     np.fill_diagonal(d, 0.0)
-    write_matrix(WORK / ("embed_all_dist.csv" if a.all else "embed_dist.csv"), [u.id for u in units], d)
+    name = "embed_tiled_dist.csv" if a.tile else "embed_all_dist.csv" if a.all else "embed_dist.csv"
+    write_matrix(WORK / name, [u.id for u in units], d)
     (WORK / "embed_model.txt").write_text(f"timm:{MODEL_NAME}\nsha256 {e.weights_hash()}\n")
     print(f"{len(units)} embeddings with {MODEL_NAME}")
 

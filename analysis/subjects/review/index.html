@@ -110,6 +110,17 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
 
   function ink() { return getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#10099F"; }
 
+  const tiled = {};
+  const wide = (c) => c.rows[0].length > 2 * c.rows.length;
+  function view(c) {
+    const r = c.rows;
+    if (wide(c)) return tiled[c.id] ? r : r.map((x) => x.slice(0, 2 * r.length + 24));
+    return tiled[c.id] ? [...r, ...r].map((x) => x + x) : r;
+  }
+  function capText(c) {
+    if (wide(c)) return tiled[c.id] ? "Whole band. Tap for a close-up." : "Start of the band. Tap to see all of it.";
+    return tiled[c.id] ? "Repeated 2 by 2. Tap for one." : "Tap to see it repeated.";
+  }
   function draw(canvas, rows, box) {
     const h = rows.length, w = rows[0].length;
     const z = Math.max(1, Math.floor(box / Math.max(w, h)));
@@ -202,13 +213,18 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       const b = document.createElement("button");
       b.type = "button"; b.className = "chart" + (a.exceptions[c.id] ? " is-ex" : "");
       b.title = c.id; b.setAttribute("aria-label", "Chart " + c.id + (a.exceptions[c.id] ? ", set apart" : ""));
-      const cv = document.createElement("canvas"); draw(cv, single ? c.rows.map((r) => r.slice(0, 2 * c.rows.length + 24)) : c.rows, single ? 240 : 68); b.appendChild(cv);
+      const cv = document.createElement("canvas"); draw(cv, single ? view(c) : c.rows, single ? 240 : 68); b.appendChild(cv);
       if (a.exceptions[c.id]) {
         const ex = document.createElement("span"); ex.className = "ex";
         ex.textContent = a.exceptions[c.id].map((s) => (vocab.find((v) => v.key === s) || { label: s }).label).join(", ");
         b.appendChild(ex);
       }
       if (!single) b.addEventListener("click", () => openSheet(p, c));
+      // single charts: tap to see the pattern repeated (2 x 2 for a motif, the whole length for a band),
+      // because a knot can run across the edge of one repeat
+      else b.addEventListener("click", () => { tiled[c.id] = !tiled[c.id]; draw(cv, view(c), 240); cap.textContent = capText(c); });
+      const cap = document.createElement("small"); cap.className = "hint";
+      if (single) { cap.textContent = capText(c); b.appendChild(cap); }
       grid.appendChild(b);
     }
     el.appendChild(grid);

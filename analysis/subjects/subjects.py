@@ -27,7 +27,8 @@ Steps (run through the Makefile in this folder, see README.md):
              new page of the unseen charts nearest to the confirmed knots
              (image model over every chart, embed.py --all)           -> work/knots2/
     features distances for every chart, bands by repeat unit: shape,
-             symmetry, form, provenance, texture (+ embed.py --all)   -> work/all/*_dist.csv
+             symmetry, form, provenance, texture, and texture of the
+             repeated chart (+ embed.py --all and --all --tile)       -> work/all/*_dist.csv
     learn    weights for those distances, learnt from the labels
              (main groups and knots); the fair test is held out       -> weights.csv
     fair     answers of the fair test (charts labelled one at a time)
@@ -89,6 +90,12 @@ class Unit:
             if r is not None:
                 return r.unit if axis == "x" else r.unit.T
         return p.trim
+
+    def tiled(self):
+        """The unit repeated: 2 x 2 for a motif, 3 repeats along a band. A knot or a
+        star can run across the edge of one repeat and only show when repeated."""
+        c = self.cells
+        return np.tile(c, (1, 3)) if self.kind in BAND_KINDS else np.tile(c, (2, 2))
 
     def variants(self, n=16):
         """The unit as small pictures in all 8 flipped and turned positions."""
@@ -841,10 +848,17 @@ def main():
         for name, d in md.blocks().items():
             np.fill_diagonal(d, 0.0)
             write_matrix(ALL / f"{name}_dist.csv", md.ids, d)
+        # the knot measures again on the repeated chart (Unit.tiled)
+        tm = [KnotScore.measures(u.tiled()) for u in units]
+        rk = lambda k: np.array([m[k] for m in tm]).argsort().argsort()
+        d = np.mean([MetaDistance.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
+        np.fill_diagonal(d, 0.0)
+        write_matrix(ALL / "texture_tiled_dist.csv", md.ids, d)
         print(f"{len(units)} charts -> {ALL}")
     elif a.step == "learn":
-        names = ["image", "shape", "symmetry", "form", "provenance", "texture"]
-        files = {"image": WORK / "embed_all_dist.csv", **{n: ALL / f"{n}_dist.csv" for n in names[1:]}}
+        names = ["image", "image_tiled", "shape", "symmetry", "form", "provenance", "texture", "texture_tiled"]
+        files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
+                 **{n: ALL / f"{n}_dist.csv" for n in names[2:]}}
         distances = {n: read_matrix(files[n]) for n in names if files[n].exists()}
         wl = WeightLearner(distances)
         best = wl.fit()

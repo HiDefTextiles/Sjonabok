@@ -1,7 +1,9 @@
 distance,weight
-image,0.80
+image,0.60
+image_tiled,0.20
 shape,0.00
 symmetry,0.00
-form,0.10
+form,0.00
 provenance,0.00
-texture,0.10
+texture,0.00
+texture_tiled,0.20
