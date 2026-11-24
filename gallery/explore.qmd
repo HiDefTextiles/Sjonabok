@@ -32,7 +32,7 @@ html`<ul class="source-legend">${[...sourceColors].map(([s, d]) =>
 ### Bands
 
 ::: {.overview-sheet}
-[![Every band that repeats (borders, edgings and vertical bands laid flat), in rows; each band is repeated to fill its share of the row.](patterns/overview-bands.png){fig-alt="Rows of small embroidery bands, coloured by source manuscript"}](patterns/overview-bands.png)
+[![Every band that repeats (borders, edgings and vertical bands laid flat), repeated to one length and stacked in columns.](patterns/overview-bands.png){fig-alt="Rows of small embroidery bands, coloured by source manuscript"}](patterns/overview-bands.png)
 :::
 
 ### Motifs, rosettes and one-off bands

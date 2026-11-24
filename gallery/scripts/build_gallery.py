@@ -444,11 +444,12 @@ class Gallery:
             r["similar"] = [records[j]["id"] for j in np.argsort(-score[i])[:k]]
 
     def save_overview(self):
-        """Two sheets: bands that repeat (vertical ones laid flat), and
+        """Two sheets: bands that repeat (vertical ones laid flat) stacked in
+        columns, and
         everything else (motifs, rosettes, bands that do not repeat). Each
         source in order, manuscript 1 at the top. Layouts made
         by pack_overview.py (Gurobi) are used when they match the charts."""
-        bands = BandRows(BAND_SHEET_WIDTH).add_all([p for p in self.patterns if p.is_band()])
+        bands = BandColumns(BAND_COLUMNS, BAND_LENGTH).add_all([p for p in self.patterns if p.is_band()])
         bands.save_items(self.out / "overview-band-items.csv")
         bands.save(self.out / "overview-bands.png", LAYOUT_DIR / "bands.csv")
         motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in self.patterns if not p.is_band()])
@@ -456,7 +457,8 @@ class Gallery:
         motifs.save(self.out / "overview-motifs.png", LAYOUT_DIR / "motifs.csv")
 
 
-BAND_SHEET_WIDTH = 720    # cells across the band sheet
+BAND_COLUMNS = 8          # columns on the band sheet
+BAND_LENGTH = 116         # cells of each band shown (the widest chart)
 MOTIF_SHEET_WIDTH = 720   # cells across the motif sheet
 # Layouts optimised by pack_overview.py (Gurobi) from <out>/overview-*-items.csv.
 # Used when they list exactly the charts on the sheet; otherwise a simple
@@ -515,50 +517,47 @@ class Sheet:
         write_png(canvas, path)
 
 
-class BandRows(Sheet):
-    """Bands in rows. A band repeats, so its length is free: each row is
-    filled edge to edge, its bands sharing the width equally, and only the
-    heights matter. A row is as tall as its tallest band, so the packing
-    tries to put bands of one height together."""
+class BandColumns(Sheet):
+    """Bands stacked in columns, every band repeated to the column width.
+    Only heights matter: each source's bands are shared out over the
+    columns so that, after every source, the columns are about equally
+    tall. Colour changes then run straight across and the columns end
+    level, with no white space inside a column."""
 
-    MIN_LENGTH = 60      # cells; a band is never shown shorter (nor shorter than one repeat)
+    def __init__(self, columns, length, gap=3):
+        super().__init__(columns * (length + gap) - gap, gap)
+        self.columns, self.length = columns, length
 
-    def max_per_row(self, p):
-        return max(1, (self.width + self.gap) // (max(p.band_unit().shape[1], self.MIN_LENGTH) + self.gap))
+    def h(self, p):
+        return p.band_unit().shape[0] + self.gap
 
     def save_items(self, path):
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["id", "source", "rank", "h", "max_per_row"])
+            w.writerow(["id", "source", "rank", "h"])           # h includes the gap
             for p in self.patterns:
-                w.writerow([p.id, p.source, source_rank(p.source), p.band_unit().shape[0], self.max_per_row(p)])
+                w.writerow([p.id, p.source, source_rank(p.source), self.h(p)])
 
-    def greedy_rows(self):
-        """Within each source, by height; a row is closed when full."""
-        order = sorted(self.patterns, key=lambda p: (source_rank(p.source), p.band_unit().shape[0]))
-        row, r, members = {}, 0, []
-        for p in order:
-            if members and len(members) + 1 > min(self.max_per_row(q) for q in members + [p]):
-                r, members = r + 1, []
-            members.append(p)
-            row[p.id] = r
-        return row
+    def greedy(self):
+        """Source by source, tallest first, each band onto the lowest column."""
+        tops, col = [0] * self.columns, {}
+        for rank in sorted({source_rank(p.source) for p in self.patterns}):
+            group = [p for p in self.patterns if source_rank(p.source) == rank]
+            for p in sorted(group, key=lambda p: -self.h(p)):
+                c = min(range(self.columns), key=lambda c: tops[c])
+                col[p.id] = c
+                tops[c] += self.h(p)
+        return col
 
     def save(self, path, layout_path):
-        layout = self.read_layout(layout_path, ["row"])
-        row = {k: v[0] for k, v in layout.items()} if layout else self.greedy_rows()
-        rows = {}
-        for p in self.patterns:
-            rows.setdefault(row[p.id], []).append(p)
-        items, y = [], 0
-        for r in sorted(rows):
-            members = sorted(rows[r], key=lambda p: source_rank(p.source))
-            rh = max(p.band_unit().shape[0] for p in members)
-            edges = np.linspace(0, self.width + self.gap, len(members) + 1).round().astype(int)
-            for p, x0, x1 in zip(members, edges[:-1], edges[1:]):
-                m = p.band_strip(x1 - x0 - self.gap)
-                items.append((y + (rh - m.shape[0]) // 2, x0, m, p))
-            y += rh + self.gap
+        layout = self.read_layout(layout_path, ["column"])
+        col = {k: v[0] for k, v in layout.items()} if layout and all(
+            0 <= v[0] < self.columns for v in layout.values()) else self.greedy()
+        tops, items = [0] * self.columns, []
+        for p in sorted(self.patterns, key=lambda p: (source_rank(p.source), -self.h(p))):
+            c = col[p.id]
+            items.append((tops[c], c * (self.length + self.gap), p.band_strip(self.length), p))
+            tops[c] += self.h(p)
         self.draw(items, path)
 
 

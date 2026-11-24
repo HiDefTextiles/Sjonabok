@@ -8,11 +8,10 @@ that build_gallery.py then uses instead of its simple packing:
 
 Only this script needs gurobipy (and a licence); the site build does not.
 
-Bands: each band goes into one row. A row is as tall as its tallest band
-and its bands share the width, so a band's length is free (it repeats).
-Minimise the total height of the rows. Sources keep their order: every row
-of source s comes no later than every row of source s+1 (rows may be
-shared where one source ends and the next begins).
+Bands: every band is repeated to the column width and stacked in one of
+K columns, so only heights matter. Assign each band to a column so that,
+after each source (in order), the column heights are as equal as possible:
+colour changes then run straight across and the columns end level.
 
 Motifs: rectangles (chart + gap) on a strip of fixed width, no overlap,
 no rotation. Minimise the sheet height plus GROUP times the total vertical
@@ -44,67 +43,46 @@ def write(path, fields, rows):
 
 
 class BandPacker:
-    """Assign bands to rows (see module docstring)."""
+    """Share each source's bands over the columns (see module docstring)."""
 
-    def __init__(self, items, gap=3):
-        self.items, self.gap = items, gap
+    def __init__(self, items, columns):
+        self.items, self.K = items, columns
         self.h = [int(r["h"]) for r in items]
-        self.cap = [int(r["max_per_row"]) for r in items]
         self.rank = [int(r["rank"]) for r in items]
 
-    def greedy(self):
-        """Starting rows: within each source by height, rows closed when full."""
-        order = sorted(range(len(self.items)), key=lambda i: (self.rank[i], self.h[i]))
-        row, r, members = [0] * len(order), 0, []
-        for i in order:
-            if members and len(members) + 1 > min(self.cap[j] for j in members + [i]):
-                r, members = r + 1, []
-            members.append(i)
-            row[i] = r
-        return row
-
     def solve(self, time_limit):
-        n, start = len(self.items), self.greedy()
-        R = max(start) + 1                         # never need more rows than the start
+        n, K = len(self.items), self.K
+        ranks = sorted(set(self.rank))
         m = gp.Model("bands")
         m.Params.TimeLimit = time_limit
-        a = m.addVars(n, R, vtype=GRB.BINARY, name="a")
-        used = m.addVars(R, vtype=GRB.BINARY, name="used")
-        H = m.addVars(R, lb=0, name="H")
-        pos = m.addVars(n, lb=0, ub=R - 1, name="row")        # row index of each band
+        a = m.addVars(n, K, vtype=GRB.BINARY, name="a")
         for i in range(n):
             m.addConstr(a.sum(i, "*") == 1)
-            m.addConstr(pos[i] == gp.quicksum(r * a[i, r] for r in range(R)))
-            for r in range(R):
-                m.addConstr(H[r] >= self.h[i] * a[i, r])
-                # a row holds no more bands than any of its members allows
-                m.addConstr(a.sum("*", r) <= self.cap[i] + n * (1 - a[i, r]))
-        for r in range(R):
-            m.addConstr(a.sum("*", r) <= n * used[r])
-            if r + 1 < R:
-                m.addConstr(used[r] >= used[r + 1])           # rows used from the top
-        # sources in order: last row of s <= first row of s+1
-        ranks = sorted(set(self.rank))
-        last = m.addVars(ranks, lb=0, name="last")
-        first = m.addVars(ranks, lb=0, name="first")
-        for i in range(n):
-            m.addConstr(last[self.rank[i]] >= pos[i])
-            m.addConstr(first[self.rank[i]] <= pos[i])
-        for s, t in zip(ranks, ranks[1:]):
-            m.addConstr(last[s] <= first[t])
-        m.setObjective(gp.quicksum(H[r] + self.gap * used[r] for r in range(R)), GRB.MINIMIZE)
-        for i in range(n):                                     # warm start
-            for r in range(R):
-                a[i, r].Start = 1 if start[i] == r else 0
+        # C[s, c]: height of column c after the sources up to s
+        C = m.addVars(ranks, K, lb=0, name="C")
+        hi = m.addVars(ranks, lb=0, name="hi")
+        lo = m.addVars(ranks, lb=0, name="lo")
+        for k, s in enumerate(ranks):
+            for c in range(K):
+                m.addConstr(C[s, c] == (C[ranks[k - 1], c] if k else 0)
+                            + gp.quicksum(self.h[i] * a[i, c] for i in range(n) if self.rank[i] == s))
+                m.addConstr(hi[s] >= C[s, c])
+                m.addConstr(lo[s] <= C[s, c])
+        # straight colour changes: small spread after every source; level
+        # bottom: the last spread counts double
+        m.setObjective(gp.quicksum(hi[s] - lo[s] for s in ranks) + (hi[ranks[-1]] - lo[ranks[-1]]),
+                       GRB.MINIMIZE)
+        # column symmetry: the first source fills columns in order of height
+        first = [i for i in range(n) if self.rank[i] == ranks[0]]
+        for c in range(K - 1):
+            m.addConstr(gp.quicksum(self.h[i] * a[i, c] for i in first)
+                        >= gp.quicksum(self.h[i] * a[i, c + 1] for i in first))
         m.optimize()
-        row = [next(r for r in range(R) if a[i, r].X > 0.5) for i in range(n)]
-        # renumber the rows that are used, top to bottom
-        keep = {r: k for k, r in enumerate(sorted(set(row)))}
-        return [keep[r] for r in row]
+        return [next(c for c in range(K) if a[i, c].X > 0.5) for i in range(n)]
 
     def run(self, out, time_limit):
-        row = self.solve(time_limit)
-        write(out, ["id", "row"], [(it["id"], r) for it, r in zip(self.items, row)])
+        col = self.solve(time_limit)
+        write(out, ["id", "column"], [(it["id"], c) for it, c in zip(self.items, col)])
 
 
 class MotifPacker:
@@ -195,13 +173,14 @@ def main():
     ap.add_argument("items", help="overview-*-items.csv from build_gallery.py")
     ap.add_argument("out", help="layout file to write (gallery/layout/*.csv)")
     ap.add_argument("--time", type=float, default=300, help="seconds for Gurobi")
+    ap.add_argument("--columns", type=int, default=8, help="columns on the band sheet")
     ap.add_argument("--width", type=int, default=720, help="motif sheet width in cells")
     ap.add_argument("--group", type=float, default=0.2, help="weight on each source's vertical span")
     ap.add_argument("--rounds", type=int, default=10, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
     items = read(args.items)
     if args.sheet == "bands":
-        BandPacker(items).run(args.out, args.time)
+        BandPacker(items, args.columns).run(args.out, args.time)
     else:
         MotifPacker(items, args.width, args.group).run(args.out, args.time, args.rounds)
 
