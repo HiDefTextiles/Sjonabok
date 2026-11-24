@@ -29,7 +29,7 @@ a motif.
 
 The file name starts with the source: the manuscript or museum number the pattern comes from,
 for example `thjms5898` for Þjms. 5898 at the National Museum of Iceland. The number after it
-identifies the figure on the CD.
+is the page in *Íslensk sjónabók* (2009), so `natmus453_706_p4` is from page 706; `_p4` is our own split of that page, not part of the book.
 
 The charts, the converters and this gallery live in the
 [HiDefTextiles/Sjonabok](https://github.com/HiDefTextiles/Sjonabok) repository. Every pattern in
