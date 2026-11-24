@@ -13,10 +13,12 @@ PY      ?= python3
 TXT     ?= ../../patterns/txt
 KINDS   ?= motif,rosette
 K       ?= 50
-W_SHAPE ?= 0          # cell-by-cell shape distance
-W_EMBED ?= 1          # image model (DINOv2)
-W_META  ?= 0          # gallery measures: symmetry, form, provenance
-META_WEIGHTS ?= 1,1,1 # inside W_META: symmetry,form,provenance
+# Weights of the three distances: cell-by-cell shape, image model (DINOv2),
+# gallery measures (symmetry, form, provenance; split by META_WEIGHTS).
+W_SHAPE ?= 0
+W_EMBED ?= 1
+W_META ?= 0
+META_WEIGHTS ?= 1,1,1
 REVIEWER ?=
 DISTS   = work/shape_dist.csv work/meta_dist.csv $(wildcard work/embed_dist.csv)
 
