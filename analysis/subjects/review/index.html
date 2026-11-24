@@ -41,6 +41,8 @@ h1 { font-size: 1.35rem; margin: 0; font-weight: 700; color: var(--ink); text-wr
 .pile h2 .tag.mixed { color: var(--warn); }
 .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
 .chart { position: relative; aspect-ratio: 1; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 4px; cursor: pointer; display: grid; place-items: center; font: inherit; color: inherit; }
+body.single .charts { grid-template-columns: minmax(0, 260px); }
+body.single .pile h2 small { display: none; }
 .chart canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
 .chart .ex { position: absolute; left: 2px; right: 2px; bottom: 2px; font-size: .62rem; line-height: 1.2; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chart.is-ex { border-color: var(--accent); border-width: 2px; }
@@ -67,7 +69,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
 
 <div class="wrap">
   <header>
-    <h1>Sjónabók subject review</h1>
+    <h1 id="title">Sjónabók subject review</h1>
     <div class="bar" aria-hidden="true"><i id="bar"></i></div>
     <div class="status">
       <span id="progress">Loading piles…</span>
@@ -78,7 +80,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       <span id="save" class="save" aria-live="polite"></span>
     </div>
   </header>
-  <p class="intro">Each pile holds charts the image model found alike. Tap the subject (or several) for the pile. Tap a chart that does not fit to give it its own subject. Mark <b>Mixed</b> if the pile should be split in the next round. Answers save as you go.</p>
+  <p id="intro" class="intro">Each pile holds charts the image model found alike. Tap the subject (or several) for the pile. Tap a chart that does not fit to give it its own subject. Mark <b>Mixed</b> if the pile should be split in the next round. Answers save as you go.</p>
   <div id="notice" class="notice" hidden></div>
   <div id="piles" class="piles"></div>
 </div>
@@ -98,7 +100,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  let data = null, vocab = [], db = null, canWrite = false, local = false;
+  let data = null, vocab = [], db = null, canWrite = false, local = false, single = false;
   const answers = {};          // pile key -> {subjects, exceptions, mixed, note}
   let showAll = false, sheetFor = null;
 
@@ -173,7 +175,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
   function progress() {
     const n = data.piles.length;
     const done = data.piles.filter((p) => isDone(answers[key(p.pile)])).length;
-    $("progress").textContent = `${done} of ${n} piles done`;
+    $("progress").textContent = `${done} of ${n} ${single ? "charts" : "piles"} done`;
     $("bar").style.width = (100 * done / n) + "%";
   }
 
@@ -183,7 +185,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     el.className = "pile" + (isDone(a) ? " done" : "");
     el.id = "pile-" + p.pile;
     const h = document.createElement("h2");
-    h.textContent = "Pile " + p.pile + " ";
+    h.textContent = (single ? "Chart " : "Pile ") + p.pile + " ";
     const sm = document.createElement("small"); sm.textContent = p.charts.length + (p.charts.length === 1 ? " chart" : " charts");
     h.appendChild(sm);
     if (isDone(a)) {
@@ -199,18 +201,18 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       const b = document.createElement("button");
       b.type = "button"; b.className = "chart" + (a.exceptions[c.id] ? " is-ex" : "");
       b.title = c.id; b.setAttribute("aria-label", "Chart " + c.id + (a.exceptions[c.id] ? ", set apart" : ""));
-      const cv = document.createElement("canvas"); draw(cv, c.rows, 68); b.appendChild(cv);
+      const cv = document.createElement("canvas"); draw(cv, c.rows, single ? 240 : 68); b.appendChild(cv);
       if (a.exceptions[c.id]) {
         const ex = document.createElement("span"); ex.className = "ex";
         ex.textContent = a.exceptions[c.id].map((s) => (vocab.find((v) => v.key === s) || { label: s }).label).join(", ");
         b.appendChild(ex);
       }
-      b.addEventListener("click", () => openSheet(p, c));
+      if (!single) b.addEventListener("click", () => openSheet(p, c));
       grid.appendChild(b);
     }
     el.appendChild(grid);
 
-    const lab = document.createElement("p"); lab.className = "label"; lab.textContent = "This pile is";
+    const lab = document.createElement("p"); lab.className = "label"; lab.textContent = single ? "This chart is" : "This pile is";
     const chips = document.createElement("div"); chips.className = "chips";
     for (const v of vocab) {
       chips.appendChild(chip(v.label, a.subjects.includes(v.key), () => {
@@ -219,7 +221,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
         rerender(p); save(k);
       }));
     }
-    chips.appendChild(chip("Mixed", a.mixed, () => {
+    if (!single) chips.appendChild(chip("Mixed", a.mixed, () => {
       a.mixed = !a.mixed; if (a.mixed) a.subjects = [];
       rerender(p); save(k);
     }, "mixed"));
@@ -296,6 +298,11 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     try { data = await fetch("piles.json").then((r) => r.json()); }
     catch (e) { $("progress").textContent = "Could not load the piles."; return; }
     vocab = data.vocabulary;
+    // a "single" run shows one chart per card (the fair test): no Mixed, no odd charts
+    single = !!data.single;
+    if (data.title) { $("title").textContent = data.title; document.title = data.title; }
+    if (data.intro) $("intro").textContent = data.intro;
+    if (single) document.body.classList.add("single");
     render();
 
     const inViewer = !!(window.claude && window.claude.use);

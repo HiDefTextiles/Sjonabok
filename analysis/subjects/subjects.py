@@ -307,7 +307,7 @@ class ReviewPage:
     def __init__(self, txt_dir):
         self.txt_dir = Path(txt_dir)
 
-    def write(self, clusters, out):
+    def write(self, clusters, out, extra=None):
         out.mkdir(parents=True, exist_ok=True)
         piles = []
         for c, ids in clusters.items():
@@ -318,7 +318,7 @@ class ReviewPage:
             piles.append({"pile": c, "charts": charts})
         vocab = [{"key": r["subject"], "label": r["label"]} for r in read_csv(VOCABULARY)]
         run = dt.datetime.fromtimestamp((WORK / "clusters.csv").stat().st_mtime).strftime("%Y-%m-%dT%H%M")
-        (out / "piles.json").write_text(json.dumps({"run": run, "piles": piles, "vocabulary": vocab},
+        (out / "piles.json").write_text(json.dumps({"run": run, "piles": piles, "vocabulary": vocab, **(extra or {})},
                                                    ensure_ascii=False, separators=(",", ":")))
         page = (HERE / "review" / "index.html").read_text(encoding="utf-8")
         (out / "index.html").write_text(self.HEAD + page + "</body></html>", encoding="utf-8")
@@ -376,9 +376,11 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "answers", "labels", "suggest"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
+    ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
+    ap.add_argument("--seed", type=int, default=2026, help="sample: random seed")
     ap.add_argument("--meta-weights", default="1,1,1", help="meta: symmetry,form,provenance")
     ap.add_argument("--reviewer", default="", help="name written into subjects.csv")
     ap.add_argument("--from", dest="src", default="", help="answers: folder of pile JSON files")
@@ -412,6 +414,17 @@ def main():
     elif a.step == "page":
         ReviewPage(a.txt).write(read_clusters(WORK / "clusters.csv"), WORK / "review")
         print(f"review page -> {WORK / 'review'}")
+    elif a.step == "sample":
+        # The fair test: N charts drawn at random (fixed seed), labelled one at a
+        # time, so the labels do not depend on any clustering.
+        ids = sorted(Corpus.read_ids(WORK / "units.csv"))
+        pick = sorted(np.random.default_rng(a.seed).choice(ids, size=min(a.n, len(ids)), replace=False))
+        ReviewPage(a.txt).write({k + 1: [str(i)] for k, i in enumerate(pick)}, WORK / "sample", {
+            "run": f"sample-{a.seed}-{a.n}", "single": True, "title": "Sjónabók fair test",
+            "intro": f"{len(pick)} charts drawn at random. Give each its subject (or several). "
+                     "These labels are used to check which features group charts by subject best. "
+                     "Answers save as you go."})
+        print(f"{len(pick)} charts -> {WORK / 'sample'}")
     elif a.step == "answers":
         answers_to_form(a.src)
     elif a.step == "labels":

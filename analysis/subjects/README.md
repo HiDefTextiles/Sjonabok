@@ -44,3 +44,10 @@ writes the form that `make labels` reads.
 The same page can be published on claude.ai, where answers are kept in the
 page's own database. Export the pile documents as JSON files (one per pile)
 and run `python3 subjects.py answers --from <folder>` to write `review.csv`.
+
+## The fair test
+
+`make sample` draws 40 charts at random (seed 2026) and serves them as a
+review page with one chart per card. Labels made this way do not depend on
+any clustering, so they can compare the distances (shape, image model,
+gallery measures) without favouring the one that made the piles.

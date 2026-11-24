@@ -49,6 +49,11 @@ review: work/review/index.html
 	@echo "Open http://localhost:8000 (Ctrl+C to stop)"
 	$(PY) -m http.server 8000 -d work/review
 
+sample: work/units.csv review/index.html vocabulary.csv
+	$(PY) subjects.py sample --txt $(TXT) --n 40 --seed 2026
+	@echo "Open http://localhost:8001 (Ctrl+C to stop)"
+	$(PY) -m http.server 8001 -d work/sample
+
 labels:
 	$(PY) subjects.py labels --reviewer "$(REVIEWER)"
 
@@ -58,4 +63,4 @@ suggest: work/clusters.csv subjects.csv
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets review labels suggest clean
+.PHONY: all embed sheets review sample labels suggest clean
