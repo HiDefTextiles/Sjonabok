@@ -1,0 +1,13 @@
+subject,label,description
+bird,Bird,"Any bird, including peacocks and doves"
+flower,Flower or plant,"Flowers, leaves, vines, vases with flowers"
+tree,Tree,"Trees and tree-of-life figures"
+deer,Deer or reindeer,"Deer, reindeer, harts"
+animal,Other animal,"Lions, dogs, horses, fish, unicorns and other animals"
+human,Human figure,"People, angels, faces"
+heart,Heart,"Hearts"
+star,Star or rose,"Eight-pointed stars and roses (áttablaðarós and similar)"
+cross,Cross,"Crosses"
+letters,Letters,"Letters, monograms, words"
+geometric,Geometric,"Abstract or geometric figures with no depicted subject"
+unknown,Not sure,"Reviewed, but the subject is unclear"

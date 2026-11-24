@@ -1,0 +1,187 @@
+---
+title: "Methods: sorting motifs by subject"
+description: "How the Sjónabók gallery groups patterns by what they depict (birds, flowers, deer and more): a practical guide to using AI to sort a collection, with a person making every decision."
+---
+
+Many Sjónabók patterns depict something: a bird, a flower in a vase, a reindeer, a heart, a
+human figure. This page explains how we group them by subject, step by step, so that anyone can
+check the result or repeat the method on their own collection. Every script, setting and label is
+in the [Sjonabok repository](https://github.com/HiDefTextiles/Sjonabok/tree/main/analysis/subjects).
+
+::: {.heimild}
+**The rule we follow: the computer proposes, a person decides.** No subject shown in the gallery
+was set by a computer. AI is used to put similar charts next to each other so that a person can
+label them quickly and consistently. Every label carries the name of the person who set it and
+the date.
+:::
+
+## Why not let the AI decide?
+
+Image models are trained mostly on photographs. A Sjónabók chart is different: a bird may be
+10 × 10 cells of black and white, drawn in a style several centuries old. A model can tell that
+two charts *look alike*, and that is useful, but it cannot be trusted to say that a chart *is a
+bird*. A wrong label in a public gallery is worse than no label. So the AI does the tedious part,
+sorting 600 charts into small piles of look-alikes, and a person does the part that needs
+knowledge.
+
+## The workflow at a glance
+
+| Step | Done by | What happens | Output |
+|---|---|---|---|
+| 1. Units | Computer | Pick what to compare: a whole motif, or one repeat of a band | `units.csv` |
+| 2. Shape distance | Computer | Compare every pair of charts cell by cell, ignoring flips, turns and shifts | `shape_dist.csv` |
+| 3. Image model | Computer | Describe each chart with a pretrained image model and compare the descriptions | `embed_dist.csv` |
+| 4. Clusters | Computer | Put the charts into about 50 small piles of look-alikes | `clusters.csv` |
+| 5. Review | Person | Look at each pile, name its subject, pick out the odd ones | `review.csv` → `subjects.csv` |
+| 6. Suggestions | Computer | For charts not yet reviewed, suggest the subject of their nearest labelled neighbours | `suggestions.csv` |
+| 7. Gallery | Computer | Show reviewed subjects as a filter | the *Subject* filter |
+
+Steps 1 to 4 and 6 can be rerun at any time and give the same result. Step 5 is the only one
+whose output is written by a person, and a rerun never changes it.
+
+## Step 1: what is compared {#units}
+
+A stand-alone motif or rosette is compared as the whole chart, with its empty margin trimmed.
+A border band repeats one figure many times, so it is compared on one repeat (the
+[repeat unit](about.qmd#repeats)), otherwise a band of six birds would look nothing like a single
+bird. The first round, the *pilot*, covers the 233 motifs and rosettes. Bands follow once the
+pilot has been reviewed.
+
+## Step 2: shape distance {#shape}
+
+Each chart is shrunk to a 16 × 16 grey picture and compared with every other chart in all eight
+turned and mirrored positions. The best match counts (a correlation between the pictures), and
+the distance is one minus that match. This is the same comparison as
+[similar patterns](about.qmd#similar). It is exact and easy to explain, and it is good at finding
+copies and close variants of the same figure. It is poor at meaning: a bird with raised wings and
+one with lowered wings can be far apart.
+
+## Step 3: a pretrained image model {#embedding}
+
+An *image model* is a neural network that has already learnt, from millions of pictures, to
+describe an image as a list of numbers (an *embedding*). Pictures that look alike to people get
+similar lists. We use [DINOv2](https://arxiv.org/abs/2304.07193), an openly published model, in
+its smallest size (ViT-S/14), which describes each picture with 384 numbers and runs on an
+ordinary laptop without a graphics card. We do not train or change the model.
+
+For each chart we:
+
+1. draw it black on white in a 224 × 224 square, enlarging whole cells so the edges stay sharp;
+2. do this in all eight turned and mirrored positions and average the eight descriptions, so a
+   bird facing left and one facing right are described the same way;
+3. compare two charts by the angle between their descriptions (one minus the cosine similarity).
+
+The model sees the overall form, a beak and legs, a stem with leaves, better than the cell-by-cell
+comparison does. It can also be fooled by texture or by how dense a chart is, which is why its
+result is only a proposal.
+
+## Step 4: clusters {#clusters}
+
+The two distances have different scales, so each is first turned into ranks between 0 and 1 and
+the two are averaged with equal weight. The charts are then grouped with
+[hierarchical clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html)
+in R (Ward's method). This builds a family tree of the charts, joining the most alike first,
+and the tree is cut into 50 piles.
+
+Fifty is deliberately more than the number of subjects. Small, pure piles are quick to review;
+large piles mix subjects and have to be sorted chart by chart. Two piles of birds are no problem,
+they get the same label. The piles are numbered along the tree, so neighbouring numbers look alike.
+
+We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
+of one, so we changed to Ward's method, which keeps piles of similar size (largest 16 in the pilot).
+
+## Step 5: the review {#review}
+
+The reviewer gets one contact sheet per pile, with every chart and its file name, and a form,
+`review.csv`, with one row per pile. For each pile they fill in:
+
+- **subject**: one word from the [subject list](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/vocabulary.csv)
+  (bird, flower, tree, deer, other animal, human figure, heart, star, cross, letters, geometric,
+  not sure). A chart can have several subjects, for example a bird on a flowering branch.
+- **exceptions**: charts in the pile that do not fit, each with its own subject.
+- **mixed**: if the pile is too varied, it is left for a finer cut in the next round.
+
+`make labels` then writes one row per chart into `subjects.csv`: the chart, its subjects, the
+reviewer's name, the date and any note. This file is the result of the whole method, and it is the
+only file a person writes.
+
+## Step 6: suggestions for the rest {#suggestions}
+
+Once some charts are labelled, each unlabelled chart gets a suggestion: the most common subject
+among its five nearest labelled charts, with how many of the five agree. Suggestions go into the
+next review round to speed it up. They are never shown in the gallery as a subject.
+
+## Step 7: the gallery {#gallery}
+
+When the gallery is built, `subjects.csv` is read and each pattern gets its reviewed subjects.
+They appear as the *Subject* filter and in the pattern view. Charts not yet reviewed are listed
+as *Not yet sorted*.
+
+## Open and repeatable {#reproducible}
+
+- **Code and settings are public.** All steps are in
+  [`analysis/subjects/`](https://github.com/HiDefTextiles/Sjonabok/tree/main/analysis/subjects):
+  `subjects.py` (steps 1, 2, 5, 6), `embed.py` (step 3) and `cluster.R` (step 4), run in order
+  by a `Makefile`.
+- **The same input gives the same output.** Clustering has no random element; the image model
+  runs on the processor in PyTorch's deterministic mode; the model name and a fingerprint (SHA-256)
+  of its weights are recorded with each run.
+- **Only human work is stored.** Distances, piles and contact sheets are rebuilt from the charts
+  in minutes, so they are not kept in git. `review.csv` and `subjects.csv` are kept, with names
+  and dates, and every change to them is visible in the repository history.
+- **Labels belong to charts, not piles.** Pile numbers change between runs; labels are stored by
+  the chart's file name, so a new run cannot move or lose them.
+
+## Try it on your own collection {#guide}
+
+The method works for any set of small images: other pattern books, stamps, logos, fossils. What
+you need: Python 3 with NumPy and Pillow, R with the tidyverse, and for step 3 PyTorch (the model,
+about 85 MB, downloads itself the first time).
+
+```bash
+git clone https://github.com/HiDefTextiles/Sjonabok
+cd Sjonabok/analysis/subjects
+make                      # steps 1, 2, 4 and the contact sheets (shape distance only)
+make embed                # step 3: add the image model, then
+make -B sheets            # redo the piles with both distances
+# ... fill in review.csv ...
+make labels REVIEWER="Your Name"
+make suggest              # suggestions for the next round
+```
+
+Lessons from our pilot that carry over:
+
+1. **Start small.** Run the whole loop on a few hundred items before scaling up. Our pilot is the
+   233 motifs and rosettes.
+2. **Over-split on purpose.** Many small piles are faster to label than a few large mixed ones.
+3. **Label piles, fix exceptions.** Naming a pile of 12 birds is one decision, not twelve.
+4. **Keep a fixed vocabulary.** Decide the subject words before reviewing, and add a word only on
+   purpose, so labels stay consistent between people and rounds.
+5. **Keep people's decisions as data.** Store who decided what and when, separately from anything
+   a computer can rebuild.
+6. **Look at the failures.** Piles that mix subjects tell you what the method cannot see; write
+   that down, as we do below.
+7. **Record the model.** Name the model and its version so the result can be checked later.
+
+## Known limits {#limits}
+
+- Both distances compare *form*. Two subjects with the same outline (a tulip and a stylised tree)
+  can share a pile; the reviewer separates them.
+- Very small or very dense charts lose detail at 16 × 16 cells and in the image model.
+- Some charts hold more than one figure; for now they are compared as one picture.
+- The subject words are ours. They describe what the motif looks like today, not what it meant to
+  the people who drew it centuries ago.
+
+## Who did what {#credits}
+
+The method and the subject list were set by Helga Ingimundardóttir, Háskóli Íslands
+(HiDef Textiles), who also reviews every label. The code and this page were written with the help
+of an AI coding assistant (Claude, by Anthropic) and checked by HiDef Textiles. The image model is
+DINOv2 by Meta AI, used as published.
+
+## Sources {#sources}
+
+- Oquab, M. et al. (2023). [DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193). arXiv:2304.07193.
+- R Core Team. [`hclust`: Hierarchical Clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html), R documentation.
+- McInnes, L., Healy, J. and Astels, S. (2017). [hdbscan: Hierarchical density based clustering](https://joss.theoj.org/papers/10.21105/joss.00205). *Journal of Open Source Software* 2(11). An alternative we considered.
+- Radford, A. et al. (2021). [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) (CLIP). Considered for naming suggestions; not used, because its guesses on small pattern charts are unreliable.

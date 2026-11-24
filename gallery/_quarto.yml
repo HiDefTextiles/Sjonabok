@@ -29,6 +29,8 @@ website:
         href: index.qmd
       - text: "Explore"
         href: explore.qmd
+      - text: "Methods"
+        href: methods.qmd
       - text: "About"
         href: about.qmd
     tools:

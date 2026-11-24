@@ -17,6 +17,7 @@ include-after-body:
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
 </div>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
+<details open id="f-subject-box" hidden><summary>Subject</summary><div id="f-subject" class="chips"></div><small><a href="methods.html">Reviewed by hand, see Methods</a></small></details>
 <details open><summary>Symmetry</summary><div id="f-sym" class="chips"></div></details>
 <details><summary>Symmetry group</summary><div id="f-group" class="chips"></div></details>
 <details open><summary>Source</summary><div id="f-source" class="chips"></div></details>

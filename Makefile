@@ -79,3 +79,9 @@ gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
 .PHONY: gallery gallery-data gallery-preview gallery-clean
+
+# ── Subjects (analysis/subjects, see gallery Methods page) ──────────────────
+subjects:
+	$(MAKE) -C analysis/subjects
+
+.PHONY: subjects

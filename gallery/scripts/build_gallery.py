@@ -18,6 +18,7 @@ not a curator's judgement.
 """
 
 import argparse
+import csv
 import json
 import re
 import shutil
@@ -69,6 +70,19 @@ POINT_NAMES = {
     "D1": "one mirror",
     "C1": "no symmetry",
 }
+
+# Subjects (bird, flower, ...) reviewed by a person; see analysis/subjects
+# and the gallery's Methods page. Charts not reviewed yet get no subject.
+SUBJECTS_CSV = Path(__file__).resolve().parents[2] / "analysis" / "subjects" / "subjects.csv"
+VOCABULARY_CSV = SUBJECTS_CSV.with_name("vocabulary.csv")
+
+
+def read_rows(path):
+    if not path.exists():
+        return []
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
 
 NAME_RE = re.compile(r"^(?P<source>.+?)_(?P<number>\d+)(?:_p(?P<part>\d+))?$")
 
@@ -338,12 +352,14 @@ class Gallery:
             p.measure().save_images(self.out)
         records = [p.record() for p in self.patterns]
         self.add_similar(records)
+        subjects = self.add_subjects(records)
         self.save_overview()
         index = {
             "count": len(records),
             "tolerance": TOLERANCE,
             "sources": self.summary(records, "source_label"),
             "kinds": self.summary(records, "kind"),
+            "subjects": subjects,
             "patterns": records,
         }
         (self.out / "patterns.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")))
@@ -355,6 +371,15 @@ class Gallery:
         for r in records:
             counts[r[key]] = counts.get(r[key], 0) + 1
         return dict(sorted(counts.items()))
+
+    @staticmethod
+    def add_subjects(records):
+        """Reviewed subjects per pattern, and the labels of those in use."""
+        labels = {r["id"]: r["subjects"].split("|") for r in read_rows(SUBJECTS_CSV) if r["subjects"]}
+        for r in records:
+            r["subjects"] = labels.get(r["id"], [])
+        used = {s for v in labels.values() for s in v}
+        return {v["subject"]: v["label"] for v in read_rows(VOCABULARY_CSV) if v["subject"] in used}
 
     def add_similar(self, records, k=8):
         """Nearest neighbours: best correlation over shifts, flips and turns
