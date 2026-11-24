@@ -112,13 +112,15 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
 
   const tiled = {};
   const wide = (c) => c.rows[0].length > 2 * c.rows.length;
+  const tall = (c) => c.rows.length > 2 * c.rows[0].length;
   function view(c) {
     const r = c.rows;
     if (wide(c)) return tiled[c.id] ? r : r.map((x) => x.slice(0, 2 * r.length + 24));
+    if (tall(c)) return tiled[c.id] ? r : r.slice(0, 2 * r[0].length + 24);
     return tiled[c.id] ? [...r, ...r].map((x) => x + x) : r;
   }
   function capText(c) {
-    if (wide(c)) return tiled[c.id] ? "Whole band. Tap for a close-up." : "Start of the band. Tap to see all of it.";
+    if (wide(c) || tall(c)) return tiled[c.id] ? "Whole band. Tap for a close-up." : "Start of the band. Tap to see all of it.";
     return tiled[c.id] ? "Repeated 2 by 2. Tap for one." : "Tap to see it repeated.";
   }
   function draw(canvas, rows, box) {
@@ -233,7 +235,9 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     const chips = document.createElement("div"); chips.className = "chips";
     for (const v of vocab) {
       chips.appendChild(chip(v.label, a.subjects.includes(v.key), () => {
-        a.subjects = a.subjects.includes(v.key) ? a.subjects.filter((s) => s !== v.key) : [...a.subjects, v.key];
+        // data.exclusive: one answer per chart (e.g. Knot / No knot)
+        a.subjects = a.subjects.includes(v.key) ? a.subjects.filter((s) => s !== v.key)
+          : data.exclusive ? [v.key] : [...a.subjects, v.key];
         if (a.subjects.length) a.mixed = false;
         rerender(p); save(k);
       }));

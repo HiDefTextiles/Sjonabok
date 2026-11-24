@@ -66,12 +66,16 @@ gallery measures) without favouring the one that made the piles.
 
 ## Ways to browse (no labels)
 
-- `gallery/scripts/facets.py`: outline, line, openness and size words from each 0/1 chart,
-  computed when the gallery is built (NumPy only).
+- `gallery/scripts/facets.py`: fit on 85 needles, outline, stroke and openness words from each
+  0/1 chart, computed when the gallery is built (NumPy only).
 - `subjects.py features`, `make weights.csv`: distances for all 600 charts and the weights learnt
   from the labels (`weights.csv`, kept in git).
-- `make families` (Rscript families.R): look-alike families (M1..M8 motifs, B1..B8 bands, 24 close families
-  each), the look-alike order and a t-SNE map -> `families.csv`, kept in git so the gallery
-  and pattern synthesis can use it without the image model. Needs the R package Rtsne.
+- `make families` (Rscript families.R): look-alike families, as many as stay stable under
+  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M4 motifs, B1..B10 bands), 24 close
+  families per part, the look-alike order and a t-SNE map -> `families.csv`, kept in git so the
+  gallery and pattern synthesis can use it without the image model. Needs the R packages Rtsne
+  and fpc.
+- `subjects.py learn` reports the fair test with a bootstrap 95% interval, balanced accuracy
+  and the agreement (ARI) of a 3-way cut of the motifs with the main groups.
 - `subjects.py misses`: a review page of the charts the computer places in the wrong main
   group, asking what tells them apart (the next features).

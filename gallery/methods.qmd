@@ -95,22 +95,16 @@ We also built a third distance from what the gallery already measures about each
 its symmetry scores and symmetry group, its form (share of filled cells, width to height, number of
 separate pieces) and its provenance (the same manuscript, and the same page, count as closer).
 After the first review we checked how well each distance predicts the subjects the reviewer gave,
-by asking which subject a chart's five nearest charts have:
+by asking which subject a chart's five nearest charts have. The image model came out ahead, but
+that check is unfair to the other distances, and we no longer quote its numbers (an outside
+review could not reproduce them from the labels as committed).
 
-| Distance | Right subject from the 5 nearest charts |
-|---|---|
-| Image model | 80% |
-| Gallery measures (symmetry, form, provenance) | 61% |
-| Cell-by-cell shape | 50% |
-| Image model and gallery measures, 2 : 1 | 73% |
-| Always guess the most common subject (star) | 54% |
-
-This test favours the image model, because the reviewer labelled piles that the image model had
-made. So we ran a fair test (`make sample`): 40 charts drawn at random with a fixed seed and
+It is unfair because the reviewer labelled piles that the image model had made. So we ran a fair test (`make sample`): 40 charts drawn at random with a fixed seed and
 labelled one at a time, outside any pile. Two charts were labelled *not sure*, which leaves 38.
 
-The first surprise was the reviewer. The same person had given 20 of the 40 charts a different
-subject in the piles than on their own, almost always star, cross or geometric. Those 20 were
+The first surprise was the reviewer. The same person had given 20 of the 40 charts a different set
+of subjects in the piles than on their own, almost always star, cross or geometric (a few only
+gained or lost a second subject). Those 20 were
 looked at again on a *settle* page that showed both earlier answers, and the new answer replaced
 both. Then each distance was scored again, guessing a chart's subject from its five nearest
 labelled charts:
@@ -124,11 +118,13 @@ labelled charts:
 | Always guess the most common (star; ornament) | 24% | 53% |
 
 Each range runs over two pools of neighbours: all charts labelled in the piles, and only the other
-38 fair-test charts. With 38 charts a difference of three charts is within chance, so no distance
-is clearly best. The image model stays the default and the gallery measures keep weight 0
+38 fair-test charts. With 38 charts the uncertainty is large (a 95% interval of about ±13
+percentage points), so a difference of three charts is within chance and no distance is clearly
+best. Settling can also have nudged a few labels towards the piles: of the 20, 13 kept the answer
+given on its own, 3 the pile answer, and 4 got a new one. The image model stays the default and the gallery measures keep weight 0
 (`W_META` in the Makefile). The clearer lesson is in the second column: at the level of the
-[main groups](#groups) the computer is right about three times in four, and the reviewer's two
-answers agreed nine times in ten even before settling.
+[main groups](#groups) the computer is right about three times in four, and before settling the
+reviewer's two answers shared a main group for 34 of the 38 charts (identical main groups for 29).
 
 We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
 of one, so we changed to Ward's method, which keeps piles of similar size (largest 18 in the pilot).
@@ -202,32 +198,61 @@ related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-
 
 | Filter | What it measures | Words |
 |---|---|---|
-| Look-alike family | The image model on the chart and on the chart repeated, plus the knot measures on the repeated chart, weighted as learnt below; Ward clustering, motifs and bands separately | M1 to M8 for motifs, B1 to B8 for bands, each split into 3 close families |
-| Outline | The silhouette with holes filled: how much of its box it fills, whether the corners are empty | Square, Rounded or octagon, Diamond or eight-point star, Free shape, Band |
-| Line | Share of filled cells whose four neighbours are all filled | Line drawing (under 5%), Mixed, Solid (20% or more) |
-| Openness | Small enclosed openings per 100 filled cells, with the chart repeated so that openings across an edge count | Closed (under 1), Some openings, Lacy (5 or more) |
-| Size | A motif's longer side; a band's width across | Small, Medium, Large |
+| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M4 for motifs, B1 to B10 for bands, with 24 close families in each part |
+| Fit on 85 needles | A motif's width; a band's height across. With a band on both edges the motif corridor is 85 minus twice the band height | Motif up to 20, 21–40, 41–60, over 60 wide; band up to 7, 8–12, 13–17, over 17 rows |
+| Outline | The figure with its holes filled: does it fill 82% or more of its box? | Fills its square, Stands free, Band |
+| Stroke | The middle length of the runs of filled cells along rows and columns | Thin (under 1.5 cells), Double, Bold (2.5 or more) |
+| Openness | Small enclosed openings per 100 filled cells. A tile or band is counted repeated, so openings across an edge count; a free-standing figure is counted once | Closed (under 1), Some openings, Lacy (5 or more) |
 
 The sort order *Look-alike order* walks along the family tree, so each chart sits next to the
 ones most like it, and each family starts with its name.
 
-**People chose the features, the computer sets the groups.** The families use no labels. What
-the labels did was decide which measures count. For each weighting of the measures the computer
-asked how often a chart's five nearest charts share its main group, or its *knot* answer, and
-kept the best weighting (`make weights.csv` in `analysis/subjects`). The fair-test charts were left out of this. The
-result: the image model 0.6, the image model on the repeated chart 0.2, the knot measures on the
-repeated chart 0.2, and nothing for symmetry, form or provenance. The repeated view came in
-because the reviewer noticed that some knots and stars only show when a motif is repeated.
+**People chose the features, the computer sets the groups.** The families use no labels. The
+labels decided which measures count, and they come from the review: the reviewer saw that knots
+and stars can show only when a motif is repeated, so the image model also looks at the chart
+repeated (2 × 2, or a band twice along its length); and an outside review pointed out that
+turning charts every way hides which way is up, which is what tells a plant (stem at the bottom)
+or an animal (legs below) from an ornament, so the image model also looks at the chart only
+upright and mirrored left to right, and three measures of uprightness were added (left-right and
+top-bottom mirror kept apart, how top-heavy, how narrow the base).
 
-What it does not do yet: the families split by form rather than subject. Animals do gather
-(family M2 holds most of the deer and other animals, together with tulip-like figures), but the
-top of the tree separates open from solid and square from free, not animals from plants. A page
-of the charts the computer still places in the wrong main group asks the reviewer what tells
-them apart; those clues are the next features to measure.
+For each weighting of the ten distances on a grid, the computer scored three things on the
+labelled charts, leaving out the fair test: how often a chart's five nearest charts share its main
+group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
+the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
+the top, so their mean is kept (`make weights.csv` in `analysis/subjects`): the image model 0.4,
+upright 0.2, repeated 0.2, and symmetry 0.2.
 
-Earlier we tried a fifth word list, *detail* (how many different small 3 × 3 shapes a chart
-uses). Looking at examples showed it did not separate simple from intricate charts, so it was
-dropped.
+How good is it? On the 38 held-out fair-test charts:
+
+| Weighting | Right main group (95% interval) | Balanced over the three groups | Motifs cut in 3 vs main groups (ARI) |
+|---|---|---|---|
+| Learnt weights | 74% (58–87%) | 64% | 0.47 |
+| Image model alone | 76% (63–89%) | 66% | 0.12 |
+| All ten distances equally | 79% (66–92%) | 69% | 0.44 |
+| Always guess ornament | 53% | 33% | 0 |
+
+So, honestly: for guessing a single chart's group, no weighting beats the image model alone.
+What the features change is the shape of the tree. With the image model alone the top split of
+the motifs has almost nothing to do with the groups (ARI 0.12); with the upright, repeated and
+symmetry views it follows them much better (0.47). The balanced column shows where the work is:
+animals are found only 2 times in 5, plants about 3 in 5, ornament nearly always. There are only
+22 animals among the labels, too few to learn from; more animal labels are the next step, and a
+page of the charts the computer still places in the wrong group asks the reviewer what tells them
+apart.
+
+The families themselves are kept only as fine as they are stable. The charts were resampled 50
+times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
+Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73; at 8 families it
+falls to 0.58): roughly large plant scenes, small free figures (animals and sprigs), and two kinds
+of geometric ornament. Bands stay stable up to 10 families, mostly by height and repeat length.
+The 24 close families in each part are finer and less stable: good for browsing, not a claim.
+Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we
+use it as a practical rule, checked by the resampling.
+
+Words we tried and dropped after checking random examples by eye: *line* (by filled neighbours;
+double strokes counted as lines), outline *round* and *diamond* (tulips and vases landed there)
+and *detail* (it did not separate simple from intricate charts).
 
 ## Open and repeatable {#reproducible}
 
@@ -286,6 +311,11 @@ Lessons from our pilot that carry over:
 - Some charts hold more than one figure; for now they are compared as one picture.
 - The knot measure also ranks other lacy, open patterns highly, so many of its top charts are not
   knots.
+- Bands are compared by one repeat. For about 60 bands no repeat was found (some alternate two
+  motifs, some have a long repeat), so they are compared whole, and some band families gather
+  them for that reason rather than for how they look.
+- The knot answers so far come from charts the computer chose as likely knots, so they say
+  little about how the other measures do on knots.
 - The subject words are ours. They describe what the motif looks like today, not what it meant to
   the people who drew it centuries ago.
 

@@ -57,6 +57,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import rankdata
 from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
@@ -191,8 +192,28 @@ class MetaDistance:
                 "pieces": float(np.log1p(p.pieces)),
                 "source": p.source, "page": f"{p.source}_{p.number}",
                 **KnotScore.measures(u.cells),
+                **self.upright(u.cells, s),
             })
         self.rows = rows
+
+    @staticmethod
+    def upright(cells, s):
+        """Which way is up. Charts are drawn upright: a plant stands on a stem or vase, an
+        animal has legs below and a back above, an ornament looks the same every way.
+            lr, tb        left-right and top-bottom mirror agreement, kept apart (not as
+                          larger and smaller), because a plant mirrors left-right only
+            top_heavy     filled share of the top half minus the bottom half
+            base          width of the filled part in the bottom fifth, relative to the
+                          widest row: small for a stem or legs, 1 for a block or a star"""
+        m = np.asarray(cells).astype(bool)
+        h, w = m.shape
+        half = h // 2
+        top, bottom = m[:half].sum(), m[h - half:].sum()
+        widths = [np.ptp(np.nonzero(r)[0]) + 1 if r.any() else 0 for r in m]
+        base_rows = widths[h - max(1, h // 5):]
+        return {"lr": s.get("lr", 0), "tb": s.get("tb", 0),
+                "top_heavy": float((top - bottom) / max(1, m.sum())),
+                "base": float(max(base_rows) / max(1, max(widths)))}
 
     @staticmethod
     def spread(x):
@@ -213,9 +234,10 @@ class MetaDistance:
         prov = 0.5 * self.differs(col("source")) + 0.5 * self.differs(col("page"))
         # texture: the knot measures (enclosed openings, diagonal strokes); rank-spread,
         # because a few lacy charts have very many openings
-        rk = lambda k: np.array(col(k)).argsort().argsort()
+        rk = lambda k: rankdata(col(k), method="average")
         texture = np.mean([self.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
-        return {"symmetry": sym, "form": form, "provenance": prov, "texture": texture}
+        upright = np.mean([self.spread(col(k)) for k in ("lr", "tb", "top_heavy", "base")], axis=0)
+        return {"symmetry": sym, "form": form, "provenance": prov, "texture": texture, "upright": upright}
 
     def matrix(self):
         b = self.blocks()
@@ -393,19 +415,23 @@ def fair_answers(folder, reviewer, path=FAIRTEST):
     """Fair-test answers (one JSON file per chart) -> fairtest.csv."""
     review = Review()
     today = dt.date.today().isoformat()
-    rows = []
+    # merge into what is there; a settled answer (see `settled`) is never undone
+    rows = {r["id"]: r for r in read_csv(path)}
+    n = 0
     for f in sorted(Path(folder).glob("p*.json")):
         d = json.loads(f.read_text())
         d = d.get("data", d)
         subject = review.check("|".join(d.get("subjects", [])))
-        if subject:
-            rows.append({"id": d["ids"][0], "subjects": subject, "reviewer": reviewer, "date": today,
-                         "note": d.get("note", "").strip()})
+        i = d["ids"][0]
+        if subject and not rows.get(i, {}).get("note", "").startswith("settled:"):
+            rows[i] = {"id": i, "subjects": subject, "reviewer": reviewer, "date": today,
+                       "note": d.get("note", "").strip()}
+            n += 1
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["id", "subjects", "reviewer", "date", "note"])
         w.writeheader()
-        w.writerows(sorted(rows, key=lambda r: r["id"]))
-    print(f"{len(rows)} fair-test labels -> {path}")
+        w.writerows(sorted(rows.values(), key=lambda r: r["id"]))
+    print(f"{n} fair-test labels written, {len(rows)} in {path}")
 
 
 def settle_answers(folder, reviewer):
@@ -444,6 +470,9 @@ def feature_answers(folder, feature, reviewer, path=FEATURE_LABELS):
         if not picked:
             continue
         i = d["ids"][0]
+        if feature in picked and len(picked) > 1:
+            print(f"  {i}: both Knot and No knot ticked, skipped")
+            continue
         rows[(i, feature)] = {"id": i, "feature": feature, "value": "yes" if feature in picked else "no",
                               "reviewer": reviewer, "date": today, "note": d.get("note", "").strip()}
         n += 1
@@ -469,6 +498,22 @@ def nearest_to(seeds, ids, d, exclude, n):
     return out
 
 
+def adjusted_rand(a, b):
+    """Adjusted Rand index of two labellings (Hubert and Arabie 1985)."""
+    from math import comb
+    ua, ub = sorted(set(a)), sorted(set(b))
+    t = np.zeros((len(ua), len(ub)), dtype=int)
+    for x, y in zip(a, b):
+        t[ua.index(x), ub.index(y)] += 1
+    n = len(a)
+    s_ij = sum(comb(int(v), 2) for v in t.ravel())
+    s_a = sum(comb(int(v), 2) for v in t.sum(1))
+    s_b = sum(comb(int(v), 2) for v in t.sum(0))
+    expect = s_a * s_b / comb(n, 2)
+    top = (s_a + s_b) / 2
+    return (s_ij - expect) / (top - expect) if top != expect else 0.0
+
+
 class WeightLearner:
     """Learn how much each distance counts, from the people's labels.
 
@@ -486,13 +531,13 @@ class WeightLearner:
     The result only sets weights; the clustering that uses them sees no labels.
     """
 
-    def __init__(self, distances, k=5, step=0.1, min_knots=10):
+    def __init__(self, distances, k=5, step=0.1, min_knots=10, tie=0.006):
         self.names = list(distances)
         self.ids = distances[self.names[0]][0]
         for n in self.names:
             assert distances[n][0] == self.ids, n
         self.D = np.stack([Evaluation.rank_scale(distances[n][1]) for n in self.names])
-        self.k, self.step = k, step
+        self.k, self.step, self.tie = k, step, tie
         idx = {i: n for n, i in enumerate(self.ids)}
         to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
         groups = {r["id"]: {to.get(x, "") for x in r["subjects"].split("|")} - {""} for r in read_csv(SUBJECTS)}
@@ -527,7 +572,7 @@ class WeightLearner:
             for rank, j in enumerate(near):
                 for s in labels[j]:
                     votes[s] = votes.get(s, 0) + 1 - rank * 1e-3
-            right += max(votes, key=votes.get) in truth[i]
+            right += bool(votes) and max(votes, key=votes.get) in truth[i]
         return right / max(1, len(test))
 
     def score(self, w):
@@ -538,20 +583,76 @@ class WeightLearner:
         kn = self.knn(d, list(self.knot), self.knot, self.knot, self.knot)
         return g, kn
 
+    def split_score(self, w, k=3):
+        """ARI of a label-free Ward cut of the labelled motifs (fair test left out) into k
+        groups against their main groups: does the top of the tree follow the groups?"""
+        from scipy.cluster.hierarchy import linkage, fcluster
+        from scipy.spatial.distance import squareform
+        idx = [i for i in sorted(self.group) if len(self.group[i]) == 1]
+        d = np.tensordot(w, self.D[:, idx][:, :, idx], axes=1)
+        cut = fcluster(linkage(squareform(d, checks=False), "ward"), k, "maxclust")
+        return adjusted_rand(list(cut), [next(iter(self.group[i])) for i in idx])
+
     def fit(self):
+        """Score = mean of: nearest-neighbour agreement on main groups, on knots (when
+        there are enough answers), and how well a cut of the tree into 3 follows the
+        main groups (the goal: groups found without labels)."""
         rows = []
         for w in self.grid():
             g, kn = self.score(w)
-            rows.append((g if kn is None else (g + kn) / 2, g, kn, w))
-        rows.sort(key=lambda r: (-r[0], -r[3][self.names.index("image")] if "image" in self.names else 0))
+            parts = [g, self.split_score(w)] + ([] if kn is None else [kn])
+            rows.append((float(np.mean(parts)), g, kn, w))
+        rows.sort(key=lambda r: -r[0])
         self.results = rows
-        self.best = rows[0][3]
+        # Many weightings tie at the top (one chart more or less right); a single winner
+        # would be picked by chance. Take the mean of all weightings within `tie` of the
+        # best score, rounded to the grid, so the choice is stable.
+        top = [r[3] for r in rows if r[0] >= rows[0][0] - self.tie]
+        w = np.mean(top, axis=0)
+        self.best = np.round(w / self.step) * self.step
+        self.best = self.best / self.best.sum()
+        self.n_top = len(top)
         return self.best
 
     def holdout(self, w):
         """Fair-test charts guessed from their k nearest labelled (non-fair) charts."""
         d = np.tensordot(w, self.D, axes=1)
         return self.knn(d, list(self.fair), self.group, self.group, self.fair), len(self.fair)
+
+    def holdout_detail(self, w, boot=2000, seed=2026):
+        """Fair test: share right with a bootstrap 95% interval, and balanced accuracy
+        (the mean of the share right within each main group, so the large ornament
+        group cannot hide misses among animals)."""
+        d = np.tensordot(w, self.D, axes=1)
+        pool = np.array(sorted(self.group))
+        hits, truth = [], []
+        for i in sorted(self.fair):
+            cand = pool[pool != i]
+            near = cand[np.argsort(d[i, cand], kind="stable")[: self.k]]
+            votes = {}
+            for rank, j in enumerate(near):
+                for g in self.group[j]:
+                    votes[g] = votes.get(g, 0) + 1 - rank * 1e-3
+            hits.append(bool(votes) and max(votes, key=votes.get) in self.fair[i])
+            truth.append(sorted(self.fair[i])[0])
+        hits = np.array(hits, dtype=float)
+        rng = np.random.default_rng(seed)
+        b = hits[rng.integers(0, len(hits), (boot, len(hits)))].mean(axis=1)
+        per = {g: hits[[t == g for t in truth]].mean() for g in sorted(set(truth))}
+        return hits.mean(), np.percentile(b, [2.5, 97.5]), np.mean(list(per.values())), per
+
+    def top_split(self, w, kinds, k=3):
+        """Adjusted Rand index between a label-free Ward cut of the motifs into k groups
+        and the people's main groups (charts with one group only). 0 is chance, 1 perfect."""
+        from scipy.cluster.hierarchy import linkage, fcluster
+        from scipy.spatial.distance import squareform
+        d = np.tensordot(w, self.D, axes=1)
+        motifs = [n for n, i in enumerate(self.ids) if kinds.get(i) == "0"]
+        sub = d[np.ix_(motifs, motifs)]
+        cut = fcluster(linkage(squareform(sub, checks=False), "ward"), k, "maxclust")
+        lab = {**self.group, **self.fair}
+        pairs = [(c, next(iter(lab[m]))) for c, m in zip(cut, motifs) if m in lab and len(lab[m]) == 1]
+        return adjusted_rand([p[0] for p in pairs], [p[1] for p in pairs])
 
     def write(self, path=WEIGHTS):
         with open(path, "w", newline="") as f:
@@ -589,8 +690,14 @@ class Evaluation:
 
     @staticmethod
     def rank_scale(d):
-        r = d.ravel().argsort().argsort().reshape(d.shape).astype(float)
-        return r / r.max()
+        """Average ranks of the pairs (upper triangle), scaled to 0..1 and mirrored: the
+        same as rank_scale in cluster.R, so tied distances get the same value."""
+        n = d.shape[0]
+        iu = np.triu_indices(n, 1)
+        r = np.zeros_like(d, dtype=float)
+        if len(iu[0]) > 1:
+            r[iu] = (rankdata(d[iu], method="average") - 1) / (len(iu[0]) - 1)
+        return r + r.T
 
     def guess(self, d, idx, i, pool, labels):
         near = sorted((j for j in pool if j != i), key=lambda j: d[idx[i], idx[j]])[: self.k]
@@ -638,13 +745,20 @@ class Evaluation:
         print(f"-- {self.level}")
         for name, d in scaled.items():
             for pool, (h, n) in self.score(d, ids).items():
-                w.writerow([self.level, name, pool, h, n, f"{h / n:.3f}"])
-                print(f"{name:32s} {pool:6s} {h:3d}/{n} {h / n:.0%}")
+                share = h / n if n else 0.0
+                w.writerow([self.level, name, pool, h, n, f"{share:.3f}"])
+                print(f"{name:32s} {pool:6s} {h:3d}/{n} {share:.0%}")
+        if not self.pile or not self.fair:
+            print("no labels to compare with")
+            return
         top, (h, n) = self.baseline()
         w.writerow([self.level, f"always {top}", "-", h, n, f"{h / n:.3f}"])
         print(f"{'always ' + top:32s} {'-':6s} {h:3d}/{n} {h / n:.0%}")
         shared, same, n = self.agreement()
-        print(f"pile label vs fair label for the same chart: share a subject {shared}/{n}, identical {same}/{n}")
+        # after `settled` both files hold the same answer for the 20 charts that differed,
+        # so this is only informative before settling (it was 25/38 and 20/38 then)
+        print(f"pile label vs fair label for the same chart: share a subject {shared}/{n}, identical {same}/{n}"
+              " (identical after settling by construction)")
 
 
 class KnotScore:
@@ -666,7 +780,7 @@ class KnotScore:
             if m.sum() < min_cells:
                 continue
             self.rows.append({"id": f.stem, **self.measures(m)})
-        rank = lambda k: np.array([r[k] for r in self.rows]).argsort().argsort() / max(1, len(self.rows) - 1)
+        rank = lambda k: (rankdata([r[k] for r in self.rows], method="average") - 1) / max(1, len(self.rows) - 1)
         for r, a, b in zip(self.rows, rank("openings"), rank("diagonal")):
             r["score"] = a + b
         self.rows.sort(key=lambda r: -r["score"])
@@ -821,7 +935,7 @@ def main():
         top = ks.rows[: a.top]
         knot = next(r for r in read_csv(FEATURES) if r["feature"] == "knot")
         ReviewPage(a.txt).write({k + 1: [r["id"]] for k, r in enumerate(top)}, WORK / "knots", {
-            "run": "knots", "single": True, "title": "Sjónabók: find the knots",
+            "run": "knots", "single": True, "exclusive": True, "title": "Sjónabók: find the knots",
             "vocabulary": [{"key": "knot", "label": "Knot"}, {"key": "none", "label": "No knot"}],
             "intro": f"The {len(top)} charts the computer finds most knot-like, most likely first "
                      f"({knot['description'].lower()}). Tap Knot or No knot. Your answers teach the next round."})
@@ -839,7 +953,7 @@ def main():
         ids, d = read_matrix(WORK / "embed_all_dist.csv")
         pick = nearest_to(seeds, ids, d, set(seen), a.top)
         ReviewPage(a.txt).write({k + 1: [i] for k, i in enumerate(pick)}, WORK / "knots2", {
-            "run": f"knots-{len(seeds)}", "single": True, "title": "Sjónabók: more knots",
+            "run": f"knots-{len(seeds)}", "single": True, "exclusive": True, "title": "Sjónabók: more knots",
             "vocabulary": [{"key": "knot", "label": "Knot"}, {"key": "none", "label": "No knot"}],
             "intro": f"The image model's nearest charts to your {len(seeds)} knots, taken from each knot in turn. "
                      "None of these were on the first page. Tap Knot or No knot."})
@@ -859,7 +973,7 @@ def main():
             write_matrix(ALL / f"{name}_dist.csv", md.ids, d)
         # the knot measures again on the repeated chart (Unit.tiled)
         tm = [KnotScore.measures(u.tiled()) for u in units]
-        rk = lambda k: np.array([m[k] for m in tm]).argsort().argsort()
+        rk = lambda k: rankdata([m[k] for m in tm], method="average")
         d = np.mean([MetaDistance.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
         np.fill_diagonal(d, 0.0)
         write_matrix(ALL / "texture_tiled_dist.csv", md.ids, d)
@@ -870,32 +984,45 @@ def main():
                 w.writerow([u.id, u.kind, int(u.kind in BAND_KINDS)])
         print(f"{len(units)} charts -> {ALL}")
     elif a.step == "learn":
-        names = ["image", "image_tiled", "shape", "symmetry", "form", "provenance", "texture", "texture_tiled"]
+        names = ["image", "image_upright", "image_tiled", "shape", "symmetry", "form", "provenance",
+                 "texture", "texture_tiled", "upright"]
         files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
-                 **{n: ALL / f"{n}_dist.csv" for n in names[2:]}}
+                 "image_upright": WORK / "embed_upright_dist.csv",
+                 **{n: ALL / f"{n}_dist.csv" for n in names[3:]}}
         distances = {n: read_matrix(files[n]) for n in names if files[n].exists()}
-        wl = WeightLearner(distances)
+        # a finer grid for few distances, a coarser one for many (the grid grows fast)
+        wl = WeightLearner(distances, step=0.1 if len(distances) <= 8 else 0.2)
         best = wl.fit()
         wl.write()
-        print(f"learnt from {len(wl.group)} group labels and {len(wl.knot)} knot answers; fair test held out")
+        print(f"learnt from {len(wl.group)} group labels and {len(wl.knot)} knot answers (objective: group k-NN, "
+              f"knot k-NN, 3-way split ARI); fair test held out; "
+              f"mean of the {wl.n_top} weightings within {wl.tie} of the best score")
         print("top weightings (score, group, knot, weights " + ",".join(wl.names) + "):")
         for sc, g, kn, w in wl.results[:8]:
             print(f"  {sc:.3f} {g:.3f} {kn if kn is None else round(kn, 3)} {np.round(w, 2)}")
-        for label, w in (("learnt", best), ("image only", np.eye(len(wl.names))[wl.names.index("image")]),
-                         ("equal", np.full(len(wl.names), 1 / len(wl.names)))):
+        compare = [("learnt", best), ("equal", np.full(len(wl.names), 1 / len(wl.names)))]
+        if "image" in wl.names:
+            compare.insert(1, ("image only", np.eye(len(wl.names))[wl.names.index("image")]))
+        kinds = {r["id"]: r["band"] for r in read_csv(ALL / "kinds.csv")}
+        for label, w in compare:
             g, kn = wl.score(w)
-            h, n = wl.holdout(w)
-            print(f"{label:11s} train group {g:.0%}  knot {kn if kn is None else f'{kn:.0%}'}  fair test {h:.0%} of {n}")
+            acc, ci, bal, per = wl.holdout_detail(w)
+            print(f"{label:11s} train {g:.0%}  split ARI {wl.split_score(w):.2f}  knot {kn if kn is None else f'{kn:.0%}'}  "
+                  f"fair test {acc:.0%} (95% {ci[0]:.0%}-{ci[1]:.0%}), balanced {bal:.0%} "
+                  f"[{', '.join(f'{k} {v:.0%}' for k, v in per.items())}]  "
+                  f"motifs cut in 3, agreement with groups (ARI) {wl.top_split(w, kinds):.2f}")
     elif a.step == "final":
         # cluster every chart with the learnt weights (no labels), then name the clusters
-        files = {"image": "work/embed_all_dist.csv", "image_tiled": "work/embed_tiled_dist.csv"}
+        files = {"image": "work/embed_all_dist.csv", "image_tiled": "work/embed_tiled_dist.csv",
+                 "image_upright": "work/embed_upright_dist.csv"}
         args = [f"{r['weight']}={files.get(r['distance'], 'work/all/' + r['distance'] + '_dist.csv')}"
                 for r in read_csv(WEIGHTS) if float(r["weight"]) > 0]
         subprocess.run(["Rscript", "cluster.R", str(a.k), *args], cwd=HERE, check=True,
                        env={**os.environ, "OUT": "work/all"})
         a.step = "groups"
     if a.step == "misses":
-        files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv"}
+        files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
+                 "image_upright": WORK / "embed_upright_dist.csv"}
         rows = read_csv(WEIGHTS)
         wl = WeightLearner({r["distance"]: read_matrix(files.get(r["distance"], ALL / f"{r['distance']}_dist.csv"))
                             for r in rows})
@@ -934,14 +1061,13 @@ def main():
         print(f"{len(misses)} of {len(labels)} labelled charts missed -> {WORK / 'misses'}")
     if a.step == "groups":
         to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
-        labels = {}
-        for path in (SUBJECTS, FAIRTEST):
-            for r in read_csv(path):
-                g = {to.get(x, "") for x in r["subjects"].split("|")} - {""}
-                if g:
-                    labels[r["id"]] = g
+        read = lambda path: {r["id"]: {to.get(x, "") for x in r["subjects"].split("|")} - {""}
+                             for r in read_csv(path)}
+        fair = {i: g for i, g in read(FAIRTEST).items() if g}
+        # clusters are named from the pile labels only; the fair test checks the names
+        labels = {i: g for i, g in read(SUBJECTS).items() if g and i not in fair}
         clusters = read_clusters(ALL / "clusters.csv")
-        rows, unnamed, right, n = [], [], 0, 0
+        rows, unnamed, right, n, fright, fn = [], [], 0, 0, 0, 0
         for c, ids in clusters.items():
             votes = {}
             for i in ids:
@@ -951,6 +1077,8 @@ def main():
             known = [i for i in ids if i in labels]
             right += sum(group in labels[i] for i in known)
             n += len(known)
+            fright += sum(group in fair[i] for i in ids if i in fair)
+            fn += sum(i in fair for i in ids)
             if not group:
                 unnamed.append(c)
             rows += [{"id": i, "cluster": c, "group": group, "labelled": len(known), "size": len(ids)} for i in ids]
@@ -958,8 +1086,8 @@ def main():
             w = csv.DictWriter(f, fieldnames=["id", "cluster", "group", "labelled", "size"])
             w.writeheader()
             w.writerows(rows)
-        print(f"{len(clusters)} clusters; labelled charts in their cluster's group: {right}/{n}; "
-              f"clusters with no labelled chart: {unnamed}")
+        print(f"{len(clusters)} clusters; pile-labelled charts in their cluster's group (in sample): {right}/{n}; "
+              f"fair-test charts (held out): {fright}/{fn}; clusters with no labelled chart: {unnamed}")
     elif a.step == "evaluate":
         distances = {}
         for name, f in (("image", "embed_dist.csv"), ("shape", "shape_dist.csv"), ("meta", "meta_dist.csv")):

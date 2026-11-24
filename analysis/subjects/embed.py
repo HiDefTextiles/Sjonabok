@@ -65,8 +65,13 @@ class Embedder:
         square.paste(img, ((SIZE - img.width) // 2, (SIZE - img.height) // 2))
         return np.repeat(np.asarray(square, dtype=float)[:, :, None] / 255.0, 3, axis=2)
 
-    def embed(self, cells):
-        pics = [np.rot90(b, k) for b in (cells, cells[:, ::-1]) for k in range(4)]
+    def embed(self, cells, upright=False):
+        # all 8 turns and mirrors, or (upright) only the chart and its left-right mirror:
+        # charts are drawn upright, and which way is up tells plants and animals from ornament
+        if upright:
+            pics = [cells, cells[:, ::-1]]
+        else:
+            pics = [np.rot90(b, k) for b in (cells, cells[:, ::-1]) for k in range(4)]
         x = np.stack([(self.render(p) - MEAN) / STD for p in pics]).transpose(0, 3, 1, 2)
         with self.torch.no_grad():
             v = self.model(self.torch.tensor(x, dtype=self.torch.float32)).numpy()
@@ -82,16 +87,19 @@ def main():
                     help="every chart, bands by their repeat unit -> work/embed_all_dist.csv (for features)")
     ap.add_argument("--tile", action="store_true",
                     help="with --all: embed each chart repeated (2 x 2, or 3 repeats of a band) -> work/embed_tiled_dist.csv")
+    ap.add_argument("--upright", action="store_true",
+                    help="with --all: average only the chart and its left-right mirror -> work/embed_upright_dist.csv")
     a = ap.parse_args()
     units = Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units
     if not a.all:
         keep = set(Corpus.read_ids(WORK / "units.csv"))
         units = [u for u in units if u.id in keep]
     e = Embedder()
-    v = np.stack([e.embed(u.tiled() if a.tile else u.cells) for u in units])
+    v = np.stack([e.embed(u.tiled() if a.tile else u.cells, upright=a.upright) for u in units])
     d = np.clip(1.0 - v @ v.T, 0.0, 2.0)
     np.fill_diagonal(d, 0.0)
-    name = "embed_tiled_dist.csv" if a.tile else "embed_all_dist.csv" if a.all else "embed_dist.csv"
+    name = ("embed_upright_dist.csv" if a.upright else "embed_tiled_dist.csv" if a.tile
+            else "embed_all_dist.csv" if a.all else "embed_dist.csv")
     write_matrix(WORK / name, [u.id for u in units], d)
     (WORK / "embed_model.txt").write_text(f"timm:{MODEL_NAME}\nsha256 {e.weights_hash()}\n")
     print(f"{len(units)} embeddings with {MODEL_NAME}")

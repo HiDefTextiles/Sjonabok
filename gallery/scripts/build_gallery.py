@@ -419,16 +419,19 @@ class Gallery:
             r["map"] = [float(f["x"]), float(f["y"])]
             fam = families.setdefault(f["family"], {"n": 0, "example": None, "words": {}})
             fam["n"] += 1
-            if f["example"] == "TRUE" and fam["example"] is None:
+            if f.get("family_example", f["example"]) == "TRUE":
                 fam["example"] = r["id"]
-            for k in ("outline", "line", "open"):
+            if "stability" in f:
+                fam["stability"] = float(f["stability"])
+            for k in ("outline", "stroke", "open"):
                 w = fam["words"].setdefault(k, {})
                 w[r["facets"][k]] = w.get(r["facets"][k], 0) + 1
         for key, fam in families.items():
             top = {k: max(c, key=c.get) for k, c in fam.pop("words").items()}
             band = key.startswith("B")
             first = "Bands" if band else FACET_LABELS["outline"][top["outline"]]
-            fam["label"] = f"{first}, {FACET_LABELS['line'][top['line']].lower()}, {FACET_LABELS['open'][top['open']].lower()}"
+            stable = f", stability {fam['stability']:.2f}" if "stability" in fam else ""
+            fam["label"] = f"{key}: {fam['n']} charts{stable}; mostly {first.lower()}, {FACET_LABELS['stroke'][top['stroke']].lower()} stroke, {FACET_LABELS['open'][top['open']].lower()}"
         return dict(sorted(families.items(), key=lambda kv: (kv[0][0] != "M", int(kv[0][1:]))))
 
     def add_similar(self, records, k=8):

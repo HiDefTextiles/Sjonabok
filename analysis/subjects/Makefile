@@ -78,23 +78,31 @@ knots: review/index.html features.csv
 
 # Final groups: features for every chart, weights learnt from the labels,
 # then a clustering that sees no labels, each cluster named by its labelled charts.
-work/embed_all_dist.csv:
+CHARTS := $(wildcard $(TXT)/*.txt)
+
+work/embed_all_dist.csv: embed.py $(CHARTS)
 	HF_HUB_DISABLE_XET=1 $(PY) embed.py --all --txt $(TXT)
 
-work/embed_tiled_dist.csv:
+work/embed_tiled_dist.csv: embed.py $(CHARTS)
 	HF_HUB_DISABLE_XET=1 $(PY) embed.py --all --tile --txt $(TXT)
 
-work/all/texture_dist.csv:
+work/embed_upright_dist.csv: embed.py $(CHARTS)
+	HF_HUB_DISABLE_XET=1 $(PY) embed.py --all --upright --txt $(TXT)
+
+# writes every work/all/*_dist.csv and work/all/kinds.csv
+work/all/texture_dist.csv: subjects.py $(CHARTS)
 	$(PY) subjects.py features --txt $(TXT)
 
-weights.csv: work/embed_all_dist.csv work/embed_tiled_dist.csv work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
+EMBEDS := work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv
+
+weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
 	$(PY) subjects.py learn
 
 final: weights.csv
 	$(PY) subjects.py final --k $(K)
 
 # look-alike families for every chart (no labels), kept in git for the gallery
-families.csv: weights.csv families.R
+families.csv: weights.csv families.R $(EMBEDS) work/all/texture_dist.csv
 	Rscript families.R
 
 families: families.csv

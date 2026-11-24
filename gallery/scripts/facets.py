@@ -1,27 +1,33 @@
 """Facets: ways to browse the charts, measured from the 0/1 grid alone.
 
 Each facet turns a measure into a few plain words, so it can be a gallery
-filter and a way to put like with like (for example as training sets for
+filter and a way to put like with like (for example as source sets for
 pattern synthesis). No labels and no model are used: anyone can recompute
 them from the charts, and the thresholds are written here.
 
-    line     how the figure is drawn: Line drawing (under 5% of filled
-             cells have all four neighbours filled), Solid (20% or more), Mixed
-    open     how open the figure is when repeated: Closed, Some openings, Lacy
-             (small enclosed openings per 100 filled cells, chart repeated
-             2 x 2, a band twice along its length, so openings across an
-             edge count): under 1 Closed, 5 or more Lacy
-    outline  the silhouette of a motif (holes filled): Square (fills 82% or
-             more of its box), Diamond or eight-point star (corners nearly
-             empty, edges touched only near the middle), Rounded or octagon
-             (fills 60% or more), otherwise Free shape (animals, flowers,
-             trees); bands get Band
-    size     a motif by its longer side: Small (up to 15 cells), Medium (up
-             to 40), Large; a band by its width across: Small (up to 7 rows),
-             Medium (up to 15), Large
+    stroke   how thick the drawing is: the median length of the runs of
+             filled cells along rows and columns. Thin (under 1.5 cells),
+             Double (under 2.5), Bold
+    open     how open the figure is: small enclosed openings (2 cells or more)
+             per 100 filled cells: under 1 Closed, 5 or more Lacy, otherwise
+             Some openings. A chart that runs on across two opposite edges
+             (30% or more of both edge rows or columns filled: a tile) or a
+             band is counted repeated, 2 x 2 or twice along the
+             band, so openings across an edge count; a free-standing figure is
+             counted once, because repeating it only adds gaps between copies
+    outline  Fills its square (the figure with holes filled covers 82% or
+             more of its box), Stands free, or Band
+    fit      for knitting on 85 needles: a motif by its width (Up to 20, 21
+             to 40, 41 to 60, Over 60 cells), a band by its height across
+             (Up to 7, 8 to 12, 13 to 17, Over 17 rows). With a band on both
+             edges the motif corridor is 85 minus twice the band height
 
 The thresholds were set by looking at the distribution over all 600 charts
-so that each word holds a useful share, then rounded; see the Methods page.
+and at examples, then rounded; see the Methods page. Earlier words for line
+style (by filled neighbours), outline (round, diamond) and detail were
+dropped after a check of random examples showed too many errors. Float
+length is not a facet: the gallery already sorts by longest float, and with
+a double-bed backing floats do not limit the banner.
 """
 
 import numpy as np
@@ -29,11 +35,12 @@ import numpy as np
 BAND_KINDS = ("border", "edging", "vertical band")
 
 LABELS = {
-    "line": {"line": "Line drawing", "mixed": "Mixed", "solid": "Solid"},
+    "stroke": {"thin": "Thin", "double": "Double", "bold": "Bold"},
     "open": {"closed": "Closed", "some": "Some openings", "lacy": "Lacy"},
-    "outline": {"square": "Square", "round": "Rounded or octagon", "diamond": "Diamond or eight-point star",
-                "free": "Free shape", "band": "Band"},
-    "size": {"small": "Small", "medium": "Medium", "large": "Large"},
+    "outline": {"square": "Fills its square", "free": "Stands free", "band": "Band"},
+    "fit": {"m20": "Motif up to 20 wide", "m40": "Motif 21–40 wide", "m60": "Motif 41–60 wide",
+            "m99": "Motif over 60 wide", "b7": "Band up to 7 rows", "b12": "Band 8–12 rows",
+            "b17": "Band 13–17 rows", "b99": "Band over 17 rows"},
 }
 
 
@@ -71,18 +78,34 @@ class Facets:
         self.period = period
 
     # ── measures ─────────────────────────────────────────────────────────
-    def interior(self):
-        p = np.pad(self.m, 1)
-        inner = p[1:-1, 1:-1] & p[:-2, 1:-1] & p[2:, 1:-1] & p[1:-1, :-2] & p[1:-1, 2:]
-        return float(inner.sum() / max(1, self.m.sum()))
+    @staticmethod
+    def runs(m):
+        """Lengths of all runs of True cells along the rows of m."""
+        out = []
+        for row in m:
+            r = np.diff(np.r_[0, row.astype(np.int8), 0])
+            out.extend((np.nonzero(r == -1)[0] - np.nonzero(r == 1)[0]).tolist())
+        return out
+
+    def stroke(self):
+        r = self.runs(self.m) + self.runs(self.m.T)
+        return float(np.median(r)) if r else 0.0
+
+    def spans(self, share=0.3):
+        """Does the drawing run on across its box, like a tile? (Charts are trimmed, so every
+        chart touches its edges; a tile fills a good share of two opposite edges.)"""
+        m = self.m
+        return bool((m[0].mean() >= share and m[-1].mean() >= share) or
+                    (m[:, 0].mean() >= share and m[:, -1].mean() >= share))
 
     def tiled(self):
         m = self.m
         if self.band:
-            if self.kind == "vertical band":
-                return np.tile(m, (2, 1))
-            return np.tile(m, (1, 2))
+            return np.tile(m, (2, 1)) if self.kind == "vertical band" else np.tile(m, (1, 2))
         return np.tile(m, (2, 2))
+
+    def open_measure(self):
+        return self.openings(self.tiled() if (self.band or self.spans()) else self.m)
 
     @staticmethod
     def openings(m):
@@ -102,50 +125,25 @@ class Facets:
         outside = np.isin(lab, list(edge))
         return ~outside
 
-    def outline_measures(self):
-        s = self.silhouette()
-        h, w = s.shape
-        fill = float(s.mean())
-        # corners: the four quarter-size corner squares; a diamond leaves them nearly empty
-        ch, cw = max(1, h // 4), max(1, w // 4)
-        corners = np.concatenate([s[:ch, :cw].ravel(), s[:ch, -cw:].ravel(),
-                                  s[-ch:, :cw].ravel(), s[-ch:, -cw:].ravel()]).mean()
-        # middle of each edge (the centre half of the outer rows and columns)
-        y0, y1, x0, x1 = h // 4, h - h // 4, w // 4, w - w // 4
-        mids = np.concatenate([s[0, x0:x1], s[-1, x0:x1], s[y0:y1, 0], s[y0:y1, -1]]).mean()
-        return fill, float(corners), float(mids)
+    def fill(self):
+        return float(self.silhouette().mean())
 
     # ── words ────────────────────────────────────────────────────────────
     def words(self):
-        inner = self.interior()
-        line = "line" if inner < 0.05 else "solid" if inner >= 0.2 else "mixed"
-        op = self.openings(self.tiled())
+        st = self.stroke()
+        stroke = "thin" if st < 1.5 else "double" if st < 2.5 else "bold"
+        op = self.open_measure()
         opening = "closed" if op < 1.0 else "lacy" if op >= 5.0 else "some"
+        outline = "band" if self.band else "square" if self.fill() >= 0.82 else "free"
+        h, w = self.m.shape
         if self.band:
-            outline = "band"
+            across = w if self.kind == "vertical band" else h
+            fit = "b7" if across <= 7 else "b12" if across <= 12 else "b17" if across <= 17 else "b99"
         else:
-            fill, corners, mids = self.outline_measures()
-            if fill >= 0.82:
-                outline = "square"
-            elif corners < 0.12 and mids < 0.45 and fill < 0.62:
-                outline = "diamond"
-            elif fill >= 0.6:
-                outline = "round"
-            else:
-                outline = "free"
-        if self.band:
-            # a band by its width across (rows of a border, columns of a vertical band)
-            side = min(self.m.shape)
-            size = "small" if side <= 7 else "medium" if side <= 15 else "large"
-        else:
-            side = max(self.m.shape)
-            size = "small" if side <= 15 else "medium" if side <= 40 else "large"
-        return {"line": line, "open": opening, "outline": outline, "size": size}
+            fit = "m20" if w <= 20 else "m40" if w <= 40 else "m60" if w <= 60 else "m99"
+        return {"stroke": stroke, "open": opening, "outline": outline, "fit": fit}
 
     def measures(self):
         """The raw numbers behind the words (for checking thresholds)."""
-        out = {"interior": round(self.interior(), 3), "openings": round(self.openings(self.tiled()), 2)}
-        if not self.band:
-            fill, corners, mids = self.outline_measures()
-            out.update(fill=round(fill, 3), corners=round(corners, 3), mids=round(mids, 3))
-        return out
+        return {"stroke": round(self.stroke(), 2), "openings": round(self.open_measure(), 2),
+                "fill": round(self.fill(), 3)}

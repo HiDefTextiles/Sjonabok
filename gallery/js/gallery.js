@@ -36,7 +36,7 @@
 
   // Facets measured from the chart itself (scripts/facets.py) and look-alike families
   // (analysis/subjects/families.R): no labels, see the Methods page.
-  const FACETS = [["family", "Look-alike family"], ["outline", "Outline"], ["line", "Line"], ["open", "Openness"], ["size", "Size"]];
+  const FACETS = [["family", "Look-alike family"], ["fit", "Fit on 85 needles"], ["outline", "Outline"], ["stroke", "Stroke"], ["open", "Openness"]];
   const FILTER_KEYS = ["kind", "theme", "subject", "sym", "group", "source", ...FACETS.map((f) => f[0])];
 
   const $ = (id) => document.getElementById(id);
@@ -52,7 +52,8 @@
 
   const isAsym = (p) => !(p.mirror_lr || p.mirror_tb || p.turn180 || p.turn90 || p.diagonal || p.glide);
   const group = (p) => p.frieze || p.point || "—";
-  const themes = (p) => (p.themes && p.themes.length ? p.themes : ["unsorted"]);
+  // a chart reviewed as "not sure" has subjects but no group: it is reviewed, not unsorted
+  const themes = (p) => (p.themes && p.themes.length ? p.themes : p.subjects && p.subjects.length ? ["unclear"] : ["unsorted"]);
   const subjects = (p) => (p.subjects && p.subjects.length ? p.subjects : ["unsorted"]);
   const facet = (k) => (p) => (k === "family" ? p.family || "—" : (p.facets || {})[k] || "—");
 
@@ -300,7 +301,7 @@
       fact("Main group", p.themes && p.themes.length ? p.themes.map((k) => THEMES[k] || k).join(", ") : null) +
       fact("Subject", p.subjects && p.subjects.length ? p.subjects.map((k) => SUBJECTS[k] || k).join(", ") : null) +
       fact("Look-alike family", p.family ? `${p.family} (${(FAMILIES[p.family] || {}).n || "?"} charts; close family ${p.close})` : null) +
-      fact("Look", p.facets ? ["outline", "line", "open", "size"].map((k) => (FACET_LABELS[k] || {})[p.facets[k]] || p.facets[k]).join(", ") : null) +
+      fact("Look", p.facets ? ["outline", "stroke", "open", "fit"].map((k) => (FACET_LABELS[k] || {})[p.facets[k]] || p.facets[k]).join(", ") : null) +
       fact("Chart size", `${p.width} × ${p.height} cells`) +
       fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
       fact("Repeat", p.period ? `every ${p.period} cells` + (p.repeat_status
@@ -388,7 +389,7 @@
     chips($("f-sym"), "sym", SYM);
     THEMES = json.themes || {};
     if (Object.keys(THEMES).length) {
-      chips($("f-theme"), "theme", [...Object.entries(THEMES), ["unsorted", "Not yet sorted"]]);
+      chips($("f-theme"), "theme", [...Object.entries(THEMES), ["unclear", "Not sure"], ["unsorted", "Not yet sorted"]]);
       $("f-theme-box").hidden = false;
     }
     SUBJECTS = json.subjects || {};
@@ -415,6 +416,14 @@
     chips($("f-source"), "source", sources);
     ranges($("f-range"));
     loadUrl();
+    // drop filter values from an old link that no chip offers any more
+    for (const k of FILTER_KEYS) {
+      const el = $("f-" + k);
+      if (!el) { state[k].clear(); continue; }
+      const offered = new Set([...el.querySelectorAll(".chip")].map((b) => b.dataset.value));
+      for (const v of [...state[k]]) if (!offered.has(v)) state[k].delete(v);
+    }
+    if (![...$("sort").options].some((o) => o.value === state.sort)) { state.sort = "name"; $("sort").value = "name"; }
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
