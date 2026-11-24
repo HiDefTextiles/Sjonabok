@@ -195,6 +195,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       h.appendChild(t);
     }
     el.appendChild(h);
+    if (p.hint) { const ph = document.createElement("p"); ph.className = "hint"; ph.textContent = p.hint; el.appendChild(ph); }
 
     const grid = document.createElement("div"); grid.className = "charts";
     for (const c of p.charts) {

@@ -16,8 +16,14 @@ Steps (run through the Makefile in this folder, see README.md):
              turned into the review form                              -> review.csv
     labels   turn the filled review form into one row per pattern     -> subjects.csv
     suggest  nearest labelled neighbours for charts not yet labelled  -> work/suggestions.csv
+    settle   a review page of the charts whose pile label and fair-test
+             label disagree, showing both earlier answers             -> work/settle/
+    fair     answers of the fair test (charts labelled one at a time)
+             as one row per chart                                     -> fairtest.csv
+    evaluate how well each distance finds a fair-test chart's subject
+             from its nearest labelled charts                         -> work/evaluation.csv
 
-Only subjects.csv and review.csv are written by a person and kept in git.
+Only subjects.csv, review.csv and fairtest.csv are written by a person and kept in git.
 Everything under work/ is rebuilt from the charts.
 """
 
@@ -40,6 +46,7 @@ from pattern_processing.repeat_unit import RepeatUnit  # noqa: E402
 WORK = HERE / "work"
 SUBJECTS = HERE / "subjects.csv"
 REVIEW = HERE / "review.csv"
+FAIRTEST = HERE / "fairtest.csv"
 VOCABULARY = HERE / "vocabulary.csv"
 
 # The pilot covers stand-alone figures; bands join once their repeat units
@@ -248,7 +255,8 @@ class Review:
     """
 
     def __init__(self, vocabulary=VOCABULARY):
-        self.words = {r["subject"] for r in read_csv(vocabulary)} | {"mixed"}
+        self.order = [r["subject"] for r in read_csv(vocabulary)]
+        self.words = set(self.order) | {"mixed"}
 
     def write_form(self, clusters, path=REVIEW):
         labelled = {r["id"] for r in read_csv(SUBJECTS)}
@@ -264,7 +272,8 @@ class Review:
         bad = [s for s in subject.split("|") if s and s not in self.words]
         if bad:
             raise SystemExit(f"Unknown subject {bad}; add it to vocabulary.csv first.")
-        return subject
+        # one spelling for each combination: vocabulary order
+        return "|".join(sorted(set(filter(None, subject.split("|"))), key=self.order.index))
 
     def apply(self, reviewer, path=REVIEW):
         existing = read_csv(SUBJECTS)
@@ -273,12 +282,13 @@ class Review:
         new = []
         for row in read_csv(path):
             subject = row["subject"].strip()
-            if not subject or subject == "mixed":
-                continue
+            if subject == "mixed":
+                subject = ""
             exceptions = dict(e.split("=", 1) for e in row["exceptions"].split() if "=" in e)
             for i in row["ids"].split():
+                # a mixed or unnamed pile still keeps the charts picked out one by one
                 s = self.check(exceptions.get(i, subject))
-                if i not in done:
+                if s and i not in done:
                     new.append({"id": i, "subjects": s, "reviewer": reviewer, "date": today,
                                 "note": row["note"].strip()})
                     done.add(i)
@@ -341,6 +351,109 @@ def answers_to_form(folder, path=REVIEW):
     print(f"{len(rows)} piles -> {path}")
 
 
+def fair_answers(folder, reviewer, path=FAIRTEST):
+    """Fair-test answers (one JSON file per chart) -> fairtest.csv."""
+    review = Review()
+    today = dt.date.today().isoformat()
+    rows = []
+    for f in sorted(Path(folder).glob("p*.json")):
+        d = json.loads(f.read_text())
+        d = d.get("data", d)
+        subject = review.check("|".join(d.get("subjects", [])))
+        if subject:
+            rows.append({"id": d["ids"][0], "subjects": subject, "reviewer": reviewer, "date": today,
+                         "note": d.get("note", "").strip()})
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["id", "subjects", "reviewer", "date", "note"])
+        w.writeheader()
+        w.writerows(sorted(rows, key=lambda r: r["id"]))
+    print(f"{len(rows)} fair-test labels -> {path}")
+
+
+class Evaluation:
+    """Which distance best finds a chart's subject from its k nearest labelled charts?
+
+    The test charts are the fair test: drawn at random and labelled one at a
+    time, so their labels do not come from any clustering. A guess is the
+    subject most common among the k nearest charts (ties go to the nearer
+    chart); it is right if it is one of the chart's own subjects. Two pools of
+    neighbours:
+
+    piles   every chart labelled in the pile review, except the test chart
+    fair    only the other fair-test charts (cleanest, but a small pool)
+
+    Charts labelled only "unknown" are left out. Distances are rank-scaled
+    to 0..1 before they are mixed, as in cluster.R.
+    """
+
+    def __init__(self, k=5):
+        self.k = k
+        self.pile = {r["id"]: set(r["subjects"].split("|")) for r in read_csv(SUBJECTS)}
+        self.fair = {r["id"]: set(r["subjects"].split("|")) - {"unknown"} for r in read_csv(FAIRTEST)}
+        self.fair = {i: s for i, s in self.fair.items() if s}
+
+    @staticmethod
+    def rank_scale(d):
+        r = d.ravel().argsort().argsort().reshape(d.shape).astype(float)
+        return r / r.max()
+
+    def guess(self, d, idx, i, pool, labels):
+        near = sorted((j for j in pool if j != i), key=lambda j: d[idx[i], idx[j]])[: self.k]
+        votes = {}
+        for rank, j in enumerate(near):
+            for s in labels[j]:
+                votes[s] = votes.get(s, 0) + 1 - rank * 1e-3
+        return max(votes, key=votes.get)
+
+    def score(self, d, ids):
+        idx = {i: n for n, i in enumerate(ids)}
+        test = [i for i in self.fair if i in idx]
+        out = {}
+        for name, labels in (("piles", self.pile), ("fair", self.fair)):
+            pool = [j for j in labels if j in idx]
+            hits = [self.guess(d, idx, i, pool, labels) in self.fair[i] for i in test]
+            out[name] = (sum(hits), len(hits))
+        return out
+
+    def baseline(self):
+        counts = {}
+        for s in self.pile.values():
+            for x in s:
+                counts[x] = counts.get(x, 0) + 1
+        top = max(counts, key=counts.get)
+        hits = sum(top in s for s in self.fair.values())
+        return top, (hits, len(self.fair))
+
+    def agreement(self):
+        both = [i for i in self.fair if i in self.pile]
+        shared = sum(bool(self.fair[i] & self.pile[i]) for i in both)
+        same = sum(self.fair[i] == self.pile[i] for i in both)
+        return shared, same, len(both)
+
+    def write(self, distances, path):
+        ids = next(iter(distances.values()))[0]
+        scaled = {n: self.rank_scale(d) for n, (i, d) in distances.items()}
+        mixes = {"image 2 : gallery measures 1": {"image": 2, "meta": 1},
+                 "image 1 : gallery measures 1": {"image": 1, "meta": 1},
+                 "image 2 : symmetry 1": {"image": 2, "symmetry": 1},
+                 "image 2 : provenance 1": {"image": 2, "provenance": 1}}
+        for name, w in mixes.items():
+            if all(k in scaled for k in w):
+                scaled[name] = sum(v * scaled[k] for k, v in w.items()) / sum(w.values())
+        with open(path, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["distance", "pool", "right", "charts", "share"])
+            for name, d in scaled.items():
+                for pool, (h, n) in self.score(d, ids).items():
+                    w.writerow([name, pool, h, n, f"{h / n:.3f}"])
+                    print(f"{name:32s} {pool:6s} {h:3d}/{n} {h / n:.0%}")
+            top, (h, n) = self.baseline()
+            w.writerow([f"always {top}", "-", h, n, f"{h / n:.3f}"])
+            print(f"{'always ' + top:32s} {'-':6s} {h:3d}/{n} {h / n:.0%}")
+        shared, same, n = self.agreement()
+        print(f"pile label vs fair label for the same chart: share a subject {shared}/{n}, identical {same}/{n}")
+
+
 class Suggestions:
     """Majority subject of the k nearest labelled charts. Never shown as fact."""
 
@@ -376,7 +489,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -434,6 +547,43 @@ def main():
     elif a.step == "suggest":
         dist = WORK / "dist.csv"
         Suggestions(dist).write(WORK / "suggestions.csv")
+    elif a.step == "fair":
+        if not a.reviewer:
+            raise SystemExit("Give --reviewer (or REVIEWER=... to make).")
+        fair_answers(a.src, a.reviewer)
+    elif a.step == "settle":
+        label = {r["subject"]: r["label"] for r in read_csv(VOCABULARY)}
+        name = lambda x: " + ".join(label.get(s, s) for s in x.split("|")) if x else "nothing"
+        pile = {r["id"]: r["subjects"] for r in read_csv(SUBJECTS)}
+        fair = {r["id"]: r["subjects"] for r in read_csv(FAIRTEST)}
+        todo = [i for i in sorted(fair) if set(pile.get(i, "").split("|")) != set(fair[i].split("|"))]
+        page = ReviewPage(a.txt)
+        page.write({k + 1: [i] for k, i in enumerate(todo)}, WORK / "settle", {
+            "run": "settle", "single": True, "title": "Sjónabók: settle the differences",
+            "intro": f"These {len(todo)} charts got one answer in the piles and another when shown on their own. "
+                     "Give each the subject you now think is right; your answer replaces both."})
+        # show both earlier answers on each card
+        j = json.loads((WORK / "settle" / "piles.json").read_text())
+        for p in j["piles"]:
+            i = p["charts"][0]["id"]
+            p["hint"] = f"{i}. In a pile: {name(pile.get(i, ''))}. On its own: {name(fair[i])}."
+        (WORK / "settle" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
+        print(f"{len(todo)} charts -> {WORK / 'settle'}")
+    elif a.step == "evaluate":
+        distances = {}
+        for name, f in (("image", "embed_dist.csv"), ("shape", "shape_dist.csv"), ("meta", "meta_dist.csv")):
+            if (WORK / f).exists():
+                distances[name] = read_matrix(WORK / f)
+        ids = next(iter(distances.values()))[0]
+        keep = set(ids)
+        units = [u for u in Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units if u.id in keep]
+        md = MetaDistance(units)
+        order = [md.ids.index(i) for i in ids]
+        for name, d in md.blocks().items():
+            distances[name] = (ids, d[np.ix_(order, order)])
+        for name, (i, d) in distances.items():
+            assert i == ids, f"{name}: charts in a different order"
+        Evaluation().write(distances, WORK / "evaluation.csv")
 
 
 if __name__ == "__main__":
