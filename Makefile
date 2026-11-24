@@ -2,6 +2,7 @@
 PARENT_DIR = patterns
 EPS_DIR = $(PARENT_DIR)/eps
 TXT_DIR = $(PARENT_DIR)/txt
+MIN_DIR = $(PARENT_DIR)/min
 PNG_DIR = $(PARENT_DIR)/png
 
 init:
@@ -48,14 +49,22 @@ clean:
 	find $(TXT_DIR) -name '*.txt' -delete
 	find $(PNG_DIR) -name '*.png' -delete
 
-# ── Repeat units of border bands ────────────────────────────────────────────
-# make repeats : patterns/repeat/<name>.txt (one unit each) and patterns/repeats.csv
-repeats: patterns/repeats.csv
+# ── Minimal charts (committed) ──────────────────────────────────────────────
+# patterns/txt holds the full charts from the book; it is git-ignored.
+# make originals : restore patterns/txt from the last commit that had it
+# make repeats   : patterns/min/<name>.txt (one repeat unit per exact band,
+#                  other charts unchanged) and patterns/repeats.csv
+ORIG_REV = $(shell git rev-list -1 HEAD -- $(TXT_DIR)/natmus453_706_p4.txt)^
 
-patterns/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_processing/repeat_unit.py gallery/scripts/build_gallery.py
+originals:
+	git archive $(ORIG_REV) $(TXT_DIR) | tar -x
+
+repeats: $(PARENT_DIR)/repeats.csv
+
+$(PARENT_DIR)/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_processing/repeat_unit.py gallery/scripts/build_gallery.py
 	python3 extract_repeats.py $(TXT_DIR) $(PARENT_DIR)
 
-.PHONY: repeats
+.PHONY: originals repeats
 
 # ── Gallery website (gallery/, Quarto) ───────────────────────────────────────
 # make gallery-data : measure every pattern and draw PNGs in the HI palette
@@ -64,8 +73,8 @@ patterns/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_pr
 GALLERY = gallery
 GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 
-$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
-	python3 $(GALLERY)/scripts/build_gallery.py $(TXT_DIR) $(GALLERY)/patterns
+$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
 
 gallery-data: $(GALLERY_DATA)
 

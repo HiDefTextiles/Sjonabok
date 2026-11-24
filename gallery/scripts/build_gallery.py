@@ -1,10 +1,14 @@
 """Build the data behind the Sjonabok gallery.
 
-Reads every 0/1 matrix in patterns/txt, measures it (size, density,
+Reads every 0/1 matrix in patterns/min, measures it (size, density,
 symmetry, repeat, type, pieces, longest float), renders PNG images in the
 HI colour palette and writes one JSON index for the gallery page.
 
-    python3 gallery/scripts/build_gallery.py patterns/txt gallery/patterns
+    python3 gallery/scripts/build_gallery.py patterns/min gallery/patterns
+
+A band listed in patterns/repeats.csv with status "unit" is stored as one
+repeat unit; its type and repeat come from the manifest, and its images
+show the unit repeated a few times.
 
 Output (all generated, not committed):
     <out>/patterns.json        one record per pattern, plus summary tables
@@ -18,6 +22,7 @@ not a curator's judgement.
 """
 
 import argparse
+import csv
 import json
 import re
 import shutil
@@ -35,6 +40,7 @@ from pattern_processing.repeat_unit import RepeatUnit, find_period  # noqa: E402
 TOLERANCE = 0.98          # share of cells that must agree for a symmetry
 THUMB_PX = 240            # target size of the longest thumbnail side
 FULL_ZOOM = 10            # pixels per cell in the full PNG
+SHOW_CELLS = 72           # a stored unit is drawn repeated to at least this length
 
 # Readable names for the source codes in the file names. Þjms. is the
 # accession prefix of Þjóðminjasafn Íslands (National Museum of Iceland).
@@ -81,11 +87,14 @@ def agreement(a, b):
 class Pattern:
     """One digitised chart and everything the gallery shows about it."""
 
-    def __init__(self, path):
+    def __init__(self, path, unit_row=None):
         self.path = Path(path)
         self.id = self.path.stem
         self.matrix = self.read(self.path)
-        self.trim = self.trimmed(self.matrix)
+        self.unit_row = unit_row       # manifest row when the file is one repeat unit
+        # a unit keeps its empty edge columns: they belong to the repeat
+        self.trim = self.matrix if unit_row else self.trimmed(self.matrix)
+        self.display = self.matrix     # what the images show
         m = NAME_RE.match(self.id)
         self.source = m["source"] if m else self.id
         self.number = int(m["number"]) if m else 0
@@ -112,6 +121,8 @@ class Pattern:
 
     # ── measures ─────────────────────────────────────────────────────────
     def measure(self):
+        if self.unit_row:
+            return self.measure_unit()
         t = self.trim
         h, w = t.shape
         self.kind = self.classify_shape(h, w)
@@ -126,6 +137,23 @@ class Pattern:
         self.pieces = self.count_pieces(t)
         self.float_fg = self.longest_run(t, 1)
         self.float_bg = self.longest_run(t, 0)
+        return self
+
+    def measure_unit(self):
+        """A stored repeat unit: type and period from the manifest, symmetry
+        measured on the unit repeated, images of a few repeats."""
+        row = self.unit_row
+        self.kind, axis = row["kind"], row["axis"]
+        unit = self.matrix.T if axis == "y" else self.matrix
+        copies = max(3, -(-SHOW_CELLS // unit.shape[1]))
+        band = np.tile(unit, (1, copies))
+        self.display = band.T if axis == "y" else band
+        self.measure_band(band, vertical=axis == "y")
+        self.period = int(row["period"])
+        self.repeat = RepeatUnit(axis, self.period, 0, self.matrix, 1, 0.0)
+        self.pieces = self.count_pieces(self.matrix)
+        self.float_fg = self.longest_run(band, 1)
+        self.float_bg = self.longest_run(band, 0)
         return self
 
     @staticmethod
@@ -275,11 +303,11 @@ class Pattern:
     # ── images ───────────────────────────────────────────────────────────
     def rgba(self, zoom):
         palette = np.array(COLOR_PALETTE[:2], dtype=np.uint8)
-        img = palette[self.matrix]
+        img = palette[self.display]
         return np.kron(img, np.ones((zoom, zoom, 1), dtype=np.uint8))
 
     def save_images(self, out):
-        h, w = self.matrix.shape
+        h, w = self.display.shape
         thumb_zoom = max(2, THUMB_PX // max(h, w))
         Image.fromarray(self.rgba(thumb_zoom), "RGBA").save(out / "thumb" / f"{self.id}.png", optimize=True)
         Image.fromarray(self.rgba(FULL_ZOOM), "RGBA").save(out / "png" / f"{self.id}.png", optimize=True)
@@ -303,6 +331,8 @@ class Pattern:
             "ones": ones,
             "density": round(ones / (tw * th), 3),
             "kind": self.kind,
+            "unit": bool(self.unit_row),
+            "show": [int(self.display.shape[1]), int(self.display.shape[0])],
             "period": self.period,
             "repeat_status": self.repeat.status if self.repeat else None,
             "repeat_mismatch": self.repeat.mismatch if self.repeat else None,
@@ -320,16 +350,25 @@ class Pattern:
             "pieces": self.pieces,
             "float_fg": self.float_fg,
             "float_bg": self.float_bg,
-            "thumb_zoom": max(2, THUMB_PX // max(h, w)),
+            "thumb_zoom": max(2, THUMB_PX // max(self.display.shape)),
         }
 
 
 class Gallery:
     """All patterns, their similarity links and the generated files."""
 
-    def __init__(self, txt_dir, out_dir):
+    def __init__(self, txt_dir, out_dir, manifest=None):
         self.out = Path(out_dir)
-        self.patterns = [Pattern(p) for p in sorted(Path(txt_dir).glob("*.txt"))]
+        units = self.read_units(Path(manifest) if manifest else Path(txt_dir).parent / "repeats.csv")
+        self.patterns = [Pattern(p, units.get(p.stem)) for p in sorted(Path(txt_dir).glob("*.txt"))]
+
+    @staticmethod
+    def read_units(path):
+        """Manifest rows of the bands stored as one repeat unit."""
+        if not path.exists():
+            return {}
+        with open(path, newline="") as f:
+            return {r["name"]: r for r in csv.DictReader(f) if r["status"] == "unit"}
 
     def build(self):
         for sub in ("thumb", "png", "txt"):
@@ -393,8 +432,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns")
     ap.add_argument("out_dir", help="folder for patterns.json and images")
+    ap.add_argument("--manifest", help="repeats.csv (default: next to txt_dir)")
     args = ap.parse_args()
-    Gallery(args.txt_dir, args.out_dir).build()
+    Gallery(args.txt_dir, args.out_dir, args.manifest).build()
 
 
 if __name__ == "__main__":

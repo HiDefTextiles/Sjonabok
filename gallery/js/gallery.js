@@ -147,7 +147,8 @@
 
   function card(p) {
     const a = document.createElement("a");
-    a.className = p.trim_width >= 2.5 * p.trim_height ? "tile wide" : "tile";
+    const [sw, sh] = p.show || [p.trim_width, p.trim_height];
+    a.className = sw >= 2.5 * sh ? "tile wide" : "tile";
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
@@ -188,15 +189,20 @@
     return x1 < 0 ? { x0: 0, x1: m[0].length - 1, y0: 0, y1: m.length - 1 } : { x0, x1, y0, y1 };
   }
 
-  // Repeat view. A band with a known repeat keeps the chart's own start
-  // (its edge piece) and then continues from the last full repeat, so the
-  // seam always falls in phase. Other patterns are tiled whole.
+  // Repeat view. A band stored as one repeat unit is simply repeated. A
+  // full band chart keeps its own start (its edge piece) and then continues
+  // from the last full repeat, so the seam always falls in phase. Other
+  // patterns are tiled whole.
   function repeatLayout(m) {
     const h = m.length, w = m[0].length, p = current.period;
     const along = current.kind === "vertical band" ? "y" : "x";
     const layout = (W, H, src, extra = {}) =>
       ({ W, H, src, at: (x, y) => { const [sx, sy] = src(x, y); return m[sy][sx]; }, ...extra });
     if (!view.tile) return layout(w, h, (x, y) => [x, y]);
+    if (current.unit)
+      return along === "x"
+        ? layout(Math.max(3 * w, 72), h, (x, y) => [x % w, y])
+        : layout(w, Math.max(3 * h, 72), (x, y) => [x, y % h]);
     if (!p || !["border", "edging", "vertical band"].includes(current.kind))
       return current.kind === "border" || current.kind === "edging"
         ? layout(3 * w, h, (x, y) => [x % w, y])
@@ -272,9 +278,11 @@
       fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
-      fact("Chart size", `${p.width} × ${p.height} cells`) +
-      fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
-      fact("Repeat", p.period ? `every ${p.period} cells` + (p.repeat_status
+      (p.unit
+        ? fact("Repeat unit", `${p.width} × ${p.height} cells (the file holds one repeat)`)
+        : fact("Chart size", `${p.width} × ${p.height} cells`) +
+          fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`)) +
+      fact("Repeat", p.period ? `every ${p.period} cells` + (p.unit ? "" : p.repeat_status
         ? ` (${p.repeat_status === "ok" ? "checked" : "check"}: ${(p.repeat_mismatch * 100).toFixed(1)}% of cells differ)` : "") : null) +
       fact("Filled cells", `${p.ones} (${pct(p.density)})`) +
       fact("Symmetry", syms) +
