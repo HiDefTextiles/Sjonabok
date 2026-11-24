@@ -13,7 +13,7 @@ include-after-body:
 <button id="toggle-filters" class="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-body">Filters <span id="active-n" class="active-n"></span></button>
 <div id="filter-body" class="filter-body">
 <div class="filter-head">
-<input id="q" type="search" placeholder="Search by name, e.g. 5898_246" aria-label="Search patterns">
+<input id="q" type="search" placeholder="Search by file name, e.g. 5898_246" aria-label="Search patterns">
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
 </div>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
@@ -53,7 +53,6 @@ include-after-body:
 <p id="d-cell" class="d-cell">Tap or hover a cell to see its row and column.</p>
 </div>
 <div class="d-info">
-<p class="eyebrow" id="d-source"></p>
 <h2 id="d-title"></h2>
 <dl id="d-facts" class="facts-list"></dl>
 <p class="d-dl"><a id="d-txt" download>0/1 chart (.txt)</a> · <a id="d-png" download>Image (.png)</a> · <a id="d-link">Link to this pattern</a></p>
