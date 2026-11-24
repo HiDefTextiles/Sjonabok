@@ -123,6 +123,17 @@ class MotifPacker:
         m.setObjective(H + self.group * gp.quicksum(bot[s] - top[s] for s in ranks), GRB.MINIMIZE)
 
         added = set()
+        pairs = {}
+
+        def side(i, j, xs, ys):
+            """(p, q) of the side that separates i and j in a layout."""
+            if xs[i] + self.w[i] <= xs[j]:
+                return 0, 0
+            if xs[j] + self.w[j] <= xs[i]:
+                return 1, 0
+            if ys[i] + self.h[i] <= ys[j]:
+                return 0, 1
+            return 1, 1
 
         Mx, My = self.width + 3, Hmax
 
@@ -130,6 +141,7 @@ class MotifPacker:
             # two binaries pick one of four sides: (0,0) i left of j, (1,0) j left
             # of i, (0,1) i above j, (1,1) j above i
             p, q = m.addVar(vtype=GRB.BINARY), m.addVar(vtype=GRB.BINARY)
+            pairs[i, j] = (p, q)
             m.addConstr(x[i] + self.w[i] <= x[j] + Mx * (p + q))
             m.addConstr(x[j] + self.w[j] <= x[i] + Mx * (1 - p + q))
             m.addConstr(y[i] + self.h[i] <= y[j] + My * (1 + p - q))
@@ -142,9 +154,22 @@ class MotifPacker:
             if self.near < 0 or self.overlap(i, j, self.x0, self.y0, self.near):
                 separate(i, j)
         best = (self.x0, self.y0)
+        clashes = [(i, j) for i, j in itertools.combinations(range(n), 2) if self.overlap(i, j, *best)]
+        if clashes:
+            raise SystemExit(f"the starting layout has {len(clashes)} overlaps; rebuild the items file")
+        if self.near < 0:
+            rounds = 1                      # every pair is in the model: one solve
         for k in range(rounds):
+            # a complete start: positions, sides of every pair, height and spans
+            bx, by = best
             for i in range(n):
-                x[i].Start, y[i].Start = best[0][i], best[1][i]
+                x[i].Start, y[i].Start = bx[i], by[i]
+            for (i, j), (p, q) in pairs.items():
+                p.Start, q.Start = side(i, j, bx, by)
+            H.Start = max(b + h for b, h in zip(by, self.h))
+            for s_ in ranks:
+                top[s_].Start = min(b for b, r in zip(by, self.rank) if r == s_)
+                bot[s_].Start = max(b + h for b, h, r in zip(by, self.h, self.rank) if r == s_)
             m.Params.TimeLimit = time_limit / rounds
             m.optimize()
             if m.SolCount == 0:

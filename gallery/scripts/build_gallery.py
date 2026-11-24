@@ -572,7 +572,9 @@ class MotifSheet(Sheet):
         for p in sorted(self.patterns, key=lambda p: (-p.trim.shape[0], -p.trim.shape[1])):
             h, w = p.trim.shape
             w = min(w, self.width)
-            y, x = min((int(sky[x:x + w].max()), x) for x in range(self.width - w + 1))
+            # the span includes the gap on the right, so nothing ends up
+            # flush against the left edge of a chart already placed
+            y, x = min((int(sky[x:x + w + self.gap].max()), x) for x in range(self.width - w + 1))
             sky[x:x + w + self.gap] = y + h + self.gap
             out[p.id] = (x, y)
         return out
