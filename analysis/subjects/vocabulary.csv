@@ -1,13 +1,13 @@
-subject,label,description
-bird,Bird,"Any bird, including peacocks and doves"
-flower,Flower or plant,"Flowers, leaves, vines, vases with flowers"
-tree,Tree,"Trees and tree-of-life figures"
-deer,Deer or reindeer,"Deer, reindeer, harts"
-animal,Other animal,"Lions, dogs, horses, fish, unicorns and other animals"
-human,Human figure,"People, angels, faces"
-heart,Heart,"Hearts"
-star,Star or rose,"Eight-pointed stars and roses (áttablaðarós and similar)"
-cross,Cross,"Crosses"
-letters,Letters,"Letters, monograms, words"
-geometric,Geometric,"Abstract or geometric figures with no depicted subject"
-unknown,Not sure,"Reviewed, but the subject is unclear"
+subject,label,group,description
+bird,Bird,animals,"Any bird, including peacocks and doves"
+flower,Flower or plant,plants,"Flowers, leaves, vines, vases with flowers"
+tree,Tree,plants,Trees and tree-of-life figures
+deer,Deer or reindeer,animals,"Deer, reindeer, harts"
+animal,Other animal,animals,"Lions, dogs, horses, fish, unicorns and other animals"
+human,Human figure,animals,"People, angels, faces"
+heart,Heart,ornament,Hearts
+star,Star or rose,ornament,Eight-pointed stars and roses (áttablaðarós and similar)
+cross,Cross,ornament,Crosses
+letters,Letters,ornament,"Letters, monograms, words"
+geometric,Geometric,ornament,Abstract or geometric figures with no depicted subject
+unknown,Not sure,,"Reviewed, but the subject is unclear"

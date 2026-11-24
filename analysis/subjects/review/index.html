@@ -202,7 +202,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       const b = document.createElement("button");
       b.type = "button"; b.className = "chart" + (a.exceptions[c.id] ? " is-ex" : "");
       b.title = c.id; b.setAttribute("aria-label", "Chart " + c.id + (a.exceptions[c.id] ? ", set apart" : ""));
-      const cv = document.createElement("canvas"); draw(cv, c.rows, single ? 240 : 68); b.appendChild(cv);
+      const cv = document.createElement("canvas"); draw(cv, single ? c.rows.map((r) => r.slice(0, 2 * c.rows.length + 24)) : c.rows, single ? 240 : 68); b.appendChild(cv);
       if (a.exceptions[c.id]) {
         const ex = document.createElement("span"); ex.className = "ex";
         ex.textContent = a.exceptions[c.id].map((s) => (vocab.find((v) => v.key === s) || { label: s }).label).join(", ");
