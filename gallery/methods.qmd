@@ -151,7 +151,7 @@ git clone https://github.com/HiDefTextiles/Sjonabok
 cd Sjonabok/analysis/subjects
 make embed                # steps 1 and 3: units and the image model
 make                      # steps 2 and 4 and the contact sheets
-# ... fill in review.csv ...
+make review               # step 5: review on a phone or laptop, export review.csv
 make labels REVIEWER="Your Name"
 make suggest              # suggestions for the next round
 ```
