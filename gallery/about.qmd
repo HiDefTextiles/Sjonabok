@@ -39,7 +39,7 @@ the gallery can be downloaded as its `.txt` chart or as a PNG image.
 
 On every change to the repository a GitHub Action:
 
-1. reads all charts in `patterns/txt/`,
+1. reads all charts in `patterns/min/`,
 2. measures each one (size, density, symmetry, repeat, separate pieces, longest float) and
    sorts it into a type: border band, narrow edging, rosette / star, motif or vertical band,
 3. draws PNG images in the colours of the University of Iceland
@@ -66,16 +66,16 @@ are computed, not curated, so treat them as a guide for browsing.
 
 ## Repeat units {#repeats}
 
-Every band with a repeat also has its **repeat unit** in the repository: `patterns/repeat/<name>.txt`
-holds one repeat, and `patterns/repeats.csv` lists each band's direction, repeat length, *phase*
-(the column or row in the chart where a clean unit starts), number of full copies, and how many
-cells differ from a perfect repeat. The unit is a majority vote over all copies in the chart, so a
-slip in one copy does not end up in the unit. Where a band has mirror symmetry the unit is cut so
-that a mirror axis sits in its middle, otherwise where the band is lightest, so motifs are not
-split. Run `make repeats` to rebuild them.
+A border band that repeats exactly is stored as **one repeat unit**: `patterns/min/<name>.txt`
+holds one repeat, and the *.txt* download in the pattern view is that unit. Where a band has
+mirror symmetry the unit is cut so that a mirror axis sits in its middle, otherwise where the band
+is lightest, so motifs are not split. `patterns/repeats.csv` lists every band with its direction,
+repeat length and whether it is stored as a unit. Bands that repeat with a few differing cells, and
+bands without a repeat, keep their chart as drawn.
 
-In the pattern view, *Repeat* shows the chart as drawn, with its own starting edge, and then
-continues it from the last full repeat; the dashed line marks where the original chart ends.
+In the pattern view, *Repeat* shows a unit repeated. For a band kept as drawn it shows the chart with
+its own starting edge and then continues it from the last full repeat; the dashed line marks where
+the chart ends.
 
 ## How "similar patterns" are chosen {#similar}
 
