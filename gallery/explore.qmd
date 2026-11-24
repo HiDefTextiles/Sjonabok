@@ -19,6 +19,28 @@ rows = P.map(p => ({...p, type: kinds.get(p.kind), group: p.frieze ?? p.point ??
 ![All patterns in file order, from Natmus 453 to Þjms. Th 116. Each cell is one chart, shrunk to fit.](patterns/overview.png){fig-alt="A sheet of about 600 small blue embroidery patterns"}
 :::
 
+## Where the manuscripts come from
+
+The ten manuscripts behind the collection, on a timeline and a map of Iceland. Each book is marked by its own **signature motif**: a small figure that keeps coming back in that book and not much in the others. Tap an icon for who made or owned the book, when, how sure we are, and an example page in the gallery. The frame colour says how the place is tied to the book.
+
+```{=html}
+<iframe class="manuscript-map" src="map/web/index.html" title="Map and timeline of the Sjónabók manuscripts" loading="lazy"
+  onload="const f=this, fit=()=>{try{f.style.height=(f.contentDocument.getElementById('htmlwidget_container').offsetHeight+16)+'px'}catch(e){}}; fit(); new ResizeObserver(fit).observe(f.contentDocument.body);"></iframe>
+```
+
+::: {.callout-note collapse="true" appearance="simple"}
+## How the signature motifs are picked
+
+Everything is done by an open script, so anyone can rerun it and get the same icons ([`gallery/map/signature_motifs.R`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/signature_motifs.R), `make motifs`).
+
+1. **Find small figures.** In every chart, find each small figure, 5 to 11 cells on a side, with empty space around it (at most two stray cells touching it, so a flower on a short stem still counts).
+2. **Count how often it recurs.** For each figure, count the pages in the same manuscript where it, or a near copy, appears. A near copy may be turned or mirrored and may differ in up to 12% of its cells.
+3. **Keep what belongs to that book.** Drop figures that turn up more often in other manuscripts than in this one. Score = pages × share of pages in this book × log(1 + copies).
+4. **Keep them distinct.** The manuscript with the clearest favourite chooses first; each next one takes its best figure that differs from those already chosen in at least 45% of its cells.
+
+A person checks the result: the script also draws a sheet of the six best candidates per manuscript, and a pick can be swapped by hand in `gallery/map/picks.csv`. Places and dates come from museum records ([`manuscripts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/manuscripts.csv), [`places.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/places.csv)); the map is drawn with R and leaflet (`make map`). Open questions about places are tracked in [issue #15](https://github.com/HiDefTextiles/Sjonabok/issues/15).
+:::
+
 ## Sources and types
 
 Each file name starts with the manuscript or museum number it was taken from. Borders (long bands) dominate most sources; rosettes and figurative motifs cluster in a few.

@@ -1,0 +1,11 @@
+id,step,role,place,lat,lon,when,note,url,coordinate_type,coordinate_source
+"Þjms. 1105",1,owned,Hólar í Hjaltadal,65.73335,-19.11378,until 1684,Bishop's wife at Hólar; owner/activity place only.,https://sarpur.is/is/collection/item/341264/,modern cathedral point at historic site,https://www.openstreetmap.org/way/345784116
+"Þjms. 1105",2,owned,Gröf á Höfðaströnd,65.8674,-19.3711,1685-1715,Ragnheiður lived here after 1685 (Wikipedia).,https://sarpur.is/is/collection/item/341264/,approximate (not yet checked),Wikipedia
+"Þjms. 6950",1,uncertain,Sandhólaferja,63.82659,-20.67366,,Probable owner residence (genealogy lead).,https://sarpur.is/is/collection/item/323045/,current farmyard centroid,https://www.openstreetmap.org/way/689323568; https://www.geonames.org/3413726
+"Þjms. 2008-14",1,made,"Fjarðarhorn, Hrútafjörður",65.14909,-21.10358,1780-1800,Fjarðarhornsbók; drawn on the backs of old letters.,https://sarpur.is/is/collection/item/339052/,modern farm point at same named farm,https://www.geonames.org/3417389
+"Þjms. 2008-14",2,later owned,Kjörseyri,65.2502,-21.1514,after 1820,Kept by her son.,https://sarpur.is/is/collection/item/339052/,approximate (not yet checked),
+"Þjms. Th 116",1,made,"Skaftafell, Öræfi",64.01900,-16.98924,c. 1787,Skaftafellsbók.,https://sarpur.is/is/collection/item/491584/,gazetteer point for abandoned historical farm,https://www.geonames.org/2627082
+"Þjms. 5898",1,owned,Hruni,64.142227,-20.259397,1818-1845,Priest's wife at Hruni (husband Jón Steingrímsson 1777-1851).,https://sarpur.is/is/collection/item/322753/,modern farm/church-site point,https://nat.is/hruni-church-farm/
+"Þjms. 1960-60",1,owned,Barð í Fljótum,66.04812,-19.11225,1851-1877,Priest's wife at Barð.,https://sarpur.is/is/collection/item/331642/,current farm point on historic site,https://www.geonames.org/2632924
+"Þjms. 1960-60",2,family link,Undirfell í Vatnsdal,65.4167,-20.2833,before 1851,Her father's parish; not shown to be her birthplace.,https://sarpur.is/is/collection/item/331642/,approximate (not yet checked),
+"N.453.a",1,held,"Nationalmuseet, Copenhagen",55.67455,12.57471,since 1893?,Where it is held; origin unknown.,https://samlinger.natmus.dk/dnt/object/269655,current repository building centroid,https://www.geonames.org/6949468

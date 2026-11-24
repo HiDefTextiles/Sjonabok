@@ -168,3 +168,5 @@ cython_debug/
 # Full charts from the book: local only, restore with `make originals`.
 # The committed charts are patterns/min (repeat units) and patterns/repeats.csv.
 /patterns/txt/
+# Manuscript map: leaflet files are committed with the built page (make map)
+!/gallery/map/web/lib/

@@ -98,3 +98,22 @@ gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
 .PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples
+
+# ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
+# make motifs : pick a signature motif per manuscript from patterns/min
+#               -> gallery/map/signatures.csv (+ candidates.png review sheet)
+# make map    : leaflet map with those motifs as markers -> gallery/map/web/
+# Needs R with readr, dplyr, purrr, stringr, tibble, leaflet, htmlwidgets.
+# The built map is committed, so the gallery Action does not need R.
+MAP = $(GALLERY)/map
+
+$(MAP)/signatures.csv: $(wildcard $(MIN_DIR)/*.txt) $(PARENT_DIR)/repeats.csv $(MAP)/signature_motifs.R $(wildcard $(MAP)/picks.csv)
+	LC_ALL=C.UTF-8 Rscript $(MAP)/signature_motifs.R
+
+$(MAP)/web/index.html: $(MAP)/signatures.csv $(MAP)/manuscripts.csv $(MAP)/places.csv $(MAP)/manuscript_map.R
+	cd $(MAP) && LC_ALL=C.UTF-8 Rscript manuscript_map.R
+
+motifs: $(MAP)/signatures.csv
+map: $(MAP)/web/index.html
+
+.PHONY: motifs map

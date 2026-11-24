@@ -1,0 +1,11 @@
+map_no,id,who,when_label,when_start,when_end,date_on_record,where,place_type,country,repository,confidence,source
+1,"Þjms. 1105","Ragnheiður Jónsdóttir (1646–1715)","17th century",1600,1699,FALSE,"Hólar í Hjaltadal","owned/associated here","Iceland","Þjóðminjasafn Íslands","medium-low","Þjóðminjasafn Íslands/Sarpur; Íslensk sjónabók"
+2,"Þjms. 2007-45","later owner(s)","1747–1824",1747,1824,TRUE,"Öðrumgarður, Nesjar","later owner / uncertain","Iceland","Þjóðminjasafn Íslands","low","Þjóðminjasafn Íslands/Sarpur"
+3,"Þjms. 1997-123","Ingibjörg Eiríksdóttir","18th century",1700,1799,FALSE,"Steinsstaðir","owned/associated here","Iceland","Þjóðminjasafn Íslands","low-medium","Þjóðminjasafn Íslands/Sarpur; Kristín Schmidhauser Jónsdóttir, Hugur og hönd 35 (2000), 32–34"
+4,"Þjms. 6950","Gunnar Filippusson","1776",1776,1776,TRUE,"Sandhólaferja","later owner / uncertain","Iceland","Þjóðminjasafn Íslands","medium","Þjóðminjasafn Íslands/Sarpur; biographical/genealogical records"
+5,"Þjms. 2008-14","Katrín Þorvaldsdóttir","c. 1780–1800",1780,1800,FALSE,"Fjarðarhorn","made here","Iceland","Þjóðminjasafn Íslands","high","Þjóðminjasafn Íslands/Sarpur, Fjarðarhornsbók accession information"
+6,"Þjms. Th 116","Jón Einarsson","c. 1787",1787,1787,TRUE,"Skaftafell","made here","Iceland","Þjóðminjasafn Íslands","high","Handíðir horfinnar aldar: Sjónabók frá Skaftafelli (1994)"
+7,"Þjms. 5898","Helga Brynjólfsdóttir (1807–1882)","no date on record",,,FALSE,"Hruni","owned here","Iceland","Þjóðminjasafn Íslands","high for owner/place","Þjóðminjasafn Íslands/Sarpur; published description of Þjms. 5898"
+8,"Þjms. 1960-60","Katrín Jónsdóttir (1828–1889)","no date on record",,,FALSE,"Barð í Fljótum","owned here","Iceland","Þjóðminjasafn Íslands","high for owner/place","Þjóðminjasafn Íslands/Sarpur; archival authority record for Katrín Jónsdóttir"
+9,"Þjms. 1985-235","Guðrún Jónsdóttir á Hóli","19th century",1800,1899,FALSE,,"Hóll unknown","Iceland","Þjóðminjasafn Íslands","low","Þjóðminjasafn Íslands/Sarpur"
+10,"N.453.a","unknown","1780",1780,1780,TRUE,"Copenhagen","held here; origin unknown","Denmark","Nationalmuseet","high for repository","Nationalmuseet, Danmarks Nyere Tid, object 269655, N.453.a, accession 118/1893"
