@@ -85,7 +85,7 @@ gallery-preview: $(GALLERY_DATA)
 	cd $(GALLERY) && quarto preview
 
 # make overview-layout : optimise the two overview sheets (bands: Gurobi, needs
-#                        gurobipy and a licence; motifs: local search, ~10 min);
+#                        gurobipy and a licence; motifs: local search, --time as long as you like);
 #                        commit gallery/layout/*.csv
 PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)

@@ -208,42 +208,83 @@ class MotifSearch:
     charts in the order and keeps any swap that is no taller. On this sheet
     it beats the MIP, whose bound stays far from any packing."""
 
-    def __init__(self, items, width, gap=3, seed=1):
+    def __init__(self, items, width, gap=3, seed=1, rainbow=0.0):
         self.items, self.W = items, width + gap         # w and h include the gap
         self.w = [int(r["w"]) for r in items]
         self.h = [int(r["h"]) for r in items]
+        self.rank = [int(r["rank"]) for r in items]
         self.rng = random.Random(seed)
+        self.rainbow = rainbow
+        if "top" in items[0]:
+            # shaped charts (stitches + clear ring): first and last row per
+            # column; the outlines may interlock, the w and h carry no gap
+            self.W, self.extra = width, 0
+            self.top = [[int(v) for v in r["top"].split()] for r in items]
+            self.bottom = [[int(v) for v in r["bottom"].split()] for r in items]
+        else:
+            self.extra = gap
+            self.top = [[0] * w for w in self.w]
+            self.bottom = [[h - 1] * w for w, h in zip(self.w, self.h)]
+        # where each source belongs, as a share of the height: the middle of
+        # its share of the total area, sources in order from the top
+        area = [a * b for a, b in zip(self.w, self.h)]
+        total, cum, self.target = sum(area), 0, {}
+        for r in sorted(set(self.rank)):
+            share = sum(a for a, k in zip(area, self.rank) if k == r) / total
+            self.target[r] = cum + share / 2
+            cum += share
+
+    def score(self, pos, height):
+        """Height, plus (with --rainbow) the mean distance of each chart's
+        middle from its source's place in the rainbow, area weighted."""
+        if not self.rainbow:
+            return height
+        off = sum(self.w[i] * self.h[i] * abs(pos[i][1] + self.h[i] / 2 - self.target[self.rank[i]] * height)
+                  for i in range(len(pos)))
+        return height + self.rainbow * off / sum(a * b for a, b in zip(self.w, self.h))
 
     def place(self, order):
-        """Positions and height of a bottom-left skyline packing of order."""
+        """Positions and height of a column-skyline packing of order: each
+        chart drops to where its outline first touches what is above."""
         sky = [0] * self.W
         pos, height = [None] * len(order), 0
         for i in order:
-            w, h = self.w[i], self.h[i]
-            steps = [0] + [x for x in range(1, self.W) if sky[x] != sky[x - 1]] + [self.W - w]
-            y, x = min((max(sky[x:x + w]), x) for x in steps if x + w <= self.W)
-            sky[x:x + w] = [y + h] * w
-            pos[i], height = (x, y), max(height, y + h)
+            w, top, bot = self.w[i], self.top[i], self.bottom[i]
+            cols = [c for c in range(w) if top[c] >= 0]
+            best = None
+            for x in range(self.W - w + 1):
+                y = max(sky[x + c] - top[c] for c in cols)
+                if best is None or y < best[0]:
+                    best = (y, x)
+                    if y == 0:
+                        break
+            y, x = best
+            for c in cols:
+                sky[x + c] = y + bot[c] + 1
+            pos[i], height = (x, y), max(height, y + self.h[i])
         return pos, height
 
-    def spread(self, pos, height):
+    def spread(self, pos, height, order):
         """Even out the empty space: every chart also gets its lowest
         position (the same packing dropped to the bottom edge, keeping x),
-        and goes halfway between the two. Charts that share columns keep
-        their order in both, so the halfway layout cannot overlap; the
+        and goes halfway between the two. The drop goes in reverse order,
+        so charts that share columns keep their order in both and the
+        halfway layout cannot overlap; the
         white left at the ragged bottom is spread through the sheet."""
         floor = [height] * self.W
         down = [None] * len(pos)
-        for i in sorted(range(len(pos)), key=lambda i: -pos[i][1]):
-            x, w, h = pos[i][0], self.w[i], self.h[i]
-            y = min(floor[x:x + w]) - h
-            floor[x:x + w] = [y] * w
+        for i in reversed(order):
+            x, top, bot = pos[i][0], self.top[i], self.bottom[i]
+            cols = [c for c in range(self.w[i]) if top[c] >= 0]
+            y = min(floor[x + c] - bot[c] - 1 for c in cols)
+            for c in cols:
+                floor[x + c] = y + top[c]
             down[i] = y
         return [(x, (y + d) // 2) for (x, y), d in zip(pos, down)]
 
     def save(self, out, order):
         pos, height = self.place(order)
-        pos = self.spread(pos, height)
+        pos = self.spread(pos, height, order)
         write(out, ["id", "x", "y"], [(it["id"], *p) for it, p in zip(self.items, pos)])
         return height
 
@@ -254,9 +295,11 @@ class MotifSearch:
             "height": sorted(range(n), key=lambda i: (-self.h[i], -self.w[i])),
             "longest side": sorted(range(n), key=lambda i: -max(self.w[i], self.h[i])),
         }
-        best = min(((self.place(o)[1], name, o) for name, o in starts.items()), key=lambda t: t[0])
-        print(f"start ({best[1]} first): height {best[0] - 3}", flush=True)
+        if self.rainbow:
+            starts["rainbow"] = sorted(range(n), key=lambda i: (self.rank[i], -self.h[i]))
+        best = min(((self.score(*self.place(o)), name, o) for name, o in starts.items()), key=lambda t: t[0])
         height, order = best[0], best[2]
+        print(f"start ({best[1]} first): height {self.place(order)[1] - self.extra}, score {height:.1f}", flush=True)
         bound = sum(a * b for a, b in zip(self.w, self.h)) / self.W
         self.save(out, order)
         t0 = time.time()
@@ -270,19 +313,20 @@ class MotifSearch:
                     trial[i], trial[j] = trial[j], trial[i]
             else:                                       # move one chart elsewhere in the order
                 trial.insert(self.rng.randrange(n), trial.pop(self.rng.randrange(n)))
-            h = self.place(trial)[1]
+            pos, ht = self.place(trial)
+            h = self.score(pos, ht)
             if h <= height:
-                if h < height:
-                    print(f"{(time.time() - t0) / 60:6.1f} min: height {h - 3}", flush=True)
+                if h < height - 0.5:
+                    print(f"{(time.time() - t0) / 60:6.1f} min: height {ht - self.extra}, score {h:.1f}", flush=True)
                 height, order = h, trial
             if time.time() >= next_save:
                 if height < saved:
                     self.save(out, order)
                     saved = height
-                    print(f"checkpoint: wrote {out} (height {height - 3})", flush=True)
+                    print(f"checkpoint: wrote {out} (height {self.place(order)[1] - self.extra})", flush=True)
                 next_save += checkpoint
-        self.save(out, order)
-        print(f"final height {height - 3} cells (lower bound from area {bound - 3:.0f})", flush=True)
+        final = self.save(out, order)
+        print(f"final height {final - self.extra} cells (lower bound from area {bound - self.extra:.0f})", flush=True)
 
 
 def main():
@@ -298,6 +342,8 @@ def main():
                     help="motifs: separate only pairs this close in the start, more lazily; -1 = all pairs at once")
     ap.add_argument("--mip", action="store_true", help="motifs: use the Gurobi MIP instead of the local search")
     ap.add_argument("--checkpoint", type=float, default=3600, help="motifs: write the best layout so far every this many seconds")
+    ap.add_argument("--rainbow", type=float, default=0.0,
+                    help="motifs: weight on keeping sources in rainbow order top to bottom (0 = height only)")
     ap.add_argument("--seed", type=int, default=1, help="motifs: seed of the local search")
     ap.add_argument("--rounds", type=int, default=15, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
@@ -307,7 +353,7 @@ def main():
     elif args.mip:
         MotifPacker(items, args.width, args.group, args.near).run(args.out, args.time, args.rounds)
     else:
-        MotifSearch(items, args.width, seed=args.seed).run(args.out, args.time, args.checkpoint)
+        MotifSearch(items, args.width, seed=args.seed, rainbow=args.rainbow).run(args.out, args.time, args.checkpoint)
 
 
 if __name__ == "__main__":

@@ -572,21 +572,59 @@ class BandColumns(Sheet):
         self.draw(items, path)
 
 
+def clear_ring(m, ring=1):
+    """The chart's stitches plus a ring of clear cells ('.' in
+    pattern-synthesis clear_space) around them, ring cells wide, padded."""
+    out = np.pad(m.astype(bool), ring)
+    for _ in range(ring):
+        grown = out.copy()
+        grown[1:, :] |= out[:-1, :]
+        grown[:-1, :] |= out[1:, :]
+        grown[:, 1:] |= out[:, :-1]
+        grown[:, :-1] |= out[:, 1:]
+        grown[1:, 1:] |= out[:-1, :-1]
+        grown[1:, :-1] |= out[:-1, 1:]
+        grown[:-1, 1:] |= out[1:, :-1]
+        grown[:-1, :-1] |= out[1:, 1:]
+        out = grown
+    return out
+
+
 class MotifSheet(Sheet):
-    """Motifs at their own size, packed as tightly as possible; colours
-    may mix. Simple packing: bottom-left skyline, tallest first, each chart
-    dropping into the lowest spot it fits."""
+    """Motifs at their own size, packed as tightly as possible. Each chart
+    is its stitches plus a one-cell clear ring, so two motifs are at least
+    two cells apart but their outlines may interlock (an animal's legs over
+    another's back). Positions are those of the ringed mask's corner.
+    Simple packing: a column skyline, tallest first."""
+
+    RING = 1
+
+    def mask(self, p):
+        return clear_ring(p.trim, self.RING)
+
+    @staticmethod
+    def profiles(mask):
+        """First and last ringed row per column (-1 for an empty column)."""
+        any_ = mask.any(axis=0)
+        top = np.where(any_, mask.argmax(axis=0), -1)
+        bottom = np.where(any_, mask.shape[0] - 1 - mask[::-1].argmax(axis=0), -1)
+        return top, bottom
 
     def skyline(self):
         sky = np.zeros(self.width, dtype=int)
         out = {}
         for p in sorted(self.patterns, key=lambda p: (-p.trim.shape[0], -p.trim.shape[1])):
-            h, w = p.trim.shape
-            w = min(w, self.width)
-            # the span includes the gap on the right, so nothing ends up
-            # flush against the left edge of a chart already placed
-            y, x = min((int(sky[x:x + w + self.gap].max()), x) for x in range(self.width - w + 1))
-            sky[x:x + w + self.gap] = y + h + self.gap
+            m = self.mask(p)
+            top, bottom = self.profiles(m)
+            w = m.shape[1]
+            cols = top >= 0
+            best = None
+            for x in range(self.width - w + 1):
+                y = int((sky[x:x + w][cols] - top[cols]).max())
+                if best is None or y < best[0]:
+                    best = (y, x)
+            y, x = best
+            sky[x:x + w][cols] = y + bottom[cols] + 1
             out[p.id] = (x, y)
         return out
 
@@ -594,19 +632,30 @@ class MotifSheet(Sheet):
         pos = self.skyline()
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["id", "source", "rank", "w", "h", "x", "y"])   # sizes include the gap
+            w.writerow(["id", "source", "rank", "w", "h", "x", "y", "top", "bottom"])   # ringed mask
             for p in self.patterns:
-                h, wd = p.trim.shape
-                w.writerow([p.id, p.source, source_rank(p.source), wd + self.gap, h + self.gap, *pos[p.id]])
+                m = self.mask(p)
+                top, bottom = self.profiles(m)
+                w.writerow([p.id, p.source, source_rank(p.source), m.shape[1], m.shape[0], *pos[p.id],
+                            " ".join(map(str, top)), " ".join(map(str, bottom))])
 
     def fits(self, pos):
-        height = max(pos[p.id][1] + p.trim.shape[0] for p in self.patterns) + self.gap
-        used = np.zeros((height, self.width + self.gap), dtype=bool)
-        for p in self.patterns:
-            (x, y), (h, w) = pos[p.id], p.trim.shape
-            if x < 0 or y < 0 or x + w > self.width or used[y:y + h + self.gap, x:x + w + self.gap].any():
+        """No chart's ring touches another chart's stitches, all on the sheet."""
+        height = max(pos[p.id][1] + self.mask(p).shape[0] for p in self.patterns)
+        owner = np.zeros((height, self.width), dtype=np.int32)
+        for k, p in enumerate(self.patterns, 1):
+            (x, y), t = pos[p.id], p.trim
+            if x < 0 or y < 0 or x + t.shape[1] + 2 * self.RING > self.width:
                 return False
-            used[y:y + h + self.gap, x:x + w + self.gap] = True
+            region = owner[y + self.RING:y + self.RING + t.shape[0], x + self.RING:x + self.RING + t.shape[1]]
+            if region[t == 1].any():
+                return False
+            region[t == 1] = k
+        for k, p in enumerate(self.patterns, 1):
+            (x, y), m = pos[p.id], self.mask(p)
+            seen = owner[y:y + m.shape[0], x:x + m.shape[1]][m]
+            if ((seen != 0) & (seen != k)).any():
+                return False
         return True
 
     def save(self, path, layout_path):
@@ -615,7 +664,8 @@ class MotifSheet(Sheet):
             print(f"{layout_path.name} has overlaps; using the simple packing")
             pos = None
         pos = pos or self.skyline()
-        self.draw([(pos[p.id][1], pos[p.id][0], p.trim[:, :self.width], p) for p in self.patterns], path)
+        r = self.RING
+        self.draw([(pos[p.id][1] + r, pos[p.id][0] + r, p.trim, p) for p in self.patterns], path)
 
 
 def main():
