@@ -160,7 +160,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     const a = answers[k];
     try {
       await db.doc("piles/" + k).set({ pile: +k.slice(1), subjects: a.subjects, exceptions: a.exceptions, mixed: a.mixed, note: a.note, ids: data.piles.find((p) => key(p.pile) === k).charts.map((c) => c.id), saved_at: new Date().toISOString() });
-      setStatus("Saved");
+      setStatus("Saved to claude.ai " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
     } catch (e) {
       dirty[k] = true;
       setStatus("Not saved: " + (e && e.code === "permission_denied" ? "you can view but not edit this review" : "connection problem, try again"));
@@ -298,8 +298,15 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     vocab = data.vocabulary;
     render();
 
-    db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    const inViewer = !!(window.claude && window.claude.use);
+    db = inViewer ? await window.claude.use("db") : null;
     const notice = $("notice");
+    if (!db && inViewer) {
+      // On claude.ai, but this view cannot save (signed out, or an app view without the database).
+      notice.hidden = false;
+      notice.textContent = "This view cannot save answers. Open the page in a web browser signed in to claude.ai (for example claude.ai on your phone's browser or on a computer). Nothing you tap here is kept.";
+      canWrite = false; db = {}; render(); return;
+    }
     if (!db) {
       // Opened from the repository (make review): keep answers in this browser and export review.csv.
       local = true;
