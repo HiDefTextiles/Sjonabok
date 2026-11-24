@@ -3,8 +3,7 @@ title: "Methods: sorting motifs by subject"
 description: "How the Sjónabók gallery groups patterns by what they depict (birds, flowers, deer and more): a practical guide to using AI to sort a collection, with a person making every decision."
 ---
 
-Many Sjónabók patterns depict something: a bird, a flower in a vase, a reindeer, a heart, a
-human figure. This page explains how we group them by subject, step by step, so that anyone can
+Many Sjónabók patterns depict something: a bird, a flower in a vase, a reindeer, a heart. This page explains how we group them by subject, step by step, so that anyone can
 check the result or repeat the method on their own collection. Every script, setting and label is
 in the [Sjonabok repository](https://github.com/HiDefTextiles/Sjonabok/tree/main/analysis/subjects).
 
@@ -140,8 +139,7 @@ The reviewer opens a review page that works on a phone: one card per pile, with 
 from its 0/1 file. For each pile they tap:
 
 - **subject**: one word from the [subject list](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/vocabulary.csv)
-  (bird, flower, tree, deer, other animal, human figure, heart, star, cross, letters, geometric,
-  not sure). A chart can have several subjects, for example a bird on a flowering branch.
+  (bird, flower, tree, deer, other animal, heart, star, cross, letters, geometric, not sure). A chart can have several subjects, for example a bird on a flowering branch.
 - **exceptions**: tap a chart that does not fit to see it large and give it its own subject.
 - **mixed**: if the pile is too varied, it is left for a finer cut in the next round.
 
@@ -172,7 +170,7 @@ also belongs to one of three main groups ([`groups.csv`](https://github.com/HiDe
 
 | Main group | Subjects |
 |---|---|
-| Animals and people | bird, deer, other animal, human figure |
+| Animals | bird, deer or reindeer, other animal |
 | Plants | flower, tree |
 | Ornament | star or rose, cross, heart, letters, geometric |
 
