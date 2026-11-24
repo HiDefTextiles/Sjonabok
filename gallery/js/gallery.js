@@ -151,7 +151,7 @@
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
-      <span class="cap"><b>${p.source_label}</b> p. ${p.number}<br>
+      <span class="cap"><b>${p.source_label}</b> p. ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
       <small>${KIND_LABELS[p.kind]} · ${p.trim_width}×${p.trim_height}</small></span>`;
     return a;
   }
@@ -227,6 +227,7 @@
     const grp = p.frieze ? `${p.frieze} (${p.frieze_name})` : p.point ? `${p.point} (${p.point_name})` : "—";
     $("d-facts").innerHTML =
       fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
+      fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
       fact("Chart size", `${p.width} × ${p.height} cells`) +
@@ -303,6 +304,10 @@
   async function init() {
     const json = await fetch(`${BASE}patterns.json`).then((r) => r.json());
     data = json.patterns;
+    // how many motifs share a page (same source and page number)
+    const perPage = {};
+    for (const p of data) { const k = p.source + "_" + p.number; perPage[k] = (perPage[k] || 0) + 1; }
+    for (const p of data) p.on_page = perPage[p.source + "_" + p.number];
     for (const p of data) { byId[p.id] = p; p.card = card(p); }
     const kinds = Object.keys(KIND_LABELS).filter((k) => json.kinds[k]);
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
