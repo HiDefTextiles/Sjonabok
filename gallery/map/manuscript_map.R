@@ -163,7 +163,8 @@ page <- m |>
      .timeline h4, .not-mapped h4 { font: 600 14px sans-serif; color: %1$s; margin: 0 0 4px; }
      .timeline { margin-bottom: 6px; }
      .leaflet-container { width: 100%% !important; height: min(75vw, 75vh) !important; }
-     .leaflet-tile-pane { filter: grayscale(1) contrast(0.85) brightness(1.08); }
+     .leaflet-tile-pane { filter: grayscale(1) sepia(0.2) hue-rotate(190deg) saturate(1.3) brightness(1.12) contrast(0.72); opacity: 0.85; }
+     .leaflet-container { background: #f4f5fb; }
      .key { margin: 2px 0 6px; font-size: 13px; color: #333; }
      .key span { display: inline-block; width: 11px; height: 11px; border: 2px solid; border-radius: 3px; margin: 0 4px 0 10px; vertical-align: -2px; }
      .key span:first-child { margin-left: 0; }
