@@ -26,12 +26,17 @@ Steps (run through the Makefile in this folder, see README.md):
     knot-answers  Knot / No knot answers (JSON) -> feature_labels.csv, and a
              new page of the unseen charts nearest to the confirmed knots
              (image model over every chart, embed.py --all)           -> work/knots2/
+    features distances for every chart, bands by repeat unit: shape,
+             symmetry, form, provenance, texture (+ embed.py --all)   -> work/all/*_dist.csv
+    learn    weights for those distances, learnt from the labels
+             (main groups and knots); the fair test is held out       -> weights.csv
     fair     answers of the fair test (charts labelled one at a time)
              as one row per chart                                     -> fairtest.csv
     evaluate how well each distance finds a fair-test chart's subject
              from its nearest labelled charts                         -> work/evaluation.csv
 
-Only subjects.csv, review.csv, fairtest.csv and feature_labels.csv are written by a person and kept in git.
+Only subjects.csv, review.csv, fairtest.csv and feature_labels.csv are written by a person;
+weights.csv is learnt from them and kept so the final clustering needs no labels and kept in git.
 Everything under work/ is rebuilt from the charts.
 """
 
@@ -58,6 +63,8 @@ FAIRTEST = HERE / "fairtest.csv"
 VOCABULARY = HERE / "vocabulary.csv"
 FEATURES = HERE / "features.csv"
 FEATURE_LABELS = HERE / "feature_labels.csv"
+WEIGHTS = HERE / "weights.csv"
+ALL = WORK / "all"
 
 # The pilot covers stand-alone figures; bands join once their repeat units
 # are reviewed (patterns/repeat, see gallery About page).
@@ -149,7 +156,7 @@ class MetaDistance:
                 page often belong together.
     """
 
-    BLOCKS = ("symmetry", "form", "provenance")
+    BLOCKS = ("symmetry", "form", "provenance")   # texture is used by `learn`, not by `meta`
 
     def __init__(self, units, weights=(1, 1, 1)):
         self.ids = [u.id for u in units]
@@ -168,6 +175,7 @@ class MetaDistance:
                 "aspect": float(np.log(w / h)),
                 "pieces": float(np.log1p(p.pieces)),
                 "source": p.source, "page": f"{p.source}_{p.number}",
+                **KnotScore.measures(u.cells),
             })
         self.rows = rows
 
@@ -188,7 +196,11 @@ class MetaDistance:
                       + [self.differs(col("group"))], axis=0)
         form = np.mean([self.spread(col(k)) for k in ("density", "aspect", "pieces")], axis=0)
         prov = 0.5 * self.differs(col("source")) + 0.5 * self.differs(col("page"))
-        return {"symmetry": sym, "form": form, "provenance": prov}
+        # texture: the knot measures (enclosed openings, diagonal strokes); rank-spread,
+        # because a few lacy charts have very many openings
+        rk = lambda k: np.array(col(k)).argsort().argsort()
+        texture = np.mean([self.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
+        return {"symmetry": sym, "form": form, "provenance": prov, "texture": texture}
 
     def matrix(self):
         b = self.blocks()
@@ -442,6 +454,98 @@ def nearest_to(seeds, ids, d, exclude, n):
     return out
 
 
+class WeightLearner:
+    """Learn how much each distance counts, from the people's labels.
+
+    Each distance is rank-scaled to 0..1 (as in cluster.R). Every weighting on
+    a grid (steps of `step`, weights summing to 1) is scored by leave-one-out
+    k-nearest-neighbour agreement on the labelled charts:
+
+        group   share of charts whose k nearest labelled charts most often
+                share its main group (vocabulary.csv), and
+        knot    the same for Knot / No knot (feature_labels.csv), when there
+                are enough answers
+
+    and the score is their mean. The fair-test charts are left out of the
+    learning, so `holdout()` gives an honest score for the chosen weights.
+    The result only sets weights; the clustering that uses them sees no labels.
+    """
+
+    def __init__(self, distances, k=5, step=0.1, min_knots=10):
+        self.names = list(distances)
+        self.ids = distances[self.names[0]][0]
+        for n in self.names:
+            assert distances[n][0] == self.ids, n
+        self.D = np.stack([Evaluation.rank_scale(distances[n][1]) for n in self.names])
+        self.k, self.step = k, step
+        idx = {i: n for n, i in enumerate(self.ids)}
+        to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
+        groups = {r["id"]: {to.get(x, "") for x in r["subjects"].split("|")} - {""} for r in read_csv(SUBJECTS)}
+        fair = {r["id"]: {to.get(x, "") for x in r["subjects"].split("|")} - {""} for r in read_csv(FAIRTEST)}
+        self.fair_ids = {i for i in fair if i in idx}
+        self.group = {idx[i]: g for i, g in groups.items() if g and i in idx and i not in self.fair_ids}
+        self.fair = {idx[i]: g for i, g in fair.items() if g and i in idx}
+        knots = {r["id"]: r["value"] == "yes" for r in read_csv(FEATURE_LABELS) if r["feature"] == "knot"}
+        self.knot = {idx[i]: {v} for i, v in knots.items() if i in idx and i not in self.fair_ids}
+        if len(self.knot) < min_knots:
+            self.knot = {}
+
+    def grid(self):
+        n, m = len(self.names), round(1 / self.step)
+        def parts(left, slots):
+            if slots == 1:
+                yield (left,)
+                return
+            for a in range(left + 1):
+                for rest in parts(left - a, slots - 1):
+                    yield (a,) + rest
+        for p in parts(m, n):
+            yield np.array(p, dtype=float) / m
+
+    def knn(self, d, test, pool, labels, truth):
+        pool = np.array(sorted(pool))
+        right = 0
+        for i in test:
+            cand = pool[pool != i]
+            near = cand[np.argsort(d[i, cand], kind="stable")[: self.k]]
+            votes = {}
+            for rank, j in enumerate(near):
+                for s in labels[j]:
+                    votes[s] = votes.get(s, 0) + 1 - rank * 1e-3
+            right += max(votes, key=votes.get) in truth[i]
+        return right / max(1, len(test))
+
+    def score(self, w):
+        d = np.tensordot(w, self.D, axes=1)
+        g = self.knn(d, list(self.group), self.group, self.group, self.group)
+        if not self.knot:
+            return g, None
+        kn = self.knn(d, list(self.knot), self.knot, self.knot, self.knot)
+        return g, kn
+
+    def fit(self):
+        rows = []
+        for w in self.grid():
+            g, kn = self.score(w)
+            rows.append((g if kn is None else (g + kn) / 2, g, kn, w))
+        rows.sort(key=lambda r: (-r[0], -r[3][self.names.index("image")] if "image" in self.names else 0))
+        self.results = rows
+        self.best = rows[0][3]
+        return self.best
+
+    def holdout(self, w):
+        """Fair-test charts guessed from their k nearest labelled (non-fair) charts."""
+        d = np.tensordot(w, self.D, axes=1)
+        return self.knn(d, list(self.fair), self.group, self.group, self.fair), len(self.fair)
+
+    def write(self, path=WEIGHTS):
+        with open(path, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["distance", "weight"])
+            for n, x in zip(self.names, self.best):
+                w.writerow([n, f"{x:.2f}"])
+
+
 class Evaluation:
     """Which distance best finds a chart's subject from its k nearest labelled charts?
 
@@ -541,25 +645,31 @@ class KnotScore:
     """
 
     def __init__(self, txt_dir, min_cells=20):
-        from scipy import ndimage
         self.rows = []
         for f in sorted(Path(txt_dir).glob("*.txt")):
             m = Pattern.trimmed(Pattern.read(f)).astype(bool)
             if m.sum() < min_cells:
                 continue
-            lab, n = ndimage.label(~m)
-            edge = set(np.unique(np.r_[lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
-            sizes = ndimage.sum(~m, lab, range(1, n + 1))
-            openings = sum(1 for k, size in enumerate(sizes, 1) if k not in edge and size >= 2)
-            q = np.pad(m, 1).astype(int)
-            orth = q[:-2, 1:-1] + q[2:, 1:-1] + q[1:-1, :-2] + q[1:-1, 2:]
-            diag = q[:-2, :-2] + q[:-2, 2:] + q[2:, :-2] + q[2:, 2:]
-            self.rows.append({"id": f.stem, "openings": 100 * openings / m.sum(),
-                              "diagonal": ((orth == 0) & (diag > 0) & m).sum() / m.sum()})
+            self.rows.append({"id": f.stem, **self.measures(m)})
         rank = lambda k: np.array([r[k] for r in self.rows]).argsort().argsort() / max(1, len(self.rows) - 1)
         for r, a, b in zip(self.rows, rank("openings"), rank("diagonal")):
             r["score"] = a + b
         self.rows.sort(key=lambda r: -r["score"])
+
+    @staticmethod
+    def measures(m):
+        from scipy import ndimage
+        m = np.asarray(m).astype(bool)
+        filled = max(1, int(m.sum()))
+        lab, n = ndimage.label(~m)
+        edge = set(np.unique(np.r_[lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+        sizes = ndimage.sum(~m, lab, range(1, n + 1))
+        openings = sum(1 for k, size in enumerate(sizes, 1) if k not in edge and size >= 2)
+        q = np.pad(m, 1).astype(int)
+        orth = q[:-2, 1:-1] + q[2:, 1:-1] + q[1:-1, :-2] + q[1:-1, 2:]
+        diag = q[:-2, :-2] + q[:-2, 2:] + q[2:, :-2] + q[2:, 2:]
+        return {"openings": 100 * openings / filled,
+                "diagonal": float(((orth == 0) & (diag > 0) & m).sum() / filled)}
 
     def write(self, path):
         with open(path, "w", newline="") as f:
@@ -604,7 +714,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -722,6 +832,32 @@ def main():
             p["hint"] = p["charts"][0]["id"]
         (WORK / "knots2" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
         print(f"{len(seeds)} knots, {len(pick)} charts -> {WORK / 'knots2'}")
+    elif a.step == "features":
+        ALL.mkdir(parents=True, exist_ok=True)
+        units = Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units
+        sd = ShapeDistance(units)
+        write_matrix(ALL / "shape_dist.csv", sd.ids, sd.matrix())
+        md = MetaDistance(units)
+        for name, d in md.blocks().items():
+            np.fill_diagonal(d, 0.0)
+            write_matrix(ALL / f"{name}_dist.csv", md.ids, d)
+        print(f"{len(units)} charts -> {ALL}")
+    elif a.step == "learn":
+        names = ["image", "shape", "symmetry", "form", "provenance", "texture"]
+        files = {"image": WORK / "embed_all_dist.csv", **{n: ALL / f"{n}_dist.csv" for n in names[1:]}}
+        distances = {n: read_matrix(files[n]) for n in names if files[n].exists()}
+        wl = WeightLearner(distances)
+        best = wl.fit()
+        wl.write()
+        print(f"learnt from {len(wl.group)} group labels and {len(wl.knot)} knot answers; fair test held out")
+        print("top weightings (score, group, knot, weights " + ",".join(wl.names) + "):")
+        for sc, g, kn, w in wl.results[:8]:
+            print(f"  {sc:.3f} {g:.3f} {kn if kn is None else round(kn, 3)} {np.round(w, 2)}")
+        for label, w in (("learnt", best), ("image only", np.eye(len(wl.names))[wl.names.index("image")]),
+                         ("equal", np.full(len(wl.names), 1 / len(wl.names)))):
+            g, kn = wl.score(w)
+            h, n = wl.holdout(w)
+            print(f"{label:11s} train group {g:.0%}  knot {kn if kn is None else f'{kn:.0%}'}  fair test {h:.0%} of {n}")
     elif a.step == "evaluate":
         distances = {}
         for name, f in (("image", "embed_dist.csv"), ("shape", "shape_dist.csv"), ("meta", "meta_dist.csv")):

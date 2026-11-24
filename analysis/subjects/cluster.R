@@ -56,8 +56,9 @@ in_order <- unique(raw[tree$order])          # renumber along the tree
 clusters <- tibble(id = ids, cluster = match(raw, in_order)) |>
   arrange(cluster, id)
 
-write_csv(clusters, "work/clusters.csv")
-write_csv(as_tibble(d, rownames = "id"), "work/dist.csv")
+out <- Sys.getenv("OUT", "work")              # OUT=work/all for every chart
+write_csv(clusters, file.path(out, "clusters.csv"))
+write_csv(as_tibble(d, rownames = "id"), file.path(out, "dist.csv"))
 
 sizes <- count(clusters, cluster)
 cat(sprintf("%d units, %d clusters (sizes %d to %d), from %s\n",
