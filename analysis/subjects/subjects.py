@@ -5,6 +5,9 @@ Steps (run through the Makefile in this folder, see README.md):
     units    which charts take part, and the picture of each one     -> work/units.csv
     shape    shape distance between every pair, ignoring flips,
              turns and shifts                                         -> work/shape_dist.csv
+    meta     distance from the gallery's own measures: symmetry, form
+             (density, width to height, pieces) and provenance
+             (manuscript, page)                                       -> work/meta_dist.csv
     (embed.py: image-model distance, optional)                        -> work/embed_dist.csv
     (cluster.R: hierarchical clustering of the distances)             -> work/clusters.csv
     sheets   one contact sheet per cluster and a review form          -> work/sheets/, review.csv
@@ -109,6 +112,71 @@ class ShapeDistance:
         corr = np.max(np.einsum("id,jvd->ijv", self.v[:, 0, :], self.v), axis=2)
         corr = np.maximum(corr, corr.T)
         d = np.clip(1.0 - corr, 0.0, 2.0)
+        np.fill_diagonal(d, 0.0)
+        return d
+
+
+class MetaDistance:
+    """Distance from what the gallery already measures about each chart.
+
+    Three equal blocks, each between 0 and 1 (a Gower distance):
+
+    symmetry    how well the chart matches itself mirrored and turned
+                (the gallery's agreement scores; left-right and top-bottom
+                are taken as the larger and the smaller of the two, so a
+                chart turned on its side scores the same), plus whether
+                the symmetry group (D4, D1, C1, ...) differs
+    form        share of filled cells, width to height, number of pieces
+    provenance  a different manuscript counts 1; a different page in the
+                same manuscript 0.5; the same page 0. Motifs drawn on one
+                page often belong together.
+    """
+
+    BLOCKS = ("symmetry", "form", "provenance")
+
+    def __init__(self, units, weights=(1, 1, 1)):
+        self.ids = [u.id for u in units]
+        self.weights = weights
+        rows = []
+        for u in units:
+            p = u.pattern
+            s = p.sym
+            h, w = u.cells.shape
+            rows.append({
+                "mirror_hi": max(s.get("lr", 0), s.get("tb", 0)),
+                "mirror_lo": min(s.get("lr", 0), s.get("tb", 0)),
+                "rot180": s.get("rot180", 0), "rot90": s.get("rot90", 0), "diag": s.get("diag", 0),
+                "group": p.point or p.frieze or "",
+                "density": float(u.cells.mean()),
+                "aspect": float(np.log(w / h)),
+                "pieces": float(np.log1p(p.pieces)),
+                "source": p.source, "page": f"{p.source}_{p.number}",
+            })
+        self.rows = rows
+
+    @staticmethod
+    def spread(x):
+        x = np.asarray(x, dtype=float)
+        r = x.max() - x.min()
+        return np.abs(x[:, None] - x[None, :]) / (r if r > 0 else 1.0)
+
+    @staticmethod
+    def differs(x):
+        x = np.asarray(x)
+        return (x[:, None] != x[None, :]).astype(float)
+
+    def blocks(self):
+        col = lambda k: [r[k] for r in self.rows]
+        sym = np.mean([self.spread(col(k)) for k in ("mirror_hi", "mirror_lo", "rot180", "rot90", "diag")]
+                      + [self.differs(col("group"))], axis=0)
+        form = np.mean([self.spread(col(k)) for k in ("density", "aspect", "pieces")], axis=0)
+        prov = 0.5 * self.differs(col("source")) + 0.5 * self.differs(col("page"))
+        return {"symmetry": sym, "form": form, "provenance": prov}
+
+    def matrix(self):
+        b = self.blocks()
+        w = np.asarray(self.weights, dtype=float)
+        d = sum(wi * b[k] for wi, k in zip(w, self.BLOCKS)) / w.sum()
         np.fill_diagonal(d, 0.0)
         return d
 
@@ -308,9 +376,10 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "sheets", "page", "answers", "labels", "suggest"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "answers", "labels", "suggest"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
+    ap.add_argument("--meta-weights", default="1,1,1", help="meta: symmetry,form,provenance")
     ap.add_argument("--reviewer", default="", help="name written into subjects.csv")
     ap.add_argument("--from", dest="src", default="", help="answers: folder of pile JSON files")
     a = ap.parse_args()
@@ -326,6 +395,11 @@ def main():
         units = [u for u in corpus.units if u.id in keep]
         sd = ShapeDistance(units)
         write_matrix(WORK / "shape_dist.csv", sd.ids, sd.matrix())
+    elif a.step == "meta":
+        keep = set(Corpus.read_ids(WORK / "units.csv"))
+        units = [u for u in Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units if u.id in keep]
+        md = MetaDistance(units, tuple(float(x) for x in a.meta_weights.split(",")))
+        write_matrix(WORK / "meta_dist.csv", md.ids, md.matrix())
     elif a.step == "sheets":
         clusters = read_clusters(WORK / "clusters.csv")
         out = WORK / "sheets"

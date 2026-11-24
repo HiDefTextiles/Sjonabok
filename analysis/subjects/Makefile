@@ -13,9 +13,12 @@ PY      ?= python3
 TXT     ?= ../../patterns/txt
 KINDS   ?= motif,rosette
 K       ?= 50
-WEIGHTS ?= 0 1        # shape, image model (shape alone if embed has not run)
+W_SHAPE ?= 0          # cell-by-cell shape distance
+W_EMBED ?= 1          # image model (DINOv2)
+W_META  ?= 0          # gallery measures: symmetry, form, provenance
+META_WEIGHTS ?= 1,1,1 # inside W_META: symmetry,form,provenance
 REVIEWER ?=
-DISTS   = work/shape_dist.csv $(wildcard work/embed_dist.csv)
+DISTS   = work/shape_dist.csv work/meta_dist.csv $(wildcard work/embed_dist.csv)
 
 all: sheets
 
@@ -28,8 +31,11 @@ work/shape_dist.csv: work/units.csv
 embed: work/units.csv embed.py
 	$(PY) embed.py --txt $(TXT)
 
+work/meta_dist.csv: work/units.csv subjects.py
+	$(PY) subjects.py meta --txt $(TXT) --meta-weights $(META_WEIGHTS)
+
 work/clusters.csv: cluster.R $(DISTS) Makefile
-	Rscript cluster.R $(K) $(WEIGHTS) work/shape_dist.csv work/embed_dist.csv
+	Rscript cluster.R $(K) $(W_SHAPE)=work/shape_dist.csv $(W_EMBED)=work/embed_dist.csv $(W_META)=work/meta_dist.csv
 
 sheets: work/clusters.csv
 	$(PY) subjects.py sheets --txt $(TXT)

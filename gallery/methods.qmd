@@ -91,6 +91,24 @@ Fifty is deliberately more than the number of subjects. Small, pure piles are qu
 large piles mix subjects and have to be sorted chart by chart. Two piles of birds are no problem,
 they get the same label. The piles are numbered along the tree, so neighbouring numbers look alike.
 
+We also built a third distance from what the gallery already measures about each chart:
+its symmetry scores and symmetry group, its form (share of filled cells, width to height, number of
+separate pieces) and its provenance (the same manuscript, and the same page, count as closer).
+After the first review we checked how well each distance predicts the subjects the reviewer gave,
+by asking which subject a chart's five nearest charts have:
+
+| Distance | Right subject from the 5 nearest charts |
+|---|---|
+| Image model | 80% |
+| Gallery measures (symmetry, form, provenance) | 61% |
+| Cell-by-cell shape | 50% |
+| Image model and gallery measures, 2 : 1 | 73% |
+| Always guess the most common subject (star) | 54% |
+
+This test favours the image model, because the reviewer labelled piles that the image model had
+made. A fair comparison needs charts labelled one at a time, outside the piles. Until then the
+gallery measures stay in the code with weight 0 (`W_META` in the Makefile).
+
 We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
 of one, so we changed to Ward's method, which keeps piles of similar size (largest 18 in the pilot).
 

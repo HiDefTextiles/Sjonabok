@@ -1,6 +1,6 @@
 # Hierarchical clustering of Sjónabók units (see README.md).
 #
-#   Rscript cluster.R K W_SHAPE W_EMBED work/shape_dist.csv [work/embed_dist.csv]
+#   Rscript cluster.R K W1=work/a_dist.csv W2=work/b_dist.csv ...
 #
 # Each distance matrix is turned into ranks scaled to 0..1, so the two
 # measures are on the same scale whatever their units, and then averaged
@@ -20,10 +20,13 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 k <- as.integer(args[1])
-weights <- as.numeric(args[2:3])
-files <- args[-(1:3)]
-weights <- weights[file.exists(files)]
-files <- files[file.exists(files)]
+pairs <- strsplit(args[-1], "=", fixed = TRUE)
+weights <- as.numeric(vapply(pairs, `[`, "", 1))
+files <- vapply(pairs, `[`, "", 2)
+keep <- file.exists(files) & weights > 0
+if (!any(keep)) keep <- file.exists(files)        # e.g. only the shape distance exists
+weights <- pmax(weights[keep], 1e-9)
+files <- files[keep]
 
 read_dist <- function(path) {
   m <- read_csv(path, show_col_types = FALSE)
