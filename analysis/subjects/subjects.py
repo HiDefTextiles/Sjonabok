@@ -31,6 +31,9 @@ Steps (run through the Makefile in this folder, see README.md):
              repeated chart (+ embed.py --all and --all --tile)       -> work/all/*_dist.csv
     learn    weights for those distances, learnt from the labels
              (main groups and knots); the fair test is held out       -> weights.csv
+    groups   final groups for every chart: each cluster of the label-free
+             clustering (work/all/clusters.csv, cluster.R with weights.csv)
+             takes the main group most of its labelled charts have    -> work/all/groups.csv
     fair     answers of the fair test (charts labelled one at a time)
              as one row per chart                                     -> fairtest.csv
     evaluate how well each distance finds a fair-test chart's subject
@@ -44,6 +47,8 @@ Everything under work/ is rebuilt from the charts.
 import argparse
 import csv
 import json
+import os
+import subprocess
 import datetime as dt
 import sys
 from pathlib import Path
@@ -721,12 +726,13 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn", "groups", "final"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
     ap.add_argument("--seed", type=int, default=2026, help="sample: random seed")
     ap.add_argument("--meta-weights", default="1,1,1", help="meta: symmetry,form,provenance")
+    ap.add_argument("--k", type=int, default=50, help="final: number of clusters")
     ap.add_argument("--top", type=int, default=60, help="knots: charts on the review page")
     ap.add_argument("--reviewer", default="", help="name written into subjects.csv")
     ap.add_argument("--from", dest="src", default="", help="answers: folder of pile JSON files")
@@ -872,6 +878,42 @@ def main():
             g, kn = wl.score(w)
             h, n = wl.holdout(w)
             print(f"{label:11s} train group {g:.0%}  knot {kn if kn is None else f'{kn:.0%}'}  fair test {h:.0%} of {n}")
+    elif a.step == "final":
+        # cluster every chart with the learnt weights (no labels), then name the clusters
+        files = {"image": "work/embed_all_dist.csv", "image_tiled": "work/embed_tiled_dist.csv"}
+        args = [f"{r['weight']}={files.get(r['distance'], 'work/all/' + r['distance'] + '_dist.csv')}"
+                for r in read_csv(WEIGHTS) if float(r["weight"]) > 0]
+        subprocess.run(["Rscript", "cluster.R", str(a.k), *args], cwd=HERE, check=True,
+                       env={**os.environ, "OUT": "work/all"})
+        a.step = "groups"
+    if a.step == "groups":
+        to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
+        labels = {}
+        for path in (SUBJECTS, FAIRTEST):
+            for r in read_csv(path):
+                g = {to.get(x, "") for x in r["subjects"].split("|")} - {""}
+                if g:
+                    labels[r["id"]] = g
+        clusters = read_clusters(ALL / "clusters.csv")
+        rows, unnamed, right, n = [], [], 0, 0
+        for c, ids in clusters.items():
+            votes = {}
+            for i in ids:
+                for g in labels.get(i, ()):
+                    votes[g] = votes.get(g, 0) + 1
+            group = max(sorted(votes), key=votes.get) if votes else ""
+            known = [i for i in ids if i in labels]
+            right += sum(group in labels[i] for i in known)
+            n += len(known)
+            if not group:
+                unnamed.append(c)
+            rows += [{"id": i, "cluster": c, "group": group, "labelled": len(known), "size": len(ids)} for i in ids]
+        with open(ALL / "groups.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["id", "cluster", "group", "labelled", "size"])
+            w.writeheader()
+            w.writerows(rows)
+        print(f"{len(clusters)} clusters; labelled charts in their cluster's group: {right}/{n}; "
+              f"clusters with no labelled chart: {unnamed}")
     elif a.step == "evaluate":
         distances = {}
         for name, f in (("image", "embed_dist.csv"), ("shape", "shape_dist.csv"), ("meta", "meta_dist.csv")):

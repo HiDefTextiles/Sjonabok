@@ -76,7 +76,24 @@ knots: review/index.html features.csv
 	@echo "Open http://localhost:8003 (Ctrl+C to stop)"
 	$(PY) -m http.server 8003 -d work/knots
 
+# Final groups: features for every chart, weights learnt from the labels,
+# then a clustering that sees no labels, each cluster named by its labelled charts.
+work/embed_all_dist.csv:
+	HF_HUB_DISABLE_XET=1 $(PY) embed.py --all --txt $(TXT)
+
+work/embed_tiled_dist.csv:
+	HF_HUB_DISABLE_XET=1 $(PY) embed.py --all --tile --txt $(TXT)
+
+work/all/texture_dist.csv:
+	$(PY) subjects.py features --txt $(TXT)
+
+weights.csv: work/embed_all_dist.csv work/embed_tiled_dist.csv work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
+	$(PY) subjects.py learn
+
+final: weights.csv
+	$(PY) subjects.py final --k $(K)
+
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets review sample labels suggest evaluate settle knots clean
+.PHONY: all embed sheets review sample labels suggest evaluate settle knots final clean
