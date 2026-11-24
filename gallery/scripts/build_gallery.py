@@ -459,7 +459,7 @@ class Gallery:
 
 BAND_COLUMNS = 8          # columns on the band sheet
 BAND_LENGTH = 116         # cells of each band shown (the widest chart)
-MOTIF_SHEET_WIDTH = 720   # cells across the motif sheet
+MOTIF_SHEET_WIDTH = BAND_COLUMNS * (BAND_LENGTH + 3) - 3   # same width as the band sheet
 # Layouts optimised by pack_overview.py (Gurobi) from <out>/overview-*-items.csv.
 # Used when they list exactly the charts on the sheet; otherwise a simple
 # packing is used, so the build never needs Gurobi.
@@ -562,14 +562,14 @@ class BandColumns(Sheet):
 
 
 class MotifSheet(Sheet):
-    """Motifs at their own size. Simple packing: bottom-left skyline, each
-    chart (source by source, largest first) drops into the lowest spot it
-    fits."""
+    """Motifs at their own size, packed as tightly as possible; colours
+    may mix. Simple packing: bottom-left skyline, tallest first, each chart
+    dropping into the lowest spot it fits."""
 
     def skyline(self):
         sky = np.zeros(self.width, dtype=int)
         out = {}
-        for p in sorted(self.patterns, key=lambda p: (source_rank(p.source), -p.trim.shape[0])):
+        for p in sorted(self.patterns, key=lambda p: (-p.trim.shape[0], -p.trim.shape[1])):
             h, w = p.trim.shape
             w = min(w, self.width)
             y, x = min((int(sky[x:x + w].max()), x) for x in range(self.width - w + 1))

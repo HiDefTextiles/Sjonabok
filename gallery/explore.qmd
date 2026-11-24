@@ -38,7 +38,7 @@ html`<ul class="source-legend">${[...sourceColors].map(([s, d]) =>
 ### Motifs, rosettes and one-off bands
 
 ::: {.overview-sheet}
-[![Every motif and rosette, and the bands that do not repeat, at their own size.](patterns/overview-motifs.png){fig-alt="Small embroidery motifs and rosettes packed together, coloured by source manuscript"}](patterns/overview-motifs.png)
+[![Every motif and rosette, and the bands that do not repeat, at their own size and packed as tightly as possible.](patterns/overview-motifs.png){fig-alt="Small embroidery motifs and rosettes packed together, coloured by source manuscript"}](patterns/overview-motifs.png)
 :::
 
 ## Sources and types

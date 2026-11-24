@@ -13,12 +13,11 @@ K columns, so only heights matter. Assign each band to a column so that,
 after each source (in order), the column heights are as equal as possible:
 colour changes then run straight across and the columns end level.
 
-Motifs: rectangles (chart + gap) on a strip of fixed width, no overlap,
-no rotation. Minimise the sheet height plus GROUP times the total vertical
-span of each source; sources keep their order top to bottom (first and
-last rows of source s are at or above those of s+1). Non-overlap is added
-lazily: start with pairs near each other in the starting layout, solve,
-add the pairs that overlap, repeat.
+Motifs: rectangles (chart + gap) on a strip as wide as the band sheet,
+no overlap, no rotation; minimise the height. Colours may mix (--group > 0
+adds a weight on each source's vertical span and keeps sources in order).
+Non-overlap is added lazily: start with pairs near each other in the
+starting layout, solve, add the pairs that clash, repeat.
 """
 
 import argparse
@@ -88,7 +87,7 @@ class BandPacker:
 class MotifPacker:
     """Strip packing with source order (see module docstring)."""
 
-    def __init__(self, items, width, group=0.2, near=40):
+    def __init__(self, items, width, group=0.0, near=40):
         self.items, self.width, self.group, self.near = items, width, group, near
         self.w = [int(r["w"]) for r in items]
         self.h = [int(r["h"]) for r in items]
@@ -117,9 +116,10 @@ class MotifPacker:
         for i in range(n):
             m.addConstr(top[self.rank[i]] <= y[i])
             m.addConstr(bot[self.rank[i]] >= y[i] + self.h[i])
-        for s, t in zip(ranks, ranks[1:]):
-            m.addConstr(top[s] <= top[t])
-            m.addConstr(bot[s] <= bot[t])
+        if self.group > 0:                  # optional: keep sources in order, compact
+            for s, t in zip(ranks, ranks[1:]):
+                m.addConstr(top[s] <= top[t])
+                m.addConstr(bot[s] <= bot[t])
         m.setObjective(H + self.group * gp.quicksum(bot[s] - top[s] for s in ranks), GRB.MINIMIZE)
 
         added = set()
@@ -136,10 +136,10 @@ class MotifPacker:
             m.addConstr(y[j] + self.h[j] <= y[i] + My * (2 - p - q))
             added.add((i, j))
 
-        # from the start: pairs of the same or neighbouring sources, and pairs
-        # close together in the starting layout; the rest only when they clash
+        # from the start: pairs close together in the starting layout; the
+        # rest only when they clash
         for i, j in itertools.combinations(range(n), 2):
-            if abs(self.rank[i] - self.rank[j]) <= 1 or self.overlap(i, j, self.x0, self.y0, self.near):
+            if self.overlap(i, j, self.x0, self.y0, self.near):
                 separate(i, j)
         best = (self.x0, self.y0)
         for k in range(rounds):
@@ -174,9 +174,9 @@ def main():
     ap.add_argument("out", help="layout file to write (gallery/layout/*.csv)")
     ap.add_argument("--time", type=float, default=300, help="seconds for Gurobi")
     ap.add_argument("--columns", type=int, default=8, help="columns on the band sheet")
-    ap.add_argument("--width", type=int, default=720, help="motif sheet width in cells")
-    ap.add_argument("--group", type=float, default=0.2, help="weight on each source's vertical span")
-    ap.add_argument("--rounds", type=int, default=10, help="lazy non-overlap rounds (motifs)")
+    ap.add_argument("--width", type=int, default=949, help="motif sheet width in cells (= band sheet)")
+    ap.add_argument("--group", type=float, default=0.0, help="weight on each source's vertical span; >0 also keeps sources in order")
+    ap.add_argument("--rounds", type=int, default=15, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
     items = read(args.items)
     if args.sheet == "bands":
