@@ -84,8 +84,9 @@ gallery: $(GALLERY_DATA)
 gallery-preview: $(GALLERY_DATA)
 	cd $(GALLERY) && quarto preview
 
-# make overview-layout : optimise the two overview sheets with Gurobi (needs
-#                        gurobipy and a licence); commit gallery/layout/*.csv
+# make overview-layout : optimise the two overview sheets (bands: Gurobi, needs
+#                        gurobipy and a licence; motifs: local search, ~10 min);
+#                        commit gallery/layout/*.csv
 PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)

@@ -1,10 +1,15 @@
 # Overview layouts
 
-`bands.csv` (id,column) and `motifs.csv` (id,x,y) place the charts on the two
-overview sheets of the Explore page. They are made with Gurobi by
-`gallery/scripts/pack_overview.py` from the item files that
-`build_gallery.py` writes, and committed because the site build has no
-Gurobi. If a file no longer lists exactly the charts on its sheet, the
-build falls back to a simple packing.
+These two files place the charts on the overview sheets of the Explore page.
+They are committed because they take minutes to compute. If a file no
+longer lists exactly the charts on its sheet (or, for motifs, has an
+overlap), the build falls back to a simple packing.
 
-    make overview-layout     # needs gurobipy and a licence
+- `bands.csv` (id,column): which of the 8 columns each band is stacked in.
+  Made with Gurobi (needs gurobipy and a licence) so that after every
+  manuscript the columns are equally tall.
+- `motifs.csv` (id,x,y): motifs, rosettes and one-off bands at their own
+  size. Made by a seeded local search over a skyline packing (no Gurobi);
+  the Gurobi MIP (`--mip`) did not beat it.
+
+    make overview-layout

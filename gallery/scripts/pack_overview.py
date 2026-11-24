@@ -13,7 +13,9 @@ K columns, so only heights matter. Assign each band to a column so that,
 after each source (in order), the column heights are as equal as possible:
 colour changes then run straight across and the columns end level.
 
-Motifs: rectangles (chart + gap) on a strip as wide as the band sheet,
+Motifs (default, no Gurobi needed): skyline packing improved by a seeded
+local search over the order (MotifSearch). With --mip:
+rectangles (chart + gap) on a strip as wide as the band sheet,
 no overlap, no rotation; minimise the height. Colours may mix (--group > 0
 adds a weight on each source's vertical span and keeps sources in order).
 Non-overlap is added lazily: start with pairs near each other in the
@@ -25,8 +27,14 @@ import csv
 import itertools
 import math
 
-import gurobipy as gp
-from gurobipy import GRB
+import random
+import time
+
+try:                       # only the Gurobi models need it
+    import gurobipy as gp
+    from gurobipy import GRB
+except ImportError:
+    gp = GRB = None
 
 
 def read(path):
@@ -192,6 +200,57 @@ class MotifPacker:
         write(out, ["id", "x", "y"], [(it["id"], a, b) for it, a, b in zip(self.items, xs, ys)])
 
 
+class MotifSearch:
+    """Motif sheet without Gurobi: bottom-left skyline packing of an order
+    of the charts, improved by a seeded local search that swaps nearby
+    charts in the order and keeps any swap that is no taller. On this sheet
+    it beats the MIP, whose bound stays far from any packing."""
+
+    def __init__(self, items, width, gap=3, seed=1):
+        self.items, self.W = items, width + gap         # w and h include the gap
+        self.w = [int(r["w"]) for r in items]
+        self.h = [int(r["h"]) for r in items]
+        self.rng = random.Random(seed)
+
+    def place(self, order):
+        """Positions and height of a bottom-left skyline packing of order."""
+        sky = [0] * self.W
+        pos, height = [None] * len(order), 0
+        for i in order:
+            w, h = self.w[i], self.h[i]
+            steps = [0] + [x for x in range(1, self.W) if sky[x] != sky[x - 1]] + [self.W - w]
+            y, x = min((max(sky[x:x + w]), x) for x in steps if x + w <= self.W)
+            sky[x:x + w] = [y + h] * w
+            pos[i], height = (x, y), max(height, y + h)
+        return pos, height
+
+    def run(self, out, seconds):
+        n = len(self.items)
+        starts = {
+            "area": sorted(range(n), key=lambda i: -self.w[i] * self.h[i]),
+            "height": sorted(range(n), key=lambda i: (-self.h[i], -self.w[i])),
+            "longest side": sorted(range(n), key=lambda i: -max(self.w[i], self.h[i])),
+        }
+        best = min(((self.place(o)[1], name, o) for name, o in starts.items()), key=lambda t: t[0])
+        print(f"start ({best[1]} first): height {best[0]}")
+        height, order = best[0], best[2]
+        end = time.time() + seconds
+        while time.time() < end:
+            trial = list(order)
+            for _ in range(3):
+                i = self.rng.randrange(n)
+                j = min(n - 1, i + self.rng.randrange(1, 8))
+                trial[i], trial[j] = trial[j], trial[i]
+            h = self.place(trial)[1]
+            if h <= height:
+                if h < height:
+                    print(f"height {h}")
+                height, order = h, trial
+        pos, height = self.place(order)
+        print(f"final height {height - 3} cells (lower bound from area {sum(a * b for a, b in zip(self.w, self.h)) / self.W:.0f})")
+        write(out, ["id", "x", "y"], [(it["id"], *p) for it, p in zip(self.items, pos)])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("sheet", choices=["bands", "motifs"])
@@ -203,13 +262,17 @@ def main():
     ap.add_argument("--group", type=float, default=0.0, help="weight on each source's vertical span; >0 also keeps sources in order")
     ap.add_argument("--near", type=int, default=-1,
                     help="motifs: separate only pairs this close in the start, more lazily; -1 = all pairs at once")
+    ap.add_argument("--mip", action="store_true", help="motifs: use the Gurobi MIP instead of the local search")
+    ap.add_argument("--seed", type=int, default=1, help="motifs: seed of the local search")
     ap.add_argument("--rounds", type=int, default=15, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
     items = read(args.items)
     if args.sheet == "bands":
         BandPacker(items, args.columns).run(args.out, args.time)
-    else:
+    elif args.mip:
         MotifPacker(items, args.width, args.group, args.near).run(args.out, args.time, args.rounds)
+    else:
+        MotifSearch(items, args.width, seed=args.seed).run(args.out, args.time)
 
 
 if __name__ == "__main__":
