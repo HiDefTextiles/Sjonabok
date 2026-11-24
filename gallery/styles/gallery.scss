@@ -241,6 +241,7 @@ dialog.detail {
   }
   .d-dl { font-size: 0.88rem; margin-top: 0.9rem; }
 
+  .hint { font-size: 0.8rem; color: rgba($hi-ink, 0.7); margin: -0.3rem 0 0.5rem; }
   .similar {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

@@ -48,6 +48,15 @@ clean:
 	find $(TXT_DIR) -name '*.txt' -delete
 	find $(PNG_DIR) -name '*.png' -delete
 
+# ── Repeat units of border bands ────────────────────────────────────────────
+# make repeats : patterns/repeat/<name>.txt (one unit each) and patterns/repeats.csv
+repeats: patterns/repeats.csv
+
+patterns/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_processing/repeat_unit.py gallery/scripts/build_gallery.py
+	python3 extract_repeats.py $(TXT_DIR) $(PARENT_DIR)
+
+.PHONY: repeats
+
 # ── Gallery website (gallery/, Quarto) ───────────────────────────────────────
 # make gallery-data : measure every pattern and draw PNGs in the HI palette
 # make gallery      : build the static site into gallery/_site
@@ -55,7 +64,7 @@ clean:
 GALLERY = gallery
 GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 
-$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py
+$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
 	python3 $(GALLERY)/scripts/build_gallery.py $(TXT_DIR) $(GALLERY)/patterns
 
 gallery-data: $(GALLERY_DATA)

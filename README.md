@@ -60,6 +60,15 @@ committed. `gallery/scripts/sync-theme.sh` refreshes the shared styles from the 
 
 ![Gallery](gallery/preview/gallery.webp)
 
+### Repeat units
+
+`make repeats` writes one repeat unit per border band to `patterns/repeat/<name>.txt` and a manifest,
+`patterns/repeats.csv` (`name, kind, axis, period, phase, copies, status, mismatch`). The phase is the
+column (or row, for vertical bands) in the original chart where a clean unit starts. The unit is a
+majority vote over all full copies; `status` is `ok` when at most 2% of cells differ from the ideal
+repeat, `check` up to 6%, `none` when no repeat was found. These files are committed so other
+projects (such as pattern-synthesis) can use them.
+
 The patterns are centuries old and in the public domain. Please credit *Íslensk sjónabók*
 (Heimilisiðnaðarfélag Íslands, Listaháskóli Íslands, Þjóðminjasafn Íslands, 2009) and HiDef Textiles.
 
