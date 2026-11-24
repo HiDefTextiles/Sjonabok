@@ -93,7 +93,13 @@ weights.csv: work/embed_all_dist.csv work/embed_tiled_dist.csv work/all/texture_
 final: weights.csv
 	$(PY) subjects.py final --k $(K)
 
+# look-alike families for every chart (no labels), kept in git for the gallery
+families.csv: weights.csv families.R
+	Rscript families.R
+
+families: families.csv
+
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets review sample labels suggest evaluate settle knots final clean
+.PHONY: all embed sheets review sample labels suggest evaluate settle knots final families clean

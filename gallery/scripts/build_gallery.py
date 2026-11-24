@@ -30,6 +30,7 @@ from PIL import Image
 
 # Reuse the palette of the existing converter so there is one source of truth.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from facets import Facets, LABELS as FACET_LABELS  # noqa: E402
 from pattern_processing.pattern_to_png import COLOR_PALETTE  # noqa: E402
 from pattern_processing.repeat_unit import RepeatUnit, find_period  # noqa: E402
 
@@ -76,6 +77,7 @@ POINT_NAMES = {
 SUBJECTS_CSV = Path(__file__).resolve().parents[2] / "analysis" / "subjects" / "subjects.csv"
 VOCABULARY_CSV = SUBJECTS_CSV.with_name("vocabulary.csv")
 GROUPS_CSV = SUBJECTS_CSV.with_name("groups.csv")
+FAMILIES_CSV = SUBJECTS_CSV.with_name("families.csv")
 
 
 def read_rows(path):
@@ -354,6 +356,8 @@ class Gallery:
         records = [p.record() for p in self.patterns]
         self.add_similar(records)
         subjects, themes = self.add_subjects(records)
+        facets = self.add_facets(records)
+        families = self.add_families(records)
         self.save_overview()
         index = {
             "count": len(records),
@@ -362,6 +366,8 @@ class Gallery:
             "kinds": self.summary(records, "kind"),
             "subjects": subjects,
             "themes": themes,
+            "facets": facets,
+            "families": families,
             "patterns": records,
         }
         (self.out / "patterns.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")))
@@ -389,6 +395,41 @@ class Gallery:
         subjects = {v["subject"]: v["label"] for v in vocab if v["subject"] in used}
         themes = {g["group"]: g["label"] for g in read_rows(GROUPS_CSV) if g["group"] in used_groups}
         return subjects, themes
+
+    def add_facets(self, records):
+        """Line, openness, outline and size words for every chart (facets.py)."""
+        by_id = {p.id: p for p in self.patterns}
+        for r in records:
+            p = by_id[r["id"]]
+            r["facets"] = Facets(p.trim, p.kind, p.period).words()
+        return {k: {v: lab for v, lab in FACET_LABELS[k].items() if any(r["facets"][k] == v for r in records)}
+                for k in FACET_LABELS}
+
+    @staticmethod
+    def add_families(records):
+        """Look-alike families from analysis/subjects/families.csv (families.R), if present.
+        Each family gets a short description from the facet words most of its charts share."""
+        rows = {r["id"]: r for r in read_rows(FAMILIES_CSV)} if FAMILIES_CSV.exists() else {}
+        families = {}
+        for r in records:
+            f = rows.get(r["id"])
+            if not f:
+                continue
+            r["family"], r["close"], r["order"] = f["family"], f["close"], int(f["order"])
+            r["map"] = [float(f["x"]), float(f["y"])]
+            fam = families.setdefault(f["family"], {"n": 0, "example": None, "words": {}})
+            fam["n"] += 1
+            if f["example"] == "TRUE" and fam["example"] is None:
+                fam["example"] = r["id"]
+            for k in ("outline", "line", "open"):
+                w = fam["words"].setdefault(k, {})
+                w[r["facets"][k]] = w.get(r["facets"][k], 0) + 1
+        for key, fam in families.items():
+            top = {k: max(c, key=c.get) for k, c in fam.pop("words").items()}
+            band = key.startswith("B")
+            first = "Bands" if band else FACET_LABELS["outline"][top["outline"]]
+            fam["label"] = f"{first}, {FACET_LABELS['line'][top['line']].lower()}, {FACET_LABELS['open'][top['open']].lower()}"
+        return dict(sorted(families.items(), key=lambda kv: (kv[0][0] != "M", int(kv[0][1:]))))
 
     def add_similar(self, records, k=8):
         """Nearest neighbours: best correlation over shifts, flips and turns

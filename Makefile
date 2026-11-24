@@ -64,7 +64,7 @@ patterns/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_pr
 GALLERY = gallery
 GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 
-$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+$(GALLERY_DATA): $(wildcard $(TXT_DIR)/*.txt) $(GALLERY)/scripts/build_gallery.py $(GALLERY)/scripts/facets.py $(wildcard analysis/subjects/*.csv) pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
 	python3 $(GALLERY)/scripts/build_gallery.py $(TXT_DIR) $(GALLERY)/patterns
 
 gallery-data: $(GALLERY_DATA)

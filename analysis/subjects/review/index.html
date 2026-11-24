@@ -229,7 +229,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
     }
     el.appendChild(grid);
 
-    const lab = document.createElement("p"); lab.className = "label"; lab.textContent = single ? "This chart is" : "This pile is";
+    const lab = document.createElement("p"); lab.className = "label"; lab.textContent = data.label || (single ? "This chart is" : "This pile is");
     const chips = document.createElement("div"); chips.className = "chips";
     for (const v of vocab) {
       chips.appendChild(chip(v.label, a.subjects.includes(v.key), () => {
@@ -243,7 +243,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12
       rerender(p); save(k);
     }, "mixed"));
     const wrap = document.createElement("div"); wrap.append(lab, chips);
-    if (a.subjects.length > 1) {
+    if (!single && a.subjects.length > 1) {
       const warn = document.createElement("p"); warn.className = "hint warn";
       warn.textContent = "Every chart in this pile gets all of these subjects. If only one or two charts differ, keep the main subject here and tap those charts to label them on their own.";
       wrap.appendChild(warn);

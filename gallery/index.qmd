@@ -19,6 +19,11 @@ include-after-body:
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
 <details open id="f-theme-box" hidden><summary>Main group</summary><div id="f-theme" class="chips"></div></details>
 <details id="f-subject-box" hidden><summary>Subject</summary><div id="f-subject" class="chips"></div><small><a href="methods.html">Reviewed by hand, see Methods</a></small></details>
+<details open id="f-family-box" hidden><summary>Look-alike family</summary><div id="f-family" class="chips family-chips"></div><small>Found by the computer without labels; <a href="methods.html#browse">see Methods</a></small></details>
+<details id="f-outline-box" hidden><summary>Outline</summary><div id="f-outline" class="chips"></div></details>
+<details id="f-line-box" hidden><summary>Line</summary><div id="f-line" class="chips"></div></details>
+<details id="f-open-box" hidden><summary>Openness</summary><div id="f-open" class="chips"></div></details>
+<details id="f-size-box" hidden><summary>Size</summary><div id="f-size" class="chips"></div></details>
 <details open><summary>Symmetry</summary><div id="f-sym" class="chips"></div></details>
 <details><summary>Symmetry group</summary><div id="f-group" class="chips"></div></details>
 <details open><summary>Source</summary><div id="f-source" class="chips"></div></details>
@@ -26,6 +31,7 @@ include-after-body:
 <label class="sort">Sort by
 <select id="sort">
 <option value="name">Source and number</option>
+<option value="alike">Look-alike order</option>
 <option value="cells">Size, large first</option>
 <option value="cells-asc">Size, small first</option>
 <option value="density">Density, dense first</option>

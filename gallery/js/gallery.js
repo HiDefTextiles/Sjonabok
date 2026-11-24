@@ -34,8 +34,16 @@
     ["density", "Density (share of filled cells)"],
   ];
 
+  // Facets measured from the chart itself (scripts/facets.py) and look-alike families
+  // (analysis/subjects/families.R): no labels, see the Methods page.
+  const FACETS = [["family", "Look-alike family"], ["outline", "Outline"], ["line", "Line"], ["open", "Openness"], ["size", "Size"]];
+  const FILTER_KEYS = ["kind", "theme", "subject", "sym", "group", "source", ...FACETS.map((f) => f[0])];
+
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), theme: new Set(), subject: new Set(), sym: new Set(), group: new Set(), source: new Set(), range: {}, q: "", sort: "name" };
+  const state = { range: {}, q: "", sort: "name" };
+  for (const k of FILTER_KEYS) state[k] = new Set();
+  let FACET_LABELS = {};
+  let FAMILIES = {};
   let data = [];
   let THEMES = {};     // main group key -> label (Animals, Plants, Ornament)
   let SUBJECTS = {};   // subject key -> label, only those reviewed so far
@@ -46,17 +54,19 @@
   const group = (p) => p.frieze || p.point || "—";
   const themes = (p) => (p.themes && p.themes.length ? p.themes : ["unsorted"]);
   const subjects = (p) => (p.subjects && p.subjects.length ? p.subjects : ["unsorted"]);
+  const facet = (k) => (p) => (k === "family" ? p.family || "—" : (p.facets || {})[k] || "—");
 
   // ── filter controls ────────────────────────────────────────────────────
   function chips(el, key, entries) {
     el.innerHTML = "";
-    for (const [value, label] of entries) {
+    for (const [value, label, thumb, title] of entries) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip";
       b.dataset.value = value;
       b.setAttribute("aria-pressed", "false");
-      b.innerHTML = `${label} <span class="n"></span>`;
+      b.innerHTML = (thumb ? `<img src="${BASE}thumb/${thumb}.png" alt="" loading="lazy">` : "") + `${label} <span class="n"></span>`;
+      if (title) b.title = title;
       b.addEventListener("click", () => {
         state[key].has(value) ? state[key].delete(value) : state[key].add(value);
         update();
@@ -102,6 +112,7 @@
     if (skip !== "subject" && state.subject.size && !subjects(p).some((s) => state.subject.has(s))) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
+    for (const [k] of FACETS) if (skip !== k && state[k].size && !state[k].has(facet(k)(p))) return false;
     if (skip !== "sym") {
       for (const s of state.sym) if (s === "none" ? !isAsym(p) : !p[s]) return false;
     }
@@ -119,6 +130,8 @@
     "density-asc": (a, b) => a.density - b.density,
     pieces: (a, b) => b.pieces - a.pieces,
     float: (a, b) => b.float_fg - a.float_fg,
+    // along the look-alike tree: neighbours look alike (motifs first, then bands)
+    alike: (a, b) => (a.order || 1e9) - (b.order || 1e9),
   };
 
   // counts on each chip show how many patterns it would add, given the other filters
@@ -140,6 +153,9 @@
     for (const p of shown) frag.appendChild(p.card);
     // dense packing keeps wide band tiles from leaving holes in the grid
     grid.style.gridAutoFlow = state.sort === "name" ? "row dense" : "row";
+    // in look-alike order, mark where one family ends and the next begins
+    let last = null;
+    for (const p of shown) { p.card.classList.toggle("family-start", state.sort === "alike" && p.family !== last); p.card.dataset.family = p.family || ""; last = p.family; }
     grid.replaceChildren(frag);
     $("count").textContent = `Showing ${shown.length} of ${data.length} patterns`;
     counts($("f-kind"), "kind", (p) => p.kind);
@@ -147,8 +163,9 @@
     counts($("f-theme"), "theme", themes);
     counts($("f-subject"), "subject", subjects);
     counts($("f-group"), "group", group);
+    for (const [k] of FACETS) if ($("f-" + k)) counts($("f-" + k), k, facet(k));
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
-    const active = ["kind", "theme", "subject", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    const active = FILTER_KEYS.reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
     $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
@@ -167,7 +184,7 @@
   // ── URL state (shareable filters) ──────────────────────────────────────
   function saveUrl() {
     const u = new URLSearchParams();
-    for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) if (state[k].size) u.set(k, [...state[k]].join(","));
+    for (const k of FILTER_KEYS) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
     const qs = u.toString();
@@ -176,7 +193,7 @@
 
   function loadUrl() {
     const u = new URLSearchParams(location.search);
-    for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
+    for (const k of FILTER_KEYS) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
     $("q").value = state.q;
@@ -282,6 +299,8 @@
       fact("Type", KIND_LABELS[p.kind]) +
       fact("Main group", p.themes && p.themes.length ? p.themes.map((k) => THEMES[k] || k).join(", ") : null) +
       fact("Subject", p.subjects && p.subjects.length ? p.subjects.map((k) => SUBJECTS[k] || k).join(", ") : null) +
+      fact("Look-alike family", p.family ? `${p.family} (${(FAMILIES[p.family] || {}).n || "?"} charts; close family ${p.close})` : null) +
+      fact("Look", p.facets ? ["outline", "line", "open", "size"].map((k) => (FACET_LABELS[k] || {})[p.facets[k]] || p.facets[k]).join(", ") : null) +
       fact("Chart size", `${p.width} × ${p.height} cells`) +
       fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
       fact("Repeat", p.period ? `every ${p.period} cells` + (p.repeat_status
@@ -377,6 +396,19 @@
       chips($("f-subject"), "subject", [...Object.entries(SUBJECTS), ["unsorted", "Not yet sorted"]]);
       $("f-subject-box").hidden = false;
     }
+    FACET_LABELS = json.facets || {};
+    FAMILIES = json.families || {};
+    for (const [k] of FACETS) {
+      const box = $("f-" + k + "-box");
+      if (!box) continue;
+      const entries = k === "family"
+        ? Object.entries(FAMILIES).map(([f, v]) => [f, `${f}`, v.example, v.label])
+        : Object.entries(FACET_LABELS[k] || {});
+      if (!entries.length) continue;
+      chips($("f-" + k), k, entries);
+      box.hidden = false;
+    }
+    if (!Object.keys(FAMILIES).length) $("sort").querySelector('option[value="alike"]')?.remove();
     const groups = [...new Set(data.map(group))].sort();
     chips($("f-group"), "group", groups.map((g) => [g, g]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
@@ -386,7 +418,7 @@
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
-      for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) state[k].clear();
+      for (const k of FILTER_KEYS) state[k].clear();
       state.q = ""; $("q").value = "";
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();

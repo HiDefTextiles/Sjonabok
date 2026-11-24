@@ -193,6 +193,42 @@ so cells touch only at their corners. Every chart is ranked by these two measure
 marks the most knot-like ones *Knot* or *No knot* on a phone page. As always, the ranking only
 decides the order; the reviewer decides what is a knot.
 
+## Ways to browse, found by the computer {#browse}
+
+Subjects need a person. The ways of browsing below do not: the computer measures them from the
+charts alone, the same way every time, so they cover all 600 charts, bands included. They are
+filters in the gallery and also a way to put like with like, for example to choose a set of
+related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-synthesis).
+
+| Filter | What it measures | Words |
+|---|---|---|
+| Look-alike family | The image model on the chart and on the chart repeated, plus the knot measures on the repeated chart, weighted as learnt below; Ward clustering, motifs and bands separately | M1 to M8 for motifs, B1 to B8 for bands, each split into 3 close families |
+| Outline | The silhouette with holes filled: how much of its box it fills, whether the corners are empty | Square, Rounded or octagon, Diamond or eight-point star, Free shape, Band |
+| Line | Share of filled cells whose four neighbours are all filled | Line drawing (under 5%), Mixed, Solid (20% or more) |
+| Openness | Small enclosed openings per 100 filled cells, with the chart repeated so that openings across an edge count | Closed (under 1), Some openings, Lacy (5 or more) |
+| Size | A motif's longer side; a band's width across | Small, Medium, Large |
+
+The sort order *Look-alike order* walks along the family tree, so each chart sits next to the
+ones most like it, and each family starts with its name.
+
+**People chose the features, the computer sets the groups.** The families use no labels. What
+the labels did was decide which measures count. For each weighting of the measures the computer
+asked how often a chart's five nearest charts share its main group, or its *knot* answer, and
+kept the best weighting (`make weights.csv` in `analysis/subjects`). The fair-test charts were left out of this. The
+result: the image model 0.6, the image model on the repeated chart 0.2, the knot measures on the
+repeated chart 0.2, and nothing for symmetry, form or provenance. The repeated view came in
+because the reviewer noticed that some knots and stars only show when a motif is repeated.
+
+What it does not do yet: the families split by form rather than subject. Animals do gather
+(family M2 holds most of the deer and other animals, together with tulip-like figures), but the
+top of the tree separates open from solid and square from free, not animals from plants. A page
+of the charts the computer still places in the wrong main group asks the reviewer what tells
+them apart; those clues are the next features to measure.
+
+Earlier we tried a fifth word list, *detail* (how many different small 3 × 3 shapes a chart
+uses). Looking at examples showed it did not separate simple from intricate charts, so it was
+dropped.
+
 ## Open and repeatable {#reproducible}
 
 - **Code and settings are public.** All steps are in

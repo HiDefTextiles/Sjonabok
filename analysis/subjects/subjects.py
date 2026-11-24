@@ -34,6 +34,9 @@ Steps (run through the Makefile in this folder, see README.md):
     groups   final groups for every chart: each cluster of the label-free
              clustering (work/all/clusters.csv, cluster.R with weights.csv)
              takes the main group most of its labelled charts have    -> work/all/groups.csv
+    misses   labelled charts whose nearest charts (learnt weights) point
+             to another main group, on a page asking what tells them
+             apart: the clues become the next features               -> work/misses/
     fair     answers of the fair test (charts labelled one at a time)
              as one row per chart                                     -> fairtest.csv
     evaluate how well each distance finds a fair-test chart's subject
@@ -726,7 +729,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn", "groups", "final"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn", "groups", "final", "misses"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -860,6 +863,11 @@ def main():
         d = np.mean([MetaDistance.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
         np.fill_diagonal(d, 0.0)
         write_matrix(ALL / "texture_tiled_dist.csv", md.ids, d)
+        with open(ALL / "kinds.csv", "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["id", "kind", "band"])
+            for u in units:
+                w.writerow([u.id, u.kind, int(u.kind in BAND_KINDS)])
         print(f"{len(units)} charts -> {ALL}")
     elif a.step == "learn":
         names = ["image", "image_tiled", "shape", "symmetry", "form", "provenance", "texture", "texture_tiled"]
@@ -886,6 +894,44 @@ def main():
         subprocess.run(["Rscript", "cluster.R", str(a.k), *args], cwd=HERE, check=True,
                        env={**os.environ, "OUT": "work/all"})
         a.step = "groups"
+    if a.step == "misses":
+        files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv"}
+        rows = read_csv(WEIGHTS)
+        wl = WeightLearner({r["distance"]: read_matrix(files.get(r["distance"], ALL / f"{r['distance']}_dist.csv"))
+                            for r in rows})
+        d = np.tensordot(np.array([float(r["weight"]) for r in rows]), wl.D, axes=1)
+        labels = {**wl.group, **wl.fair}
+        pool = np.array(sorted(labels))
+        glabel = {r["group"]: r["label"] for r in read_csv(HERE / "groups.csv")}
+        misses = []
+        for i in sorted(labels):
+            cand = pool[pool != i]
+            near = cand[np.argsort(d[i, cand], kind="stable")[:5]]
+            votes = {}
+            for rank, j in enumerate(near):
+                for g in labels[j]:
+                    votes[g] = votes.get(g, 0) + 1 - rank * 1e-3
+            guess = max(votes, key=votes.get)
+            if guess not in labels[i]:
+                misses.append((wl.ids[i], guess, labels[i]))
+        # animals first: they are missed most
+        misses.sort(key=lambda m: ("animals" not in m[2], m[0]))
+        # clue words: what a person might use to tell the groups apart
+        clues = [("head-legs", "Head and legs"), ("wings-tail", "Wings or tail"), ("stem-leaves", "Stem or leaves"),
+                 ("petals", "Petals"), ("outline", "Outline shape"), ("solid-line", "Solid or line drawing"),
+                 ("repeat", "Needs repeat"), ("wrong-label", "My label is wrong")]
+        ReviewPage(a.txt).write({k + 1: [m[0]] for k, m in enumerate(misses)}, WORK / "misses", {
+            "run": "misses", "single": True, "title": "Sjónabók: what the computer misses",
+            "label": "What tells you",
+            "vocabulary": [{"key": k, "label": v} for k, v in clues],
+            "intro": f"The computer puts these {len(misses)} charts with the wrong main group. For each, tap what tells "
+                     "you which group it is (several are fine), or write it in the note. Your clues become the next features."})
+        j = json.loads((WORK / "misses" / "piles.json").read_text())
+        name = lambda gs: " + ".join(glabel.get(g, g) for g in sorted(gs))
+        for p, m in zip(j["piles"], misses):
+            p["hint"] = f"{m[0]}. You: {name(m[2])}. Computer: {glabel.get(m[1], m[1])}."
+        (WORK / "misses" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
+        print(f"{len(misses)} of {len(labels)} labelled charts missed -> {WORK / 'misses'}")
     if a.step == "groups":
         to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
         labels = {}

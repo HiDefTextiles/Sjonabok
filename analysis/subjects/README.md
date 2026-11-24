@@ -63,3 +63,15 @@ gallery measures) without favouring the one that made the piles.
   and serves a Knot / No knot page of the top 60.
 - `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of
   the charts whose two labels differ, and `subjects.py settled --from <dir>` writes the answers.
+
+## Ways to browse (no labels)
+
+- `gallery/scripts/facets.py`: outline, line, openness and size words from each 0/1 chart,
+  computed when the gallery is built (NumPy only).
+- `subjects.py features`, `make weights.csv`: distances for all 600 charts and the weights learnt
+  from the labels (`weights.csv`, kept in git).
+- `make families` (Rscript families.R): look-alike families (M1..M8 motifs, B1..B8 bands, 24 close families
+  each), the look-alike order and a t-SNE map -> `families.csv`, kept in git so the gallery
+  and pattern synthesis can use it without the image model. Needs the R package Rtsne.
+- `subjects.py misses`: a review page of the charts the computer places in the wrong main
+  group, asking what tells them apart (the next features).
