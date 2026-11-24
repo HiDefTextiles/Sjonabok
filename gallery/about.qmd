@@ -67,9 +67,9 @@ are computed, not curated, so treat them as a guide for browsing.
 ## Repeat units {#repeats}
 
 A border band that repeats exactly is stored as **one repeat unit**: `patterns/min/<name>.txt`
-holds one repeat, and the *.txt* download in the pattern view is that unit. Where a band has
-mirror symmetry the unit is cut so that a mirror axis sits in its middle, otherwise where the band
-is lightest, so motifs are not split. `patterns/repeats.csv` lists every band with its direction,
+holds one repeat, and the *.txt* download in the pattern view is that unit. The unit is cut
+so that a border made of whole units ends cleanly: no stray dots (pieces of four cells or fewer) at
+either end, and as few connections between filled cells cut as possible, so motifs are not split. `patterns/repeats.csv` lists every band with its direction,
 repeat length and whether it is stored as a unit. Bands that repeat with a few differing cells, and
 bands without a repeat, keep their chart as drawn.
 

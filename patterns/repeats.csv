@@ -84,7 +84,7 @@ thjms1105_38_p6,border,x,8,unit,0.0000
 thjms1105_38_p7,edging,x,4,unit,0.0000
 thjms1105_42,border,x,9,unit,0.0000
 thjms1105_54_p1,border,x,25,unit,0.0000
-thjms1105_54_p2,border,x,50,near,0.0005
+thjms1105_54_p2,border,x,50,near,0.0010
 thjms1105_54_p3,border,x,22,unit,0.0000
 thjms1105_54_p4,border,x,28,unit,0.0000
 thjms1105_54_p5,border,x,,none,
@@ -104,12 +104,12 @@ thjms1105_74_p3,border,x,50,unit,0.0000
 thjms1105_74_p4,edging,x,20,unit,0.0000
 thjms1105_74_p5,border,x,52,unit,0.0000
 thjms1105_74_p6,border,x,19,unit,0.0000
-thjms1105_74_p7,border,x,52,near,0.0054
+thjms1105_74_p7,border,x,52,near,0.0107
 thjms1105_88_p1,edging,x,26,unit,0.0000
 thjms1105_88_p2,edging,x,6,unit,0.0000
 thjms1105_88_p3,border,x,50,unit,0.0000
 thjms1105_88_p4,border,x,55,unit,0.0000
-thjms1105_88_p5,border,x,54,near,0.0020
+thjms1105_88_p5,border,x,54,near,0.0027
 thjms1105_88_p6,border,x,32,unit,0.0000
 thjms1960-60_354_p1,border,x,50,unit,0.0000
 thjms1960-60_354_p2,border,x,14,unit,0.0000
@@ -217,7 +217,7 @@ thjms2008-14_538_p7,border,x,47,unit,0.0000
 thjms2008-14_540_p1,border,x,43,unit,0.0000
 thjms2008-14_540_p2,edging,x,26,unit,0.0000
 thjms2008-14_540_p3,border,x,,none,
-thjms2008-14_540_p4,border,x,42,near,0.0007
+thjms2008-14_540_p4,border,x,42,near,0.0013
 thjms2008-14_540_p5,edging,x,20,unit,0.0000
 thjms2008-14_540_p6,edging,x,12,unit,0.0000
 thjms2008-14_540_p7,edging,x,28,unit,0.0000
