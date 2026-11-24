@@ -178,24 +178,56 @@
   // ── detail view ────────────────────────────────────────────────────────
   const view = { zoom: 8, grid: true, colour: 0, tile: false, matrix: null };
 
+  // Bounds of the filled area (charts can carry empty margins)
+  function inkBounds(m) {
+    let x0 = Infinity, x1 = -1, y0 = Infinity, y1 = -1;
+    m.forEach((row, y) => {
+      const f = row.indexOf("1"), l = row.lastIndexOf("1");
+      if (f >= 0) { x0 = Math.min(x0, f); x1 = Math.max(x1, l); y0 = Math.min(y0, y); y1 = y; }
+    });
+    return x1 < 0 ? { x0: 0, x1: m[0].length - 1, y0: 0, y1: m.length - 1 } : { x0, x1, y0, y1 };
+  }
+
+  // Repeat view. A band with a known repeat keeps the chart's own start
+  // (its edge piece) and then continues from the last full repeat, so the
+  // seam always falls in phase. Other patterns are tiled whole.
+  function repeatLayout(m) {
+    const h = m.length, w = m[0].length, p = current.period;
+    const along = current.kind === "vertical band" ? "y" : "x";
+    const layout = (W, H, src, extra = {}) =>
+      ({ W, H, src, at: (x, y) => { const [sx, sy] = src(x, y); return m[sy][sx]; }, ...extra });
+    if (!view.tile) return layout(w, h, (x, y) => [x, y]);
+    if (!p || !["border", "edging", "vertical band"].includes(current.kind))
+      return current.kind === "border" || current.kind === "edging"
+        ? layout(3 * w, h, (x, y) => [x % w, y])
+        : layout(3 * w, 3 * h, (x, y) => [x % w, y % h]);
+    const b = inkBounds(m);
+    if (along === "x") {
+      const end = b.x1 + 1;
+      return layout(end + Math.max(2 * p, end), h,
+        (x, y) => [x < end ? x : end - p + ((x - end) % p), y], { seam: end });
+    }
+    const end = b.y1 + 1;
+    return layout(w, end + Math.max(2 * p, end),
+      (x, y) => [x, y < end ? y : end - p + ((y - end) % p)], { seamY: end });
+  }
+
   function draw() {
     const m = view.matrix;
     if (!m) return;
     const [fg, bg] = COLOURS[view.colour].slice(1);
-    const reps = view.tile ? 3 : 1;
-    const z = view.zoom, h = m.length, w = m[0].length;
+    const z = view.zoom;
+    const L = view.layout = repeatLayout(m);
     const cv = $("d-canvas");
-    cv.width = w * z * reps;
-    cv.height = h * z * (view.tile && current.kind !== "border" && current.kind !== "edging" ? reps : 1);
+    cv.width = L.W * z;
+    cv.height = L.H * z;
     const ctx = cv.getContext("2d");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.fillStyle = fg;
-    for (let ty = 0; ty * h * z < cv.height; ty++)
-      for (let tx = 0; tx < reps; tx++)
-        for (let y = 0; y < h; y++)
-          for (let x = 0; x < w; x++)
-            if (m[y][x] === "1") ctx.fillRect((tx * w + x) * z, (ty * h + y) * z, z, z);
+    for (let y = 0; y < L.H; y++)
+      for (let x = 0; x < L.W; x++)
+        if (L.at(x, y) === "1") ctx.fillRect(x * z, y * z, z, z);
     if (view.grid && z >= 4) {
       ctx.strokeStyle = "rgba(38,38,38,0.18)";
       ctx.lineWidth = 1;
@@ -209,6 +241,16 @@
       for (let x = 0; x <= cv.width; x += 10 * z) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, cv.height); }
       for (let y = 0; y <= cv.height; y += 10 * z) { ctx.moveTo(0, y + 0.5); ctx.lineTo(cv.width, y + 0.5); }
       ctx.stroke();
+    }
+    if (L.seam || L.seamY) {   // where the original chart ends
+      ctx.strokeStyle = "#2DD2C0";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([z, z]);
+      ctx.beginPath();
+      if (L.seam) { ctx.moveTo(L.seam * z, 0); ctx.lineTo(L.seam * z, cv.height); }
+      else { ctx.moveTo(0, L.seamY * z); ctx.lineTo(cv.width, L.seamY * z); }
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 
@@ -286,8 +328,10 @@
       const r = e.target.getBoundingClientRect();
       const scale = e.target.width / r.width;
       const h = view.matrix.length, w = view.matrix[0].length;
-      const x = Math.floor(((e.clientX - r.left) * scale) / view.zoom) % w;
-      const y = Math.floor(((e.clientY - r.top) * scale) / view.zoom) % h;
+      const vx = Math.floor(((e.clientX - r.left) * scale) / view.zoom);
+      const vy = Math.floor(((e.clientY - r.top) * scale) / view.zoom);
+      if (!view.layout || vx >= view.layout.W || vy >= view.layout.H) return;
+      const [x, y] = view.layout.src(vx, vy);
       if (view.matrix[y]) $("d-cell").textContent = `Row ${y + 1} of ${h}, column ${x + 1} of ${w}: ${view.matrix[y][x] === "1" ? "filled" : "empty"}`;
     };
     $("d-canvas").addEventListener("pointermove", cellAt);
