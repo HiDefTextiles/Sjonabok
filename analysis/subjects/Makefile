@@ -60,7 +60,23 @@ labels:
 suggest: work/clusters.csv subjects.csv
 	$(PY) subjects.py suggest
 
+# fair test: score each distance against fairtest.csv
+evaluate: work/embed_dist.csv work/meta_dist.csv work/shape_dist.csv subjects.csv fairtest.csv
+	$(PY) subjects.py evaluate --txt $(TXT)
+
+# charts whose pile label and fair-test label differ, both answers shown
+settle: subjects.csv fairtest.csv review/index.html
+	$(PY) subjects.py settle --txt $(TXT)
+	@echo "Open http://localhost:8002 (Ctrl+C to stop)"
+	$(PY) -m http.server 8002 -d work/settle
+
+# the most knot-like charts, to mark Knot or No knot
+knots: review/index.html features.csv
+	$(PY) subjects.py knots --txt $(TXT)
+	@echo "Open http://localhost:8003 (Ctrl+C to stop)"
+	$(PY) -m http.server 8003 -d work/knots
+
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets review sample labels suggest clean
+.PHONY: all embed sheets review sample labels suggest evaluate settle knots clean

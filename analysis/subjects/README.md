@@ -51,3 +51,15 @@ and run `python3 subjects.py answers --from <folder>` to write `review.csv`.
 review page with one chart per card. Labels made this way do not depend on
 any clustering, so they can compare the distances (shape, image model,
 gallery measures) without favouring the one that made the piles.
+
+## Main groups, features and knots
+
+- `vocabulary.csv` gives each subject a main group (`groups.csv`: animals, plants, ornament).
+  The gallery's *Main group* filter comes from it. Reviewers disagree far less on groups than
+  on subjects (see the Methods page).
+- `features.csv` lists features any chart can have (knot, small flowers, frame), kept apart
+  from subjects.
+- `make knots` ranks every chart by how knot-like it is (enclosed openings, diagonal strokes)
+  and serves a Knot / No knot page of the top 60.
+- `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of
+  the charts whose two labels differ, and `subjects.py settled --from <dir>` writes the answers.

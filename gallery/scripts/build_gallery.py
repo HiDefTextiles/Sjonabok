@@ -75,6 +75,7 @@ POINT_NAMES = {
 # and the gallery's Methods page. Charts not reviewed yet get no subject.
 SUBJECTS_CSV = Path(__file__).resolve().parents[2] / "analysis" / "subjects" / "subjects.csv"
 VOCABULARY_CSV = SUBJECTS_CSV.with_name("vocabulary.csv")
+GROUPS_CSV = SUBJECTS_CSV.with_name("groups.csv")
 
 
 def read_rows(path):
@@ -352,7 +353,7 @@ class Gallery:
             p.measure().save_images(self.out)
         records = [p.record() for p in self.patterns]
         self.add_similar(records)
-        subjects = self.add_subjects(records)
+        subjects, themes = self.add_subjects(records)
         self.save_overview()
         index = {
             "count": len(records),
@@ -360,6 +361,7 @@ class Gallery:
             "sources": self.summary(records, "source_label"),
             "kinds": self.summary(records, "kind"),
             "subjects": subjects,
+            "themes": themes,
             "patterns": records,
         }
         (self.out / "patterns.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")))
@@ -376,10 +378,17 @@ class Gallery:
     def add_subjects(records):
         """Reviewed subjects per pattern, and the labels of those in use."""
         labels = {r["id"]: r["subjects"].split("|") for r in read_rows(SUBJECTS_CSV) if r["subjects"]}
+        vocab = read_rows(VOCABULARY_CSV)
+        to_group = {v["subject"]: v.get("group", "") for v in vocab}
         for r in records:
             r["subjects"] = labels.get(r["id"], [])
+            # main groups (groups.csv): the safer filter, see the Methods page
+            r["themes"] = sorted({to_group.get(s, "") for s in r["subjects"]} - {""})
         used = {s for v in labels.values() for s in v}
-        return {v["subject"]: v["label"] for v in read_rows(VOCABULARY_CSV) if v["subject"] in used}
+        used_groups = {to_group.get(s, "") for s in used}
+        subjects = {v["subject"]: v["label"] for v in vocab if v["subject"] in used}
+        themes = {g["group"]: g["label"] for g in read_rows(GROUPS_CSV) if g["group"] in used_groups}
+        return subjects, themes
 
     def add_similar(self, records, k=8):
         """Nearest neighbours: best correlation over shifts, flips and turns

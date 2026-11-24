@@ -34,7 +34,8 @@ knowledge.
 | 4. Clusters | Computer | Put the charts into about 50 small piles of look-alikes | `clusters.csv` |
 | 5. Review | Person | Look at each pile, name its subject, pick out the odd ones | `review.csv` → `subjects.csv` |
 | 6. Suggestions | Computer | For charts not yet reviewed, suggest the subject of their nearest labelled neighbours | `suggestions.csv` |
-| 7. Gallery | Computer | Show reviewed subjects as a filter | the *Subject* filter |
+| 7. Gallery | Computer | Show reviewed subjects and main groups as filters | the *Main group* and *Subject* filters |
+| Check | Person | Label 40 random charts one at a time, settle the differences | `fairtest.csv` |
 
 Steps 1 to 4 and 6 can be rerun at any time and give the same result. Step 5 is the only one
 whose output is written by a person, and a rerun never changes it.
@@ -106,8 +107,29 @@ by asking which subject a chart's five nearest charts have:
 | Always guess the most common subject (star) | 54% |
 
 This test favours the image model, because the reviewer labelled piles that the image model had
-made. A fair comparison needs charts labelled one at a time, outside the piles. Until then the
-gallery measures stay in the code with weight 0 (`W_META` in the Makefile).
+made. So we ran a fair test (`make sample`): 40 charts drawn at random with a fixed seed and
+labelled one at a time, outside any pile. Two charts were labelled *not sure*, which leaves 38.
+
+The first surprise was the reviewer. The same person had given 20 of the 40 charts a different
+subject in the piles than on their own, almost always star, cross or geometric. Those 20 were
+looked at again on a *settle* page that showed both earlier answers, and the new answer replaced
+both. Then each distance was scored again, guessing a chart's subject from its five nearest
+labelled charts:
+
+| Distance | 12 subjects | 3 main groups |
+|---|---|---|
+| Image model | 50% | 66–74% |
+| Cell-by-cell shape | 50–53% | 68–71% |
+| Gallery measures (symmetry, form, provenance) | 37–42% | 68% |
+| Image model and gallery measures, 2 : 1 | 39–55% | 68–79% |
+| Always guess the most common (star; ornament) | 24% | 53% |
+
+Each range runs over two pools of neighbours: all charts labelled in the piles, and only the other
+38 fair-test charts. With 38 charts a difference of three charts is within chance, so no distance
+is clearly best. The image model stays the default and the gallery measures keep weight 0
+(`W_META` in the Makefile). The clearer lesson is in the second column: at the level of the
+[main groups](#groups) the computer is right about three times in four, and the reviewer's two
+answers agreed nine times in ten even before settling.
 
 We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
 of one, so we changed to Ward's method, which keeps piles of similar size (largest 18 in the pilot).
@@ -140,8 +162,38 @@ next review round to speed it up. They are never shown in the gallery as a subje
 ## Step 7: the gallery {#gallery}
 
 When the gallery is built, `subjects.csv` is read and each pattern gets its reviewed subjects.
-They appear as the *Subject* filter and in the pattern view. Charts not yet reviewed are listed
+They appear as the *Main group* and *Subject* filters and in the pattern view. Charts not yet reviewed are listed
 as *Not yet sorted*.
+
+## Main groups {#groups}
+
+Star, cross and geometric are where people disagree, the same person included. So each subject
+also belongs to one of three main groups ([`groups.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/groups.csv)):
+
+| Main group | Subjects |
+|---|---|
+| Animals and people | bird, deer, other animal, human figure |
+| Plants | flower, tree |
+| Ornament | star or rose, cross, heart, letters, geometric |
+
+The gallery offers *Main group* as its first subject filter, because it is the safer one. A chart
+with subjects in two groups, for example a rose with a flower at its centre, is in both, like the
+overlap of two circles in a Venn diagram. In the pilot 3 of 231 charts sit in such an overlap
+(Ornament and Plants); more will follow as charts are labelled with several subjects.
+
+## Features such as knots {#features}
+
+Some things are not a subject but a feature that any chart can have: knotwork, small flowers inside
+a larger motif, a frame. These are kept in a separate list
+([`features.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/features.csv)),
+so that a rosette can be *Ornament* and have *knotwork*, and a solo flower (subject *Flower*) is
+kept apart from a motif with small flowers in it (feature *Small flowers*).
+
+For knots the computer helps with a measure taken straight from the 0/1 chart (`make knots`):
+interlace leaves many small enclosed openings between its strands, and its strands run diagonally,
+so cells touch only at their corners. Every chart is ranked by these two measures, and the reviewer
+marks the most knot-like ones *Knot* or *No knot* on a phone page. As always, the ranking only
+decides the order; the reviewer decides what is a knot.
 
 ## Open and repeatable {#reproducible}
 
@@ -172,6 +224,7 @@ make                      # steps 2 and 4 and the contact sheets
 make review               # step 5: review on a phone or laptop, export review.csv
 make labels REVIEWER="Your Name"
 make suggest              # suggestions for the next round
+make sample               # the fair test: random charts, labelled one at a time
 ```
 
 Lessons from our pilot that carry over:
@@ -187,6 +240,9 @@ Lessons from our pilot that carry over:
 6. **Look at the failures.** Piles that mix subjects tell you what the method cannot see; write
    that down, as we do below.
 7. **Record the model.** Name the model and its version so the result can be checked later.
+8. **Test people too.** Label a random sample a second time, one item at a time. Where a person
+   disagrees with themselves, the categories are too fine; group them (as we did with
+   [main groups](#groups)) or sharpen the definitions.
 
 ## Known limits {#limits}
 
@@ -194,6 +250,8 @@ Lessons from our pilot that carry over:
   can share a pile; the reviewer separates them.
 - Very small or very dense charts lose detail at 16 × 16 cells and in the image model.
 - Some charts hold more than one figure; for now they are compared as one picture.
+- The knot measure also ranks other lacy, open patterns highly, so many of its top charts are not
+  knots.
 - The subject words are ours. They describe what the motif looks like today, not what it meant to
   the people who drew it centuries ago.
 

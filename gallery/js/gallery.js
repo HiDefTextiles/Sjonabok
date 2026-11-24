@@ -35,14 +35,16 @@
   ];
 
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), subject: new Set(), sym: new Set(), group: new Set(), source: new Set(), range: {}, q: "", sort: "name" };
+  const state = { kind: new Set(), theme: new Set(), subject: new Set(), sym: new Set(), group: new Set(), source: new Set(), range: {}, q: "", sort: "name" };
   let data = [];
+  let THEMES = {};     // main group key -> label (Animals, Plants, Ornament)
   let SUBJECTS = {};   // subject key -> label, only those reviewed so far
   let byId = {};
   let current = null;
 
   const isAsym = (p) => !(p.mirror_lr || p.mirror_tb || p.turn180 || p.turn90 || p.diagonal || p.glide);
   const group = (p) => p.frieze || p.point || "—";
+  const themes = (p) => (p.themes && p.themes.length ? p.themes : ["unsorted"]);
   const subjects = (p) => (p.subjects && p.subjects.length ? p.subjects : ["unsorted"]);
 
   // ── filter controls ────────────────────────────────────────────────────
@@ -96,6 +98,7 @@
   function passes(p, skip) {
     if (state.q && !p.id.toLowerCase().includes(state.q) && !p.source_label.toLowerCase().includes(state.q)) return false;
     if (skip !== "kind" && state.kind.size && !state.kind.has(p.kind)) return false;
+    if (skip !== "theme" && state.theme.size && !themes(p).some((s) => state.theme.has(s))) return false;
     if (skip !== "subject" && state.subject.size && !subjects(p).some((s) => state.subject.has(s))) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
@@ -141,10 +144,11 @@
     $("count").textContent = `Showing ${shown.length} of ${data.length} patterns`;
     counts($("f-kind"), "kind", (p) => p.kind);
     counts($("f-source"), "source", (p) => p.source);
+    counts($("f-theme"), "theme", themes);
     counts($("f-subject"), "subject", subjects);
     counts($("f-group"), "group", group);
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
-    const active = ["kind", "subject", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    const active = ["kind", "theme", "subject", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
     $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
@@ -163,7 +167,7 @@
   // ── URL state (shareable filters) ──────────────────────────────────────
   function saveUrl() {
     const u = new URLSearchParams();
-    for (const k of ["kind", "subject", "sym", "group", "source"]) if (state[k].size) u.set(k, [...state[k]].join(","));
+    for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
     const qs = u.toString();
@@ -172,7 +176,7 @@
 
   function loadUrl() {
     const u = new URLSearchParams(location.search);
-    for (const k of ["kind", "subject", "sym", "group", "source"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
+    for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
     $("q").value = state.q;
@@ -276,6 +280,7 @@
       fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
+      fact("Main group", p.themes && p.themes.length ? p.themes.map((k) => THEMES[k] || k).join(", ") : null) +
       fact("Subject", p.subjects && p.subjects.length ? p.subjects.map((k) => SUBJECTS[k] || k).join(", ") : null) +
       fact("Chart size", `${p.width} × ${p.height} cells`) +
       fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
@@ -362,6 +367,11 @@
     const kinds = Object.keys(KIND_LABELS).filter((k) => json.kinds[k]);
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
     chips($("f-sym"), "sym", SYM);
+    THEMES = json.themes || {};
+    if (Object.keys(THEMES).length) {
+      chips($("f-theme"), "theme", [...Object.entries(THEMES), ["unsorted", "Not yet sorted"]]);
+      $("f-theme-box").hidden = false;
+    }
     SUBJECTS = json.subjects || {};
     if (Object.keys(SUBJECTS).length) {
       chips($("f-subject"), "subject", [...Object.entries(SUBJECTS), ["unsorted", "Not yet sorted"]]);
@@ -376,7 +386,7 @@
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
-      for (const k of ["kind", "subject", "sym", "group", "source"]) state[k].clear();
+      for (const k of ["kind", "theme", "subject", "sym", "group", "source"]) state[k].clear();
       state.q = ""; $("q").value = "";
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();
