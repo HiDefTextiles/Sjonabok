@@ -23,12 +23,15 @@ Steps (run through the Makefile in this folder, see README.md):
     knots    rank every chart by how knot-like it is (thin lines, many
              small enclosed openings, diagonal strokes) and a yes/no
              review page of the most likely ones                      -> work/knots.csv, work/knots/
+    knot-answers  Knot / No knot answers (JSON) -> feature_labels.csv, and a
+             new page of the unseen charts nearest to the confirmed knots
+             (image model over every chart, embed.py --all)           -> work/knots2/
     fair     answers of the fair test (charts labelled one at a time)
              as one row per chart                                     -> fairtest.csv
     evaluate how well each distance finds a fair-test chart's subject
              from its nearest labelled charts                         -> work/evaluation.csv
 
-Only subjects.csv, review.csv and fairtest.csv are written by a person and kept in git.
+Only subjects.csv, review.csv, fairtest.csv and feature_labels.csv are written by a person and kept in git.
 Everything under work/ is rebuilt from the charts.
 """
 
@@ -54,6 +57,7 @@ REVIEW = HERE / "review.csv"
 FAIRTEST = HERE / "fairtest.csv"
 VOCABULARY = HERE / "vocabulary.csv"
 FEATURES = HERE / "features.csv"
+FEATURE_LABELS = HERE / "feature_labels.csv"
 
 # The pilot covers stand-alone figures; bands join once their repeat units
 # are reviewed (patterns/repeat, see gallery About page).
@@ -400,6 +404,44 @@ def settle_answers(folder, reviewer):
     print(f"{len(new)} charts settled")
 
 
+def feature_answers(folder, feature, reviewer, path=FEATURE_LABELS):
+    """Yes/no answers for one feature -> feature_labels.csv (id, feature, value, reviewer, date).
+    A later answer for the same chart and feature replaces the earlier one."""
+    today = dt.date.today().isoformat()
+    rows = {(r["id"], r["feature"]): r for r in read_csv(path)}
+    n = 0
+    for f in sorted(Path(folder).glob("p*.json")):
+        d = json.loads(f.read_text())
+        d = d.get("data", d)
+        picked = d.get("subjects", [])
+        if not picked:
+            continue
+        i = d["ids"][0]
+        rows[(i, feature)] = {"id": i, "feature": feature, "value": "yes" if feature in picked else "no",
+                              "reviewer": reviewer, "date": today, "note": d.get("note", "").strip()}
+        n += 1
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["id", "feature", "value", "reviewer", "date", "note"])
+        w.writeheader()
+        w.writerows(sorted(rows.values(), key=lambda r: (r["feature"], r["id"])))
+    print(f"{n} answers for {feature} -> {path}")
+
+
+def nearest_to(seeds, ids, d, exclude, n):
+    """Unseen charts nearest to the seeds, taking the nearest to each seed in turn,
+    so that one seed (say a band) does not fill the list with look-alikes."""
+    idx = {i: k for k, i in enumerate(ids)}
+    rest = [i for i in ids if i not in exclude]
+    lists = [sorted(rest, key=lambda i: d[idx[i], idx[s]]) for s in seeds if s in idx]
+    out = []
+    while lists and len(out) < min(n, len(rest)):
+        for L in lists:
+            x = next((i for i in L if i not in out), None)
+            if x and len(out) < n:
+                out.append(x)
+    return out
+
+
 class Evaluation:
     """Which distance best finds a chart's subject from its k nearest labelled charts?
 
@@ -562,7 +604,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -662,6 +704,24 @@ def main():
             p["hint"] = r["id"]
         (WORK / "knots" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
         print(f"{len(ks.rows)} charts scored, top {len(top)} -> {WORK / 'knots'}")
+    elif a.step == "knot-answers":
+        if not a.reviewer:
+            raise SystemExit("Give --reviewer (or REVIEWER=... to make).")
+        feature_answers(a.src, "knot", a.reviewer)
+        seen = {r["id"]: r["value"] for r in read_csv(FEATURE_LABELS) if r["feature"] == "knot"}
+        seeds = sorted(i for i, v in seen.items() if v == "yes")
+        ids, d = read_matrix(WORK / "embed_all_dist.csv")
+        pick = nearest_to(seeds, ids, d, set(seen), a.top)
+        ReviewPage(a.txt).write({k + 1: [i] for k, i in enumerate(pick)}, WORK / "knots2", {
+            "run": f"knots-{len(seeds)}", "single": True, "title": "Sjónabók: more knots",
+            "vocabulary": [{"key": "knot", "label": "Knot"}, {"key": "none", "label": "No knot"}],
+            "intro": f"The image model's nearest charts to your {len(seeds)} knots, taken from each knot in turn. "
+                     "None of these were on the first page. Tap Knot or No knot."})
+        j = json.loads((WORK / "knots2" / "piles.json").read_text())
+        for p in j["piles"]:
+            p["hint"] = p["charts"][0]["id"]
+        (WORK / "knots2" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
+        print(f"{len(seeds)} knots, {len(pick)} charts -> {WORK / 'knots2'}")
     elif a.step == "evaluate":
         distances = {}
         for name, f in (("image", "embed_dist.csv"), ("shape", "shape_dist.csv"), ("meta", "meta_dist.csv")):

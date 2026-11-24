@@ -78,14 +78,18 @@ class Embedder:
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--txt", default="../../patterns/txt")
+    ap.add_argument("--all", action="store_true",
+                    help="every chart, bands by their repeat unit -> work/embed_all_dist.csv (for features)")
     a = ap.parse_args()
-    keep = set(Corpus.read_ids(WORK / "units.csv"))
-    units = [u for u in Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units if u.id in keep]
+    units = Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units
+    if not a.all:
+        keep = set(Corpus.read_ids(WORK / "units.csv"))
+        units = [u for u in units if u.id in keep]
     e = Embedder()
     v = np.stack([e.embed(u.cells) for u in units])
     d = np.clip(1.0 - v @ v.T, 0.0, 2.0)
     np.fill_diagonal(d, 0.0)
-    write_matrix(WORK / "embed_dist.csv", [u.id for u in units], d)
+    write_matrix(WORK / ("embed_all_dist.csv" if a.all else "embed_dist.csv"), [u.id for u in units], d)
     (WORK / "embed_model.txt").write_text(f"timm:{MODEL_NAME}\nsha256 {e.weights_hash()}\n")
     print(f"{len(units)} embeddings with {MODEL_NAME}")
 
