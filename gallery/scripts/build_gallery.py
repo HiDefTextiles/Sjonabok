@@ -15,8 +15,9 @@ Output (all generated, not committed):
     <out>/thumb/<id>.png       gallery thumbnail
     <out>/png/<id>.png         full image, 10 px per cell
     <out>/txt/<id>.txt         copy of the matrix (download and zoom view)
-    <out>/overview-bands.png   every band on one sheet, coloured by source
-    <out>/overview-motifs.png  every motif and rosette on one sheet
+    <out>/overview-bands.png   every repeating band on one sheet, coloured by source
+    <out>/overview-motifs.png  motifs, rosettes and bands that do not repeat
+    <out>/overview-*-items.csv sizes on each sheet (input for pack_overview.py)
 
 The measures are computed automatically; they describe the digitised chart,
 not a curator's judgement.
@@ -58,12 +59,12 @@ SOURCE_LABELS = {
     "thjmsth_116": "Þjms. Th 116",
 }
 
-# One colour per source on the overview sheets, in SOURCE_LABELS order.
-# Checked for colour-blind separation between neighbours in this order;
-# the page legend names every colour, so colour is never the only cue.
+# One colour per source on the overview sheets: a rainbow in SOURCE_LABELS
+# order, darkened where needed to read on white. The page legend names every
+# colour, so colour is never the only cue.
 SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
-    "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4",
-    "#008300", "#6250d6", "#e34948", "#2b4ea8", "#a0632d",
+    "#d6336c", "#e8590c", "#d99a00", "#82a31a", "#2f9e44",
+    "#0c9a9a", "#1c7ed6", "#3b4cc0", "#7048e8", "#ae3ec9",
 ]))
 
 FRIEZE_NAMES = {
@@ -322,17 +323,22 @@ class Pattern:
         Image.fromarray(self.rgba(FULL_ZOOM), "RGBA").save(out / "png" / f"{self.id}.png", optimize=True)
         shutil.copyfile(self.path, out / "txt" / f"{self.id}.txt")
 
-    def band_strip(self):
-        """The band laid flat and filled out to BAND_SHOW cells: a stored
-        unit or a band that repeats exactly (status ok) is repeated, any other band is drawn as
-        in the book."""
+    def is_band(self):
+        """A band on the overview: a border, edging or vertical band that
+        repeats (a stored unit, or a repeat found in the chart)."""
+        if self.kind not in ("border", "edging", "vertical band"):
+            return False
+        return bool(self.unit_row) or (self.repeat is not None and self.repeat.status in ("ok", "check"))
+
+    def band_unit(self):
+        """One repeat of the band, laid flat."""
         if self.unit_row:
-            unit = self.matrix.T if self.unit_row["axis"] == "y" else self.matrix
-        elif self.repeat is not None and self.repeat.status == "ok":
-            unit = self.repeat.horizontal()
-        else:
-            return (self.trim.T if self.kind == "vertical band" else self.trim)[:, :BAND_SHOW]
-        return RepeatUnit.tile(unit, 0, BAND_SHOW)
+            return self.matrix.T if self.unit_row["axis"] == "y" else self.matrix
+        return self.repeat.horizontal()
+
+    def band_strip(self, length=116):
+        """The band laid flat, its repeat unit repeated to length cells."""
+        return RepeatUnit.tile(self.band_unit(), 0, length)
 
     # ── record ───────────────────────────────────────────────────────────
     def record(self):
@@ -438,63 +444,166 @@ class Gallery:
             r["similar"] = [records[j]["id"] for j in np.argsort(-score[i])[:k]]
 
     def save_overview(self):
-        """Two sheets: all bands (vertical ones laid flat) and all motifs."""
-        bands = [p for p in self.patterns if p.kind in ("border", "edging", "vertical band")]
-        motifs = [p for p in self.patterns if p.kind in ("motif", "rosette")]
-        OverviewSheet(width=8 * (BAND_SHOW + 3), step=BAND_SHOW + 3).add_all(bands, Pattern.band_strip).save(
-            self.out / "overview-bands.png")
-        OverviewSheet(width=720).add_all(motifs, lambda p: p.trim, tallest_first=True).save(
-            self.out / "overview-motifs.png")
+        """Two sheets: bands that repeat (vertical ones laid flat), and
+        everything else (motifs, rosettes, bands that do not repeat). Each
+        source in order, manuscript 1 at the top. Layouts made
+        by pack_overview.py (Gurobi) are used when they match the charts."""
+        bands = BandRows(BAND_SHEET_WIDTH).add_all([p for p in self.patterns if p.is_band()])
+        bands.save_items(self.out / "overview-band-items.csv")
+        bands.save(self.out / "overview-bands.png", LAYOUT_DIR / "bands.csv")
+        motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in self.patterns if not p.is_band()])
+        motifs.save_items(self.out / "overview-motif-items.csv")
+        motifs.save(self.out / "overview-motifs.png", LAYOUT_DIR / "motifs.csv")
 
 
-BAND_SHOW = 116           # cells of each band shown on the band sheet (widest chart)
+BAND_SHEET_WIDTH = 720    # cells across the band sheet
+MOTIF_SHEET_WIDTH = 720   # cells across the motif sheet
+# Layouts optimised by pack_overview.py (Gurobi) from <out>/overview-*-items.csv.
+# Used when they list exactly the charts on the sheet; otherwise a simple
+# packing is used, so the build never needs Gurobi.
+LAYOUT_DIR = Path(__file__).resolve().parents[1] / "layout"
 
 
-class OverviewSheet:
-    """Charts packed tightly on one sheet, 1 px per cell, coloured by source.
+def source_rank(source):
+    order = list(SOURCE_LABELS)
+    return order.index(source) if source in order else len(order) - 1
 
-    Bottom-left skyline packing: each chart drops into the lowest spot it
-    fits, so sources stay in rough order from top to bottom with little
-    white between them."""
 
-    def __init__(self, width, gap=3, step=1):
-        self.width, self.gap, self.step = width, gap, step   # step: allowed x positions
-        self.sky = np.zeros(width, dtype=int)   # first free row per column
-        self.placed = []                         # (y, x, matrix, colour index)
+def write_png(canvas, path):
+    """Index 0 transparent, index k the colour of source k-1."""
+    img = Image.fromarray(canvas, "P")
+    palette = [255, 255, 255]
+    for hexcol in SOURCE_COLORS.values():
+        palette += [int(hexcol[i:i + 2], 16) for i in (1, 3, 5)]
+    img.putpalette(palette)
+    img.save(path, optimize=True, transparency=0)
 
-    def add(self, m, colour):
-        h, w = m.shape
-        w = min(w, self.width)
-        best = None
-        for x in range(0, self.width - w + 1, self.step):
-            y = int(self.sky[x:x + w].max())
-            if best is None or y < best[0]:
-                best = (y, x)
-        y, x = best
-        self.sky[x:x + w + self.gap] = y + h + self.gap
-        self.placed.append((y, x, m[:, :w], colour))
 
-    def add_all(self, patterns, chart, tallest_first=False):
-        order = list(SOURCE_LABELS)
-        def key(p):
-            rank = order.index(p.source) if p.source in order else len(order)
-            return (rank, -p.trim.shape[0] if tallest_first else 0)
-        for p in sorted(patterns, key=key):   # stable: file order within a source
-            self.add(chart(p), 1 + (order.index(p.source) if p.source in order else len(order) - 1))
+class Sheet:
+    """Charts of every source on one sheet, 1 px per cell, sources in order
+    (manuscript 1 at the top) so that colour changes run across the sheet;
+    the last charts of a source may drop into gaps beside the next one.
+    A layout file from pack_overview.py (Gurobi) replaces the simple
+    packing when it lists exactly these charts."""
+
+    def __init__(self, width, gap=3):
+        self.width, self.gap = width, gap
+        self.patterns = []
+
+    def add_all(self, patterns):
+        self.patterns = sorted(patterns, key=lambda p: source_rank(p.source))   # stable: file order
         return self
 
-    def save(self, path):
-        height = max(y + m.shape[0] for y, _, m, _ in self.placed)
+    def read_layout(self, path, fields):
+        if not path.exists():
+            return None
+        with open(path, newline="") as f:
+            layout = {r["id"]: tuple(int(r[k]) for k in fields) for r in csv.DictReader(f)}
+        if set(layout) != {p.id for p in self.patterns}:
+            print(f"{path.name} is out of date (charts differ); using the simple packing")
+            return None
+        print(f"{path.name}: optimised layout")
+        return layout
+
+    def draw(self, items, path):
+        """items: (y, x, matrix, pattern)."""
+        height = max(y + m.shape[0] for y, _, m, _ in items)
         canvas = np.zeros((height, self.width), dtype=np.uint8)
-        for y, x, m, c in self.placed:
+        for y, x, m, p in items:
             region = canvas[y:y + m.shape[0], x:x + m.shape[1]]
-            region[m == 1] = c
-        img = Image.fromarray(canvas, "P")
-        palette = [255, 255, 255]
-        for hexcol in SOURCE_COLORS.values():
-            palette += [int(hexcol[i:i + 2], 16) for i in (1, 3, 5)]
-        img.putpalette(palette)
-        img.save(path, optimize=True, transparency=0)
+            region[m == 1] = source_rank(p.source) + 1
+        write_png(canvas, path)
+
+
+class BandRows(Sheet):
+    """Bands in rows. A band repeats, so its length is free: each row is
+    filled edge to edge, its bands sharing the width equally, and only the
+    heights matter. A row is as tall as its tallest band, so the packing
+    tries to put bands of one height together."""
+
+    MIN_LENGTH = 60      # cells; a band is never shown shorter (nor shorter than one repeat)
+
+    def max_per_row(self, p):
+        return max(1, (self.width + self.gap) // (max(p.band_unit().shape[1], self.MIN_LENGTH) + self.gap))
+
+    def save_items(self, path):
+        with open(path, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["id", "source", "rank", "h", "max_per_row"])
+            for p in self.patterns:
+                w.writerow([p.id, p.source, source_rank(p.source), p.band_unit().shape[0], self.max_per_row(p)])
+
+    def greedy_rows(self):
+        """Within each source, by height; a row is closed when full."""
+        order = sorted(self.patterns, key=lambda p: (source_rank(p.source), p.band_unit().shape[0]))
+        row, r, members = {}, 0, []
+        for p in order:
+            if members and len(members) + 1 > min(self.max_per_row(q) for q in members + [p]):
+                r, members = r + 1, []
+            members.append(p)
+            row[p.id] = r
+        return row
+
+    def save(self, path, layout_path):
+        layout = self.read_layout(layout_path, ["row"])
+        row = {k: v[0] for k, v in layout.items()} if layout else self.greedy_rows()
+        rows = {}
+        for p in self.patterns:
+            rows.setdefault(row[p.id], []).append(p)
+        items, y = [], 0
+        for r in sorted(rows):
+            members = sorted(rows[r], key=lambda p: source_rank(p.source))
+            rh = max(p.band_unit().shape[0] for p in members)
+            edges = np.linspace(0, self.width + self.gap, len(members) + 1).round().astype(int)
+            for p, x0, x1 in zip(members, edges[:-1], edges[1:]):
+                m = p.band_strip(x1 - x0 - self.gap)
+                items.append((y + (rh - m.shape[0]) // 2, x0, m, p))
+            y += rh + self.gap
+        self.draw(items, path)
+
+
+class MotifSheet(Sheet):
+    """Motifs at their own size. Simple packing: bottom-left skyline, each
+    chart (source by source, largest first) drops into the lowest spot it
+    fits."""
+
+    def skyline(self):
+        sky = np.zeros(self.width, dtype=int)
+        out = {}
+        for p in sorted(self.patterns, key=lambda p: (source_rank(p.source), -p.trim.shape[0])):
+            h, w = p.trim.shape
+            w = min(w, self.width)
+            y, x = min((int(sky[x:x + w].max()), x) for x in range(self.width - w + 1))
+            sky[x:x + w + self.gap] = y + h + self.gap
+            out[p.id] = (x, y)
+        return out
+
+    def save_items(self, path):
+        pos = self.skyline()
+        with open(path, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["id", "source", "rank", "w", "h", "x", "y"])   # sizes include the gap
+            for p in self.patterns:
+                h, wd = p.trim.shape
+                w.writerow([p.id, p.source, source_rank(p.source), wd + self.gap, h + self.gap, *pos[p.id]])
+
+    def fits(self, pos):
+        height = max(pos[p.id][1] + p.trim.shape[0] for p in self.patterns) + self.gap
+        used = np.zeros((height, self.width + self.gap), dtype=bool)
+        for p in self.patterns:
+            (x, y), (h, w) = pos[p.id], p.trim.shape
+            if x < 0 or y < 0 or x + w > self.width or used[y:y + h + self.gap, x:x + w + self.gap].any():
+                return False
+            used[y:y + h + self.gap, x:x + w + self.gap] = True
+        return True
+
+    def save(self, path, layout_path):
+        pos = self.read_layout(layout_path, ["x", "y"])
+        if pos and not self.fits(pos):
+            print(f"{layout_path.name} has overlaps; using the simple packing")
+            pos = None
+        pos = pos or self.skyline()
+        self.draw([(pos[p.id][1], pos[p.id][0], p.trim[:, :self.width], p) for p in self.patterns], path)
 
 
 def main():

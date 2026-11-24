@@ -15,7 +15,7 @@ rows = P.map(p => ({...p, type: kinds.get(p.kind), group: p.frieze ?? p.point ??
 
 ## Every pattern on two sheets
 
-Bands and motifs are shown apart, each packed tightly, and each colour is one source. Click a source to open its patterns in the gallery, or a sheet to see it full size.
+Bands and motifs are shown apart, each packed tightly. Each colour is one source, in order from the top, so the colour changes run across the sheet. Click a source to open its patterns in the gallery, or a sheet to see it full size.
 
 ```{ojs}
 //| echo: false
@@ -32,13 +32,13 @@ html`<ul class="source-legend">${[...sourceColors].map(([s, d]) =>
 ### Bands
 
 ::: {.overview-sheet}
-[![Every border band, narrow edging and vertical band, laid flat and repeated to the same length, in file order within each source.](patterns/overview-bands.png){fig-alt="Rows of small embroidery bands, coloured by source manuscript"}](patterns/overview-bands.png)
+[![Every band that repeats (borders, edgings and vertical bands laid flat), in rows; each band is repeated to fill its share of the row.](patterns/overview-bands.png){fig-alt="Rows of small embroidery bands, coloured by source manuscript"}](patterns/overview-bands.png)
 :::
 
-### Motifs and rosettes
+### Motifs, rosettes and one-off bands
 
 ::: {.overview-sheet}
-[![Every motif and rosette at its own size, largest first within each source.](patterns/overview-motifs.png){fig-alt="Small embroidery motifs and rosettes packed together, coloured by source manuscript"}](patterns/overview-motifs.png)
+[![Every motif and rosette, and the bands that do not repeat, at their own size.](patterns/overview-motifs.png){fig-alt="Small embroidery motifs and rosettes packed together, coloured by source manuscript"}](patterns/overview-motifs.png)
 :::
 
 ## Sources and types
