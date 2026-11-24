@@ -79,6 +79,9 @@ bands without a repeat, keep their chart as drawn.
 In the pattern view, *Repeat* shows a unit repeated. For a band kept as drawn it shows the chart with
 its own starting edge and then continues it from the last full repeat; the dashed line marks where
 the chart ends.
+A motif or rosette is shown with a one-cell empty margin all round (its *chart size*, the pattern
+size + 2), and *Repeat* places copies with a one-cell spacer between them, so neighbouring copies
+do not touch. One repeat (the *repeat tile*) is the pattern size + 1 in each direction.
 
 ## How "similar patterns" are chosen {#similar}
 

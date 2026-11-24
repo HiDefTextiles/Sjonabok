@@ -192,12 +192,24 @@
   // Repeat view. A band stored as one repeat unit is simply repeated. A
   // full band chart keeps its own start (its edge piece) and then continues
   // from the last full repeat, so the seam always falls in phase. Other
-  // patterns are tiled whole.
+  // patterns are tiled with a spacer of SPACER empty cells between copies.
+  const SPACER = 1;
+  const isMotif = (p) => p.kind === "motif" || p.kind === "rosette";
   function repeatLayout(m) {
     const h = m.length, w = m[0].length, p = current.period;
     const along = current.kind === "vertical band" ? "y" : "x";
     const layout = (W, H, src, extra = {}) =>
-      ({ W, H, src, at: (x, y) => { const [sx, sy] = src(x, y); return m[sy][sx]; }, ...extra });
+      ({ W, H, src, at: (x, y) => { const c = src(x, y); return c ? m[c[1]][c[0]] : "0"; }, ...extra });
+    if (isMotif(current)) {
+      // chart: the motif with a 1-cell margin all round; repeat: copies with a
+      // 1-cell spacer between them (one repeat = motif + 1 right and below)
+      const b = inkBounds(m), iw = b.x1 - b.x0 + 1, ih = b.y1 - b.y0 + 1;
+      const tw = iw + SPACER, th = ih + SPACER, n = view.tile ? 3 : 1;
+      return layout(n * tw + SPACER, n * th + SPACER, (x, y) => {
+        const cx = (x - SPACER) % tw, cy = (y - SPACER) % th;
+        return x >= SPACER && y >= SPACER && cx < iw && cy < ih ? [b.x0 + cx, b.y0 + cy] : null;
+      });
+    }
     if (!view.tile) return layout(w, h, (x, y) => [x, y]);
     if (current.unit)
       return along === "x"
@@ -280,8 +292,12 @@
       fact("Type", KIND_LABELS[p.kind]) +
       (p.unit
         ? fact("Repeat unit", `${p.width} × ${p.height} cells (the file holds one repeat)`)
-        : fact("Chart size", `${p.width} × ${p.height} cells`) +
-          fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`)) +
+        : fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells`) +
+          (isMotif(p)
+            ? fact("Chart size", `${p.trim_width + 2 * SPACER} × ${p.trim_height + 2 * SPACER} cells (${SPACER}-cell margin all round)`) +
+              fact("Repeat tile", `${p.trim_width + SPACER} × ${p.trim_height + SPACER} cells (${SPACER}-cell spacer right and below)`)
+            : p.width !== p.trim_width || p.height !== p.trim_height
+              ? fact("Chart size", `${p.width} × ${p.height} cells (with empty margin)`) : "")) +
       fact("Repeat", p.period ? `every ${p.period} cells` + (p.unit ? "" : p.repeat_status
         ? ` (${p.repeat_status === "ok" ? "checked" : "check"}: ${(p.repeat_mismatch * 100).toFixed(1)}% of cells differ)` : "") : null) +
       fact("Filled cells", `${p.ones} (${pct(p.density)})`) +
@@ -295,14 +311,16 @@
     $("d-similar").innerHTML = p.similar
       .map((s) => `<a href="#${s}" title="${s}"><img loading="lazy" src="${BASE}thumb/${s}.png" alt="${s}"></a>`)
       .join("");
+    const cw = isMotif(p) ? p.trim_width + 2 * SPACER : p.width;    // drawn chart size
+    const ch = isMotif(p) ? p.trim_height + 2 * SPACER : p.height;
     const room = Math.min(560, $("detail").clientWidth ? $("detail").clientWidth - 70 : innerWidth - 70);
-    view.zoom = Math.max(2, Math.min(24, Math.floor(Math.max(room, 200) / p.width), Math.floor(560 / p.height)));
+    view.zoom = Math.max(2, Math.min(24, Math.floor(Math.max(room, 200) / cw), Math.floor(560 / ch)));
     $("d-zoom").value = view.zoom;
     view.matrix = null;
     if (!$("detail").open) {
       $("detail").showModal();
       const fit = $("detail").clientWidth - 70;  // re-fit now the dialog has its real size
-      view.zoom = Math.max(2, Math.min(24, Math.floor(Math.min(fit, 560) / p.width), Math.floor(560 / p.height)));
+      view.zoom = Math.max(2, Math.min(24, Math.floor(Math.min(fit, 560) / cw), Math.floor(560 / ch)));
     }
     $("d-zoom").value = view.zoom;
     $("detail").scrollTop = 0;
@@ -340,7 +358,9 @@
       const vx = Math.floor(((e.clientX - r.left) * scale) / view.zoom);
       const vy = Math.floor(((e.clientY - r.top) * scale) / view.zoom);
       if (!view.layout || vx >= view.layout.W || vy >= view.layout.H) return;
-      const [x, y] = view.layout.src(vx, vy);
+      const c = view.layout.src(vx, vy);
+      if (!c) { $("d-cell").textContent = "Margin or spacer: empty"; return; }
+      const [x, y] = c;
       if (view.matrix[y]) $("d-cell").textContent = `Row ${y + 1} of ${h}, column ${x + 1} of ${w}: ${view.matrix[y][x] === "1" ? "filled" : "empty"}`;
     };
     $("d-canvas").addEventListener("pointermove", cellAt);
