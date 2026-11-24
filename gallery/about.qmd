@@ -60,9 +60,159 @@ are computed, not curated, so treat them as a guide for browsing.
 | Diagonal mirror | A square pattern matches its mirror across a diagonal |
 | Glide | A band matches itself flipped top to bottom and shifted half a repeat |
 | Repeat | Smallest shift along a band after which it repeats; *checked* means up to 2% of cells differ from a perfect repeat |
-| Symmetry group | Frieze group for bands (p1, p11g, p1m1, p2, p2mg, p11m, p2mm), point group for motifs (C1, D1, C2, D2, C4, D4) |
+| Symmetry group | A short code for all the symmetry together: a *frieze group* for bands (p1, p11g, p1m1, p2, p2mg, p11m, p2mm), a *point group* for motifs (C1, D1, C2, D2, C4, D4). See [Symmetry in plain words](#symmetry) |
 | Separate pieces | Number of shapes of filled cells; cells touching at a corner count as joined |
 | Longest float | Longest run of filled (or empty) cells in one row |
+
+## Symmetry in plain words {#symmetry}
+
+A pattern has *symmetry* when you can move it and it still looks the same. Four moves are used:
+
+- **Shift**: slide the pattern along. Every border band does this, because it repeats.
+- **Mirror**: flip the pattern over a line, as in a mirror. The two sides of the line match.
+- **Turn**: turn the pattern around a point. A *half-turn* is 180° (upside down), a
+  *quarter-turn* is 90°.
+- **Glide**: mirror the pattern top to bottom *and* slide it half a step along, like
+  footprints in the snow: left, right, left, right.
+
+The gallery sums up which of these moves leave a pattern unchanged in a short code, the
+*symmetry group*. The codes are the standard names that mathematicians and textile scholars use,
+so you will find them in books on pattern and ornament too.
+
+The pictures below show each code with the letter F, which has no symmetry of its own, so
+every copy shows the move that made it. On the pictures:
+
+::: {.sym-key}
+[]{.k-mirror} mirror line &emsp; []{.k-glide} glide line &emsp; []{.k-turn} turning point
+:::
+
+### Bands: the seven frieze groups {#frieze-groups}
+
+A band repeats in one direction, so it always has the shift. There are only seven ways to
+combine that shift with mirrors, turns and glides, so every band is one of these seven
+*frieze groups*. They are described here for a band running left to right; a vertical band is
+read as if it were turned on its side.
+
+::: {.sym-cards .sym-bands}
+
+::: {.sym-card}
+![](img/symmetry/p1.svg){fig-alt="A row of the letter F, all facing the same way."}
+
+**p1**: repeats only. Every copy faces the same way, with no mirror and no turn.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p11g.svg){fig-alt="F above the middle line alternates with an upside-down mirrored F below it, half a step further along."}
+
+**p11g**: glide. Each copy is flipped top to bottom and moved half a step along,
+like footprints.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p1m1.svg){fig-alt="F and its mirror image alternate, separated by upright mirror lines."}
+
+**p1m1**: mirror lines across the band. Each motif, or each pair of motifs, is the same on
+its left and right side.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p2.svg){fig-alt="F above alternates with F turned upside down below, with turning points between them."}
+
+**p2**: half-turns. Turn the band upside down and it looks the same, but nothing is
+mirrored. Look for S- or Z-shaped running motifs.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p2mg.svg){fig-alt="A mirrored pair of F above alternates with a mirrored pair of upside-down F below."}
+
+**p2mg**: mirror lines across the band and a glide. Mirrored pairs take turns above and
+below the middle, often as a zigzag.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p11m.svg){fig-alt="A row of F with its upside-down mirror image directly below, mirrored over the middle line."}
+
+**p11m**: one mirror line along the middle. The top half of the band mirrors the
+bottom half.
+:::
+
+::: {.sym-card}
+![](img/symmetry/p2mm.svg){fig-alt="F mirrored both across and along the band, four copies to each repeat."}
+
+**p2mm**: mirror lines across *and* along the band. The most symmetric band: each motif is
+mirrored left to right and top to bottom.
+:::
+
+:::
+
+**Reading the code.** *p* is a pattern that repeats. The first figure tells whether the band
+has half-turns (*2*) or not (*1*). The next letter is about lines across the band and the last
+about the line along its middle: *m* is a mirror, *g* a glide, and *1* means nothing there.
+*p2* is short for *p211*.
+
+### Motifs: point groups {#point-groups}
+
+A single motif or rosette does not repeat, so it can only be turned around its centre or
+mirrored over lines through its centre. Its *point group* has a letter and a number:
+
+- **C** (cyclic) means turns only, no mirror. **D** (dihedral) means turns *and* mirror lines.
+- The **number** is how many ways round the motif looks the same in one full turn:
+  *1* only the way it is, *2* also upside down (a half-turn), *4* also on its side (quarter-turns).
+  For D, it is also the number of mirror lines.
+
+::: {.sym-cards .sym-motifs}
+
+::: {.sym-card}
+![](img/symmetry/C1.svg){fig-alt="A single hook shape."}
+
+**C1**: no symmetry. The motif only matches itself as it is.
+:::
+
+::: {.sym-card}
+![](img/symmetry/D1.svg){fig-alt="A hook and its mirror image on either side of an upright line."}
+
+**D1**: one mirror line, like a heart, a bird seen head on or a tree.
+:::
+
+::: {.sym-card}
+![](img/symmetry/C2.svg){fig-alt="A hook and the same hook turned upside down, around a central point."}
+
+**C2**: half-turn only. Same upside down, but not mirrored, like the letters S and N.
+:::
+
+::: {.sym-card}
+![](img/symmetry/D2.svg){fig-alt="Four hooks mirrored over an upright and a level line."}
+
+**D2**: two mirror lines at right angles, and so also a half-turn, like the letter H.
+:::
+
+::: {.sym-card}
+![](img/symmetry/C4.svg){fig-alt="Four hooks, each turned a quarter from the last, like a pinwheel."}
+
+**C4**: quarter-turns, no mirror. A pinwheel that seems to spin one way.
+:::
+
+::: {.sym-card}
+![](img/symmetry/D4.svg){fig-alt="Eight hooks forming a square star with four mirror lines."}
+
+**D4**: quarter-turns and four mirror lines (upright, level and both diagonals). The square
+stars and rosettes.
+:::
+
+:::
+
+In the gallery a mirror line of a motif may be upright, level or diagonal; D1 just says there
+is one. C4 and D4 are only possible for square motifs.
+
+### How to use it
+
+- In the [gallery](index.qmd), open *Symmetry group* in the filters and pick a code. Hold the
+  pointer over a code to see what it means.
+- The [Explore](explore.qmd#symmetry) page counts how many patterns have each code; click a bar
+  to see them.
+- Symmetry is measured by the computer. A mirror or turn counts when at least 98% of the cells
+  match, so a small slip in the drawing does not spoil it, but a pattern drawn with deliberate
+  small variations may get a lower code than it seems to have.
 
 ## Repeat units {#repeats}
 

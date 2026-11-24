@@ -17,8 +17,8 @@ include-after-body:
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
 </div>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
-<details open><summary>Symmetry</summary><div id="f-sym" class="chips"></div></details>
-<details><summary>Symmetry group</summary><div id="f-group" class="chips"></div></details>
+<details open><summary>Symmetry</summary><p class="hint">Mirror: two halves match. Turn: same when turned. Glide: flipped and shifted, like footprints. <a href="about.html#symmetry">More, with pictures</a></p><div id="f-sym" class="chips"></div></details>
+<details><summary>Symmetry group</summary><p class="hint">One code for all of a pattern's symmetry: <b>p…</b> for bands, <b>C</b> (turns) or <b>D</b> (turns and mirrors) for motifs. Hover a code for its meaning, or <a href="about.html#symmetry">see the pictures</a>.</p><div id="f-group" class="chips"></div></details>
 <details open><summary>Source</summary><div id="f-source" class="chips"></div></details>
 <details open><summary>Size and density</summary><div id="f-range" class="ranges"></div></details>
 <label class="sort">Sort by

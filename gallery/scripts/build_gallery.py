@@ -57,22 +57,25 @@ SOURCE_LABELS = {
     "thjmsth_116": "Þjms. Th 116",
 }
 
+# Plain-language names, written for a band running left to right
+# (a vertical band is read as if turned on its side). Explained with
+# pictures on the About page (about.qmd#symmetry).
 FRIEZE_NAMES = {
-    "p1": "translation only",
-    "p11g": "glide reflection",
-    "p1m1": "vertical mirrors",
-    "p2": "half-turns",
-    "p2mg": "vertical mirrors and glide",
-    "p11m": "horizontal mirror",
-    "p2mm": "horizontal and vertical mirrors",
+    "p1": "repeats only, no mirror or turn",
+    "p11g": "glide: copies flip top to bottom as they repeat",
+    "p1m1": "mirror lines across the band",
+    "p2": "half-turns, no mirror",
+    "p2mg": "mirror lines across the band, and a glide",
+    "p11m": "one mirror line along the middle",
+    "p2mm": "mirror lines across and along the band",
 }
 
 POINT_NAMES = {
-    "D4": "fourfold, mirrored (square star)",
-    "C4": "fourfold turn, no mirror",
-    "D2": "two mirrors",
-    "C2": "half-turn only",
-    "D1": "one mirror",
+    "D4": "4 turns and 4 mirror lines (square star)",
+    "C4": "4 turns, no mirror (pinwheel)",
+    "D2": "2 mirror lines and a half-turn",
+    "C2": "half-turn only, no mirror",
+    "D1": "one mirror line",
     "C1": "no symmetry",
 }
 
