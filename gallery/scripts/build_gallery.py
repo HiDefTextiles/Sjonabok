@@ -323,21 +323,32 @@ class Pattern:
         Image.fromarray(self.rgba(FULL_ZOOM), "RGBA").save(out / "png" / f"{self.id}.png", optimize=True)
         shutil.copyfile(self.path, out / "txt" / f"{self.id}.txt")
 
-    def is_band(self):
-        """A band on the overview: a border, edging or vertical band that
-        repeats (a stored unit, or a repeat found in the chart)."""
-        if self.kind not in ("border", "edging", "vertical band"):
-            return False
+    BAND_MIN_WIDTH = 100   # cells; a border that spans the page is a band even if it never repeats exactly
+
+    def repeats(self):
         return bool(self.unit_row) or (self.repeat is not None and self.repeat.status in ("ok", "check"))
 
+    def is_band(self):
+        """A band on the overview: a border, edging or vertical band that
+        repeats (a stored unit, or a repeat found in the chart), or a border
+        or edging drawn across the whole page. Short pieces cut from a band
+        row (a fox, letters) and one-off vertical ornaments are motifs."""
+        if self.kind not in ("border", "edging", "vertical band"):
+            return False
+        return self.repeats() or (self.kind != "vertical band" and self.trim.shape[1] >= self.BAND_MIN_WIDTH)
+
     def band_unit(self):
-        """One repeat of the band, laid flat."""
+        """One repeat of the band laid flat, or the whole band if it does
+        not repeat."""
         if self.unit_row:
             return self.matrix.T if self.unit_row["axis"] == "y" else self.matrix
-        return self.repeat.horizontal()
+        return self.repeat.horizontal() if self.repeats() else self.trim
 
     def band_strip(self, length=116):
-        """The band laid flat, its repeat unit repeated to length cells."""
+        """The band laid flat: its repeat unit repeated to length cells, or
+        as drawn in the book (cut to length) if it does not repeat."""
+        if not self.repeats():
+            return self.trim[:, :length]
         return RepeatUnit.tile(self.band_unit(), 0, length)
 
     # ── record ───────────────────────────────────────────────────────────

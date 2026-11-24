@@ -14,7 +14,9 @@ after each source (in order), the column heights are as equal as possible:
 colour changes then run straight across and the columns end level.
 
 Motifs (default, no Gurobi needed): skyline packing improved by a seeded
-local search over the order (MotifSearch). With --mip:
+local search over the order (MotifSearch), minimising the height; the
+result is then spread so the white is even through the sheet. Long runs
+write the best layout every --checkpoint seconds. With --mip:
 rectangles (chart + gap) on a strip as wide as the band sheet,
 no overlap, no rotation; minimise the height. Colours may mix (--group > 0
 adds a weight on each source's vertical span and keeps sources in order).
@@ -224,7 +226,28 @@ class MotifSearch:
             pos[i], height = (x, y), max(height, y + h)
         return pos, height
 
-    def run(self, out, seconds):
+    def spread(self, pos, height):
+        """Even out the empty space: every chart also gets its lowest
+        position (the same packing dropped to the bottom edge, keeping x),
+        and goes halfway between the two. Charts that share columns keep
+        their order in both, so the halfway layout cannot overlap; the
+        white left at the ragged bottom is spread through the sheet."""
+        floor = [height] * self.W
+        down = [None] * len(pos)
+        for i in sorted(range(len(pos)), key=lambda i: -pos[i][1]):
+            x, w, h = pos[i][0], self.w[i], self.h[i]
+            y = min(floor[x:x + w]) - h
+            floor[x:x + w] = [y] * w
+            down[i] = y
+        return [(x, (y + d) // 2) for (x, y), d in zip(pos, down)]
+
+    def save(self, out, order):
+        pos, height = self.place(order)
+        pos = self.spread(pos, height)
+        write(out, ["id", "x", "y"], [(it["id"], *p) for it, p in zip(self.items, pos)])
+        return height
+
+    def run(self, out, seconds, checkpoint=3600):
         n = len(self.items)
         starts = {
             "area": sorted(range(n), key=lambda i: -self.w[i] * self.h[i]),
@@ -232,23 +255,34 @@ class MotifSearch:
             "longest side": sorted(range(n), key=lambda i: -max(self.w[i], self.h[i])),
         }
         best = min(((self.place(o)[1], name, o) for name, o in starts.items()), key=lambda t: t[0])
-        print(f"start ({best[1]} first): height {best[0]}")
+        print(f"start ({best[1]} first): height {best[0] - 3}", flush=True)
         height, order = best[0], best[2]
-        end = time.time() + seconds
+        bound = sum(a * b for a, b in zip(self.w, self.h)) / self.W
+        self.save(out, order)
+        t0 = time.time()
+        end, next_save, saved = t0 + seconds, t0 + checkpoint, height
         while time.time() < end:
             trial = list(order)
-            for _ in range(3):
-                i = self.rng.randrange(n)
-                j = min(n - 1, i + self.rng.randrange(1, 8))
-                trial[i], trial[j] = trial[j], trial[i]
+            if self.rng.random() < 0.5:                 # swap a few nearby charts
+                for _ in range(self.rng.randint(1, 3)):
+                    i = self.rng.randrange(n)
+                    j = min(n - 1, i + self.rng.randrange(1, 8))
+                    trial[i], trial[j] = trial[j], trial[i]
+            else:                                       # move one chart elsewhere in the order
+                trial.insert(self.rng.randrange(n), trial.pop(self.rng.randrange(n)))
             h = self.place(trial)[1]
             if h <= height:
                 if h < height:
-                    print(f"height {h}")
+                    print(f"{(time.time() - t0) / 60:6.1f} min: height {h - 3}", flush=True)
                 height, order = h, trial
-        pos, height = self.place(order)
-        print(f"final height {height - 3} cells (lower bound from area {sum(a * b for a, b in zip(self.w, self.h)) / self.W:.0f})")
-        write(out, ["id", "x", "y"], [(it["id"], *p) for it, p in zip(self.items, pos)])
+            if time.time() >= next_save:
+                if height < saved:
+                    self.save(out, order)
+                    saved = height
+                    print(f"checkpoint: wrote {out} (height {height - 3})", flush=True)
+                next_save += checkpoint
+        self.save(out, order)
+        print(f"final height {height - 3} cells (lower bound from area {bound - 3:.0f})", flush=True)
 
 
 def main():
@@ -263,6 +297,7 @@ def main():
     ap.add_argument("--near", type=int, default=-1,
                     help="motifs: separate only pairs this close in the start, more lazily; -1 = all pairs at once")
     ap.add_argument("--mip", action="store_true", help="motifs: use the Gurobi MIP instead of the local search")
+    ap.add_argument("--checkpoint", type=float, default=3600, help="motifs: write the best layout so far every this many seconds")
     ap.add_argument("--seed", type=int, default=1, help="motifs: seed of the local search")
     ap.add_argument("--rounds", type=int, default=15, help="lazy non-overlap rounds (motifs)")
     args = ap.parse_args()
@@ -272,7 +307,7 @@ def main():
     elif args.mip:
         MotifPacker(items, args.width, args.group, args.near).run(args.out, args.time, args.rounds)
     else:
-        MotifSearch(items, args.width, seed=args.seed).run(args.out, args.time)
+        MotifSearch(items, args.width, seed=args.seed).run(args.out, args.time, args.checkpoint)
 
 
 if __name__ == "__main__":
