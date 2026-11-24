@@ -15,7 +15,8 @@ Output (all generated, not committed):
     <out>/thumb/<id>.png       gallery thumbnail
     <out>/png/<id>.png         full image, 10 px per cell
     <out>/txt/<id>.txt         copy of the matrix (download and zoom view)
-    <out>/overview.png         every pattern on one sheet
+    <out>/overview-bands.png   every band on one sheet, coloured by source
+    <out>/overview-motifs.png  every motif and rosette on one sheet
 
 The measures are computed automatically; they describe the digitised chart,
 not a curator's judgement.
@@ -56,6 +57,14 @@ SOURCE_LABELS = {
     "thjms6950": "Þjms. 6950",
     "thjmsth_116": "Þjms. Th 116",
 }
+
+# One colour per source on the overview sheets, in SOURCE_LABELS order.
+# Checked for colour-blind separation between neighbours in this order;
+# the page legend names every colour, so colour is never the only cue.
+SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
+    "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4",
+    "#008300", "#6250d6", "#e34948", "#2b4ea8", "#a0632d",
+]))
 
 FRIEZE_NAMES = {
     "p1": "translation only",
@@ -313,6 +322,18 @@ class Pattern:
         Image.fromarray(self.rgba(FULL_ZOOM), "RGBA").save(out / "png" / f"{self.id}.png", optimize=True)
         shutil.copyfile(self.path, out / "txt" / f"{self.id}.txt")
 
+    def band_strip(self):
+        """The band laid flat and filled out to BAND_SHOW cells: a stored
+        unit or a band that repeats exactly (status ok) is repeated, any other band is drawn as
+        in the book."""
+        if self.unit_row:
+            unit = self.matrix.T if self.unit_row["axis"] == "y" else self.matrix
+        elif self.repeat is not None and self.repeat.status == "ok":
+            unit = self.repeat.horizontal()
+        else:
+            return (self.trim.T if self.kind == "vertical band" else self.trim)[:, :BAND_SHOW]
+        return RepeatUnit.tile(unit, 0, BAND_SHOW)
+
     # ── record ───────────────────────────────────────────────────────────
     def record(self):
         h, w = self.matrix.shape
@@ -350,6 +371,7 @@ class Pattern:
             "pieces": self.pieces,
             "float_fg": self.float_fg,
             "float_bg": self.float_bg,
+            "color": SOURCE_COLORS.get(self.source),
             "thumb_zoom": max(2, THUMB_PX // max(self.display.shape)),
         }
 
@@ -415,17 +437,64 @@ class Gallery:
         for i, r in enumerate(records):
             r["similar"] = [records[j]["id"] for j in np.argsort(-score[i])[:k]]
 
-    def save_overview(self, cell=48, cols=30):
-        """Contact sheet of every pattern, in file order."""
-        rows = -(-len(self.patterns) // cols)
-        sheet = Image.new("RGBA", (cols * cell, rows * cell), (255, 255, 255, 0))
-        for i, p in enumerate(self.patterns):
-            img = Image.fromarray(p.rgba(1), "RGBA")
-            img.thumbnail((cell - 6, cell - 6), Image.NEAREST)
-            x = (i % cols) * cell + (cell - img.width) // 2
-            y = (i // cols) * cell + (cell - img.height) // 2
-            sheet.paste(img, (x, y), img)
-        sheet.save(self.out / "overview.png", optimize=True)
+    def save_overview(self):
+        """Two sheets: all bands (vertical ones laid flat) and all motifs."""
+        bands = [p for p in self.patterns if p.kind in ("border", "edging", "vertical band")]
+        motifs = [p for p in self.patterns if p.kind in ("motif", "rosette")]
+        OverviewSheet(width=8 * (BAND_SHOW + 3), step=BAND_SHOW + 3).add_all(bands, Pattern.band_strip).save(
+            self.out / "overview-bands.png")
+        OverviewSheet(width=720).add_all(motifs, lambda p: p.trim, tallest_first=True).save(
+            self.out / "overview-motifs.png")
+
+
+BAND_SHOW = 116           # cells of each band shown on the band sheet (widest chart)
+
+
+class OverviewSheet:
+    """Charts packed tightly on one sheet, 1 px per cell, coloured by source.
+
+    Bottom-left skyline packing: each chart drops into the lowest spot it
+    fits, so sources stay in rough order from top to bottom with little
+    white between them."""
+
+    def __init__(self, width, gap=3, step=1):
+        self.width, self.gap, self.step = width, gap, step   # step: allowed x positions
+        self.sky = np.zeros(width, dtype=int)   # first free row per column
+        self.placed = []                         # (y, x, matrix, colour index)
+
+    def add(self, m, colour):
+        h, w = m.shape
+        w = min(w, self.width)
+        best = None
+        for x in range(0, self.width - w + 1, self.step):
+            y = int(self.sky[x:x + w].max())
+            if best is None or y < best[0]:
+                best = (y, x)
+        y, x = best
+        self.sky[x:x + w + self.gap] = y + h + self.gap
+        self.placed.append((y, x, m[:, :w], colour))
+
+    def add_all(self, patterns, chart, tallest_first=False):
+        order = list(SOURCE_LABELS)
+        def key(p):
+            rank = order.index(p.source) if p.source in order else len(order)
+            return (rank, -p.trim.shape[0] if tallest_first else 0)
+        for p in sorted(patterns, key=key):   # stable: file order within a source
+            self.add(chart(p), 1 + (order.index(p.source) if p.source in order else len(order) - 1))
+        return self
+
+    def save(self, path):
+        height = max(y + m.shape[0] for y, _, m, _ in self.placed)
+        canvas = np.zeros((height, self.width), dtype=np.uint8)
+        for y, x, m, c in self.placed:
+            region = canvas[y:y + m.shape[0], x:x + m.shape[1]]
+            region[m == 1] = c
+        img = Image.fromarray(canvas, "P")
+        palette = [255, 255, 255]
+        for hexcol in SOURCE_COLORS.values():
+            palette += [int(hexcol[i:i + 2], 16) for i in (1, 3, 5)]
+        img.putpalette(palette)
+        img.save(path, optimize=True, transparency=0)
 
 
 def main():
