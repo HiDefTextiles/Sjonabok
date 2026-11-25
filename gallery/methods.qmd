@@ -214,6 +214,47 @@ candidates: 60 unlabelled charts nearest to the known animals (image model 0.7, 
 `subjects.py animals`), almost all of them border bands, for the reviewer to mark *Animal* or
 *No animal*.
 
+## Words as features: an image-and-words model {#clip}
+
+Looking for new features, we searched the research on pattern and shape classification
+(sources below). The idea that worked best is an image-and-words model, CLIP: trained on pictures
+with their captions, it can say how well a picture fits a phrase such as *"a cross-stitch
+embroidery chart of a bird"*. We use the open re-trained version, OpenCLIP ViT-B/32 (`clip_features.py`).
+
+The only human input is the list of phrases
+([`prompts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/prompts.csv)):
+words for what the reviewer looks for (a bird, a deer, a peacock, a flower, a vine, an
+eight-pointed star, a rosette, letters of the alphabet and so on), chosen once. No chart's label is
+shown to the model. This matches the plan: people decide *which* features matter, the computer
+measures them on every chart.
+
+Asked to name the group outright, CLIP is poor (55% on the fair test; it calls most plants
+ornament). But its scores *relative to each other* are useful: they rank animals above the rest
+with an area under the curve of 0.90, better than any other measure we have. So each chart gets
+four scores (animals, plants, ornament, letters), each compared with its average over all charts,
+and the distance between charts' scores became one more distance for the learner. A larger CLIP
+(ViT-L/14) was no better, so the smaller, faster one is kept.
+
+The learner now chooses: the image model 0.4, the image model on the repeated chart 0.2, form 0.2
+and the CLIP word scores 0.2. The word scores were in all seven top weightings. On the held-out
+fair test the right main group is found for 82% of charts (95% interval 68–92%) against 74% for
+the image model alone, and knots 78% against 63%. Animals are still found 2 times in 5 among the
+5 animals in the fair test, too few to tell; in the training charts, which now hold 34 animals
+after the animal page, they are found far more often.
+
+Ideas we found and noted but have not used yet:
+
+- **Symmetry groups of repeats** (Liu and Collins): the 7 frieze groups for bands and 17 wallpaper
+  groups for all-over patterns. The gallery already measures the frieze group of each band; the
+  wallpaper groups would matter if all-over patterns are added.
+- **Skeleton shape** (Wilder, Feldman and Singh): the medial axis of a silhouette tells animals
+  (a trunk with a few long limbs) from leaves (one axis with many short branches). Our *tips* and
+  *thin* measures are a rough version; a proper skeleton is a candidate next feature.
+- **Global shape descriptors for animals versus plants** (arXiv 1901.11398): simple measures such as
+  convexity, elongation and moments separate the two classes surprisingly well in photographs.
+- **Ornament datasets** (OrnAsia) and **CLIP tuned on art** (CLIP-Art): a model tuned on
+  ornament could do better than general CLIP, but would need many labelled charts.
+
 ## Ways to browse, found by the computer {#browse}
 
 Subjects need a person. The ways of browsing below do not: the computer measures them from the
@@ -223,7 +264,7 @@ related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-
 
 | Filter | What it measures | Words |
 |---|---|---|
-| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M3 for motifs, B1 to B3 for bands, with 24 close families in each part |
+| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M4 for motifs, B1 to B3 for bands, with 24 close families in each part |
 | Fit on 85 needles | A motif's width; a band's height across. With a band on both edges the motif corridor is 85 minus twice the band height | Motif up to 20, 21–40, 41–60, over 60 wide; band up to 7, 8–12, 13–17, over 17 rows |
 | Outline | The figure with its holes filled: does it fill 82% or more of its box? | Fills its square, Stands free, Band |
 | Stroke | The middle length of the runs of filled cells along rows and columns | Thin (under 1.5 cells), Double, Bold (2.5 or more) |
@@ -241,43 +282,36 @@ or an animal (legs below) from an ornament, so the image model also looks at the
 upright and mirrored left to right, and three measures of uprightness were added (left-right and
 top-bottom mirror kept apart, how top-heavy, how narrow the base).
 
-For each weighting of the eleven distances on a grid (the eleventh is the [clue measures](#clues)), the computer scored three things on the
+For each weighting of the thirteen distances on a grid (including the [clue measures](#clues) and the [CLIP](#clip) image and word distances), the computer scored three things on the
 labelled charts, leaving out the fair test: how often a chart's five nearest charts share its main
 group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
 the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
 the top (within 0.01, about the change one chart makes), so their mean is kept (`make weights.csv`
-in `analysis/subjects`). With 54 knot answers (18 knots) the result is: the image model 0.33, and
-upright, repeated, symmetry and repeated knot measures 0.17 each. The knot answers are what brought
-the repeated knot measures in.
+in `analysis/subjects`). With 54 knot answers and 34 animals the result is: the image model 0.4, the image model on the
+repeated chart 0.2, form 0.2 and the CLIP word scores 0.2.
 
-How good is it? On the 38 held-out fair-test charts, after letters became a main group of their own
-(2 of the 38 are letters; see [What the computer misses](#clues)):
+How good is it? On the 38 held-out fair-test charts, with the [CLIP word scores](#clip) and the
+34 animals now labelled:
 
 | Weighting | Right main group (95% interval) | Balanced over the four groups | Motifs cut in 3 vs main groups (ARI) |
 |---|---|---|---|
-| Learnt weights | 76% (63–89%) | 53% | 0.50 |
-| Image model alone | 71% (55–84%) | 50% | 0.11 |
-| All eleven distances equally | 74% (58–87%) | 51% | 0.45 |
+| Learnt weights | 82% (68–92%) | 56% | 0.28 |
+| Image model alone | 74% (58–87%) | 51% | 0.11 |
+| All thirteen distances equally | 71% (55–84%) | 50% | 0.52 |
 | Always guess ornament | 47% | 25% | 0 |
 
-So, honestly: for guessing a single chart's group the learnt weights are a little better than the
-image model alone, but well within the noise of 38 charts.
-What the features change is the shape of the tree. With the image model alone the top split of
-the motifs has almost nothing to do with the groups (ARI 0.11); with the upright, repeated and
-symmetry views it follows them much better (0.50), and the knot answers are found 76% of the time
-against 63% with the image model alone. The balanced column shows where the work is:
-animals are found only 2 times in 5, letters not at all (two charts), plants about 3 in 4, ornament
-nearly always. There are only 22 animals among the labels, too few to learn from, so more animal
-labels are the next step.
+The learnt weights now beat the image model alone, though the intervals still overlap: 38 charts
+are few. The balanced column shows where the work is: the fair test holds only 5 animals (2 found)
+and 2 letter charts (none found). More fair-test charts, chosen at random, would make these
+numbers firmer.
 
 The families themselves are kept only as fine as they are stable. The charts were resampled 50
 times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
-Jaccard similarity of 0.7 or more. For the motifs that allows 3 families (0.87; at 4 families it
-falls to 0.69): large plant scenes (M1), small free figures, animals and sprigs (M2), and geometric
-ornament (M3, 111 of its 122 labelled charts are ornament). Bands also give 3 (0.72; 4 families
-score 0.70 and just miss), mostly by height and repeat length. With the earlier weights the motifs
-allowed 4 families, so the number moves as the labels grow; the stable core (plants, figures,
-ornament) has stayed.
+Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73; at 5 it falls to
+0.62): geometric ornament in two families (M1, M4), small free figures with animals, letters and
+sprigs (M2), and plant scenes with some animals (M3). Bands give 3 (0.79; at 4 families 0.70 just
+misses). The number moves as the labels and weights change; the stable core (ornament, figures,
+plants) has stayed.
 The 24 close families in each part are finer and less stable: good for browsing, not a claim.
 Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we
 use it as a practical rule, checked by the resampling.
@@ -363,4 +397,10 @@ DINOv2 by Meta AI, used as published.
 - Oquab, M. et al. (2023). [DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193). arXiv:2304.07193.
 - R Core Team. [`hclust`: Hierarchical Clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html), R documentation.
 - McInnes, L., Healy, J. and Astels, S. (2017). [hdbscan: Hierarchical density based clustering](https://joss.theoj.org/papers/10.21105/joss.00205). *Journal of Open Source Software* 2(11). An alternative we considered.
-- Radford, A. et al. (2021). [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) (CLIP). Considered for naming suggestions; not used, because its guesses on small pattern charts are unreliable.
+- Radford, A. et al. (2021). [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) (CLIP). Its outright guesses on pattern charts are unreliable, but its relative scores for phrases are used as features ([Words as features](#clip)).
+- Cherti, M. et al. (2023). [Reproducible scaling laws for contrastive language-image learning](https://arxiv.org/abs/2212.07143) and [OpenCLIP](https://github.com/mlfoundations/open_clip): the open CLIP weights used (ViT-B/32, LAION-2B).
+- Liu, Y., Collins, R. T. and Tsin, Y. (2004). [A computational model for periodic pattern perception based on frieze and wallpaper groups](https://www.ri.cmu.edu/pub_files/pub2/liu_yanxi_2000_2/liu_yanxi_2000_2.pdf). Symmetry groups of repeats.
+- Wilder, J., Feldman, J. and Singh, M. (2011). [Superordinate shape classification using natural shape statistics](https://ruccs.sas.rutgers.edu/images/archive/personal-manish-singh/papers/Wilder_etal_2011.pdf). *Cognition* 119. Animals versus leaves by skeleton shape.
+- [A study on general visual categorization of objects into animal and plant groups using global shape descriptors](https://arxiv.org/abs/1901.11398) (2019). arXiv:1901.11398.
+- [OrnAsia: a dataset of Asian ornaments for image classification and cultural identification](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12621315/). An ornament dataset.
+- Conde, M. V. and Turgutlu, K. (2021). [CLIP-Art: Contrastive Pre-training for Fine-Grained Art Classification](https://openaccess.thecvf.com/content/CVPR2021W/CVFAD/papers/Conde_CLIP-Art_Contrastive_Pre-Training_for_Fine-Grained_Art_Classification_CVPRW_2021_paper.pdf). CVPR workshops.

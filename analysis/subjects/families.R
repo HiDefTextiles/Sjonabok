@@ -42,6 +42,7 @@ file_for <- function(name) {
          image = "work/embed_all_dist.csv",
          image_tiled = "work/embed_tiled_dist.csv",
          image_upright = "work/embed_upright_dist.csv",
+         clip = "work/clip_all_dist.csv",
          file.path("work/all", paste0(name, "_dist.csv")))
 }
 

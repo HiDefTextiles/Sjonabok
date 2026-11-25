@@ -64,6 +64,8 @@ gallery measures) without favouring the one that made the piles.
 - `misses_clues.csv` holds what the reviewer said tells the group for charts the computer
   missed; `MetaDistance.clues` turns the clues into measures (facing, tips, thin, solidity,
   roughness) and `features` writes `work/all/clues_dist.csv`.
+- `clip_features.py` (`make work/clip_all_dist.csv`) scores every chart with OpenCLIP against the
+  phrases in `prompts.csv` (no labels): an image distance and a word-score distance for `learn`.
 - `make animals` serves an Animal / No animal page of the 60 unlabelled charts nearest to the
   labelled animals (image model 0.7, clue measures 0.3).
 - `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of
@@ -76,7 +78,7 @@ gallery measures) without favouring the one that made the piles.
 - `subjects.py features`, `make weights.csv`: distances for all 600 charts and the weights learnt
   from the labels (`weights.csv`, kept in git).
 - `make families` (Rscript families.R): look-alike families, as many as stay stable under
-  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M3 motifs, B1..B3 bands), 24 close
+  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M4 motifs, B1..B3 bands), 24 close
   families per part, the look-alike order and a t-SNE map -> `families.csv`, kept in git so the
   gallery and pattern synthesis can use it without the image model. Needs the R packages Rtsne
   and fpc.

@@ -99,7 +99,11 @@ work/embed_upright_dist.csv: embed.py $(CHARTS)
 work/all/texture_dist.csv: subjects.py $(CHARTS)
 	$(PY) subjects.py features --txt $(TXT)
 
-EMBEDS := work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv
+# image-and-words model (OpenCLIP) against prompts.csv; also writes work/all/clip_text_dist.csv
+work/clip_all_dist.csv: clip_features.py prompts.csv $(CHARTS)
+	HF_HUB_DISABLE_XET=1 $(PY) clip_features.py --txt $(TXT)
+
+EMBEDS := work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
 	$(PY) subjects.py learn

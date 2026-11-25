@@ -1048,10 +1048,10 @@ def main():
         print(f"{len(units)} charts -> {ALL}")
     elif a.step == "learn":
         names = ["image", "image_upright", "image_tiled", "shape", "symmetry", "form", "provenance",
-                 "texture", "texture_tiled", "upright", "clues"]
+                 "texture", "texture_tiled", "upright", "clues", "clip", "clip_text"]
         files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
-                 "image_upright": WORK / "embed_upright_dist.csv",
-                 **{n: ALL / f"{n}_dist.csv" for n in names[3:]}}
+                 "image_upright": WORK / "embed_upright_dist.csv", "clip": WORK / "clip_all_dist.csv",
+                 **{n: ALL / f"{n}_dist.csv" for n in names[3:] if n != "clip"}}
         distances = {n: read_matrix(files[n]) for n in names if files[n].exists()}
         # a finer grid for few distances, a coarser one for many (the grid grows fast)
         wl = WeightLearner(distances, step=0.1 if len(distances) <= 8 else 0.2)
@@ -1077,7 +1077,7 @@ def main():
     elif a.step == "final":
         # cluster every chart with the learnt weights (no labels), then name the clusters
         files = {"image": "work/embed_all_dist.csv", "image_tiled": "work/embed_tiled_dist.csv",
-                 "image_upright": "work/embed_upright_dist.csv"}
+                 "image_upright": "work/embed_upright_dist.csv", "clip": "work/clip_all_dist.csv"}
         args = [f"{r['weight']}={files.get(r['distance'], 'work/all/' + r['distance'] + '_dist.csv')}"
                 for r in read_csv(WEIGHTS) if float(r["weight"]) > 0]
         subprocess.run(["Rscript", "cluster.R", str(a.k), *args], cwd=HERE, check=True,
@@ -1085,7 +1085,7 @@ def main():
         a.step = "groups"
     if a.step == "misses":
         files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
-                 "image_upright": WORK / "embed_upright_dist.csv"}
+                 "image_upright": WORK / "embed_upright_dist.csv", "clip": WORK / "clip_all_dist.csv"}
         rows = read_csv(WEIGHTS)
         wl = WeightLearner({r["distance"]: read_matrix(files.get(r["distance"], ALL / f"{r['distance']}_dist.csv"))
                             for r in rows})
