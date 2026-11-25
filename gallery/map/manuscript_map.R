@@ -68,7 +68,7 @@ motif_note <- function(example, pages, copies)
 places <- places |>
   mutate(
     icon = pmap_chr(list(rows, colour, first, order), function(r, col, f, o)
-      svg_uri(motif_svg(r, col, if (f) 40 else 28, o))),
+      svg_uri(motif_svg(r, col, if (f) 40 else 28))),
     popup = sprintf(
       "<b>%s. %s</b><br>%s<br><i>%s</i><br>%s: <b>%s</b>%s<br><small>%s</small><br>Confidence: %s<br>Now held: <b>%s</b><br>%s<br><a href='%s' target='_blank'>Museum record</a>",
       order, id, who, when_label, role, place, ifelse(is.na(when), "", paste0(" (", when, ")")),
@@ -100,7 +100,8 @@ add_icons <- function(map, d, size) {
   addMarkers(map, data = d, ~lon, ~lat, popup = ~popup,
              popupOptions = popupOptions(maxWidth = 240, autoPanPaddingTopLeft = c(50, 10)), label = ~paste0(order, ". ", id),
              icon = icons(iconUrl = d$icon, iconWidth = size, iconHeight = size,
-                          iconAnchorX = size / 2, iconAnchorY = size / 2))
+                          iconAnchorX = size / 2, iconAnchorY = size / 2,
+                          className = paste0("motif-", size)))
 }
 m <- m |>
   add_icons(filter(pl_is, !first), 28) |>
@@ -132,7 +133,7 @@ timeline_svg <- function(d, from = 1600, to = 1900, w = 640) {
   h <- lane_y(max(dated$lane)) + 44; axis_y <- h - 22
   icon <- function(cx, cy, colour, rows, order, title)
     sprintf('<g><title>%s</title><image href="%s" x="%.1f" y="%.1f" width="%d" height="%d"/></g>',
-            htmlEscape(title), pmap_chr(list(rows, colour, order), \(rw, col, o) svg_uri(motif_svg(rw, col, 2 * r, o))),
+            htmlEscape(title), pmap_chr(list(rows, colour, order), \(rw, col, o) svg_uri(motif_svg(rw, col, 2 * r))),
             cx - r, cy - r, 2 * r, 2 * r)
   ticks <- seq(ceiling(from / 25) * 25, to, by = 25)
   parts <- c(
@@ -156,7 +157,7 @@ tl <- books |>
 
 # ── Books not on the map: place unresolved, or abroad ─────────────────────────
 side_item <- function(d, text) tags$li(
-  tags$img(src = svg_uri(motif_svg(d$rows, HI[["grey"]], 30, d$order)), width = 30, height = 30, alt = ""),
+  tags$img(src = svg_uri(motif_svg(d$rows, HI[["grey"]], 30)), width = 30, height = 30, alt = ""),
   tags$span(HTML(sprintf("<b>%s. %s</b> (%s): %s", d$order, d$id, d$when_label, text))))
 not_mapped <- tags$div(class = "not-mapped",
   tags$h4("Not on the map"),
@@ -180,6 +181,14 @@ page <- m |>
      .dk-panel p { font-size: 11px; color: #444; margin: 3px 0 0; }
      #map-is, #map-dk { width: 100%% !important; height: min(60vw, 75vh) !important; }
      #map-dk { height: min(45vw, 60vh) !important; }
+     @media (max-width: 600px) {
+       /* phones: Denmark below Iceland, smaller icons (size, centred anchor) */
+       #map-is, .dk-panel { flex: 0 0 100%%; }
+       #map-dk { height: 42vw !important; }
+       .motif-40 { width: 26px !important; height: 26px !important; margin-left: -13px !important; margin-top: -13px !important; }
+       .motif-32 { width: 24px !important; height: 24px !important; margin-left: -12px !important; margin-top: -12px !important; }
+       .motif-28 { width: 18px !important; height: 18px !important; margin-left: -9px !important; margin-top: -9px !important; }
+     }
      .leaflet-tile-pane { filter: grayscale(1) sepia(0.2) hue-rotate(190deg) saturate(1.3) brightness(1.12) contrast(0.72); opacity: 0.85; }
      .leaflet-container { background: #f4f5fb; }
      .key { margin: 2px 0 6px; font-size: 13px; color: #333; }
