@@ -126,3 +126,10 @@ motifs: $(MAP)/signatures.csv
 map: $(MAP)/web/index.html
 
 .PHONY: motifs map
+
+# ── Sarpur records (sarpur.is) ──────────────────────────────────────────────
+# sarpur/*.csv are committed; make sarpur rebuilds sarpur/sarpur.sqlite
+sarpur: sarpur/sarpur.sqlite
+sarpur/sarpur.sqlite: sarpur/build_db.py $(wildcard sarpur/*.csv)
+	python3 sarpur/build_db.py $@
+.PHONY: sarpur
