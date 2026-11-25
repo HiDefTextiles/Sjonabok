@@ -43,7 +43,7 @@ write_csv(tab |> select(submotif, manuscript, order, when_label, charts, books, 
 
 n <- nrow(first)
 p <- ggplot(tab, aes(x = order, y = -row)) +
-  geom_point(aes(size = charts), colour = "#1f3b57") +
+  geom_point(aes(size = charts), colour = "#10099F") +
   scale_size_area(max_size = 6, breaks = c(1, 3, 10, 30), name = "Charts") +
   scale_x_continuous(breaks = dates$order, labels = dates$label, limits = c(-0.6, 10.5),
                      position = "top") +
@@ -52,7 +52,7 @@ p <- ggplot(tab, aes(x = order, y = -row)) +
        title = "Recurring sub-motifs across the manuscripts",
        subtitle = sprintf("Sub-motifs (at least %d cells) found in %d or more manuscripts; manuscripts in time order", min_cells, min_books)) +
   theme_minimal(base_size = 9) +
-  theme(panel.grid.minor = element_blank(), axis.text.x = element_text(size = 6.5, lineheight = 0.9),
+  theme(panel.grid.minor = element_blank(), plot.title = element_text(colour = "#10099F", face = "bold"), text = element_text(colour = "#262626"), axis.text.x = element_text(size = 6.5, lineheight = 0.9),
         legend.position = "bottom")
 
 # picture of each sub-motif in the left margin column (x = 0)

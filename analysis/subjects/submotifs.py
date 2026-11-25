@@ -38,6 +38,8 @@ SHIFT = 2
 MATCH = 0.7
 INNER_CELLS = 20     # smallest figure looked for as a repeat inside one chart
 JOINED_CELLS = 30    # smallest sub-motif searched for where joined to other figures
+HI_BLUE = (16, 9, 159)  # HÍ palette, as in pattern_processing/pattern_to_png.py
+WHITE = (255, 255, 255)
 GENERIC = 0.15       # a sub-motif in more than this share of charts is too common to tell charts apart
 OUT = WORK / "submotifs"
 
@@ -328,7 +330,8 @@ class SubMotifs:
             if m in drawn or len(charts[m]) < 2:
                 continue
             drawn.add(m)
-            Image.fromarray(np.where(p.cells == 1, 0, 255).astype(np.uint8)).save(OUT / "png" / f"{m}.png")
+            Image.fromarray(np.where(p.cells[..., None] == 1, HI_BLUE, WHITE).astype(np.uint8)).save(
+                OUT / "png" / f"{m}.png")
         ids, d = self.chart_distance()
         ALL.mkdir(parents=True, exist_ok=True)
         write_matrix(ALL / "submotif_dist.csv", ids, d)
