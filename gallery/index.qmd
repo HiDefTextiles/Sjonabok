@@ -4,7 +4,7 @@ subtitle: "About 600 Icelandic embroidery patterns, digitised as 0/1 charts. Fil
 page-layout: full
 toc: false
 include-after-body:
-  - text: <script src="js/gallery.js"></script>
+  - text: <script src="js/gallery.js"></script><script src="js/original.js"></script>
 ---
 
 ```{=html}
@@ -44,13 +44,24 @@ include-after-body:
 <div class="d-body">
 <div class="d-view">
 <div class="d-tools">
-<label>Zoom <input id="d-zoom" type="range" min="2" max="24" value="8"></label>
-<label><input id="d-grid" type="checkbox" checked> Grid</label>
-<span id="d-colours" class="swatches" aria-label="Colours"></span>
-<label title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
+<span class="d-mode" role="group" aria-label="View"><button type="button" id="d-mode-chart" aria-pressed="true">Chart</button><button type="button" id="d-mode-orig" aria-pressed="false">Original</button></span>
+<label class="d-chart-only">Zoom <input id="d-zoom" type="range" min="2" max="24" value="8"></label>
+<label class="d-chart-only"><input id="d-grid" type="checkbox" checked> Grid</label>
+<span id="d-colours" class="swatches d-chart-only" aria-label="Colours"></span>
+<label class="d-chart-only" title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
 </div>
-<div class="d-canvas"><canvas id="d-canvas"></canvas></div>
-<p id="d-cell" class="d-cell">Tap or hover a cell to see its row and column.</p>
+<div class="d-canvas d-chart-only"><canvas id="d-canvas"></canvas></div>
+<p id="d-cell" class="d-cell d-chart-only">Tap or hover a cell to see its row and column.</p>
+<div id="d-original" class="d-original" hidden>
+<div class="d-tools o-tools">
+<label>Page <select id="o-source"></select></label>
+<label><input id="o-overlay" type="checkbox" checked> Overlay</label>
+<label>Opacity <input id="o-opacity" type="range" min="0" max="100" value="80"></label>
+<label><input id="o-fill" type="checkbox"> Filled cells</label>
+</div>
+<div id="o-stage" class="o-stage"></div>
+<p id="o-caption" class="d-cell"></p>
+</div>
 </div>
 <div class="d-info">
 <h2 id="d-title"></h2>

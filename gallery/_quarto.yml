@@ -10,6 +10,8 @@ project:
     - patterns/**
     - js/**
     - map/web/**
+    - original/**
+    - tools/**
 
 lang: en
 
