@@ -118,6 +118,10 @@ work/submotifs/kinds.csv: variants.py work/all/submotif_dist.csv
 work/submotifs/colour: recolour.py work/submotifs/kinds.csv
 	$(PY) recolour.py --txt $(TXT) --sheet work/submotifs/recoloured.png
 
+# vertical video: the eight-pointed rosette (size kind 40) morphing from book to book
+work/submotifs/reel.mp4: reel.py manuscript_dates.csv work/submotifs/kinds.csv
+	$(PY) reel.py --txt $(TXT) --kind 40 --out $@
+
 work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
