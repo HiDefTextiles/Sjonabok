@@ -235,12 +235,16 @@ four scores (animals, plants, ornament, letters), each compared with its average
 and the distance between charts' scores became one more distance for the learner. A larger CLIP
 (ViT-L/14) was no better, so the smaller, faster one is kept.
 
-The learner now chooses: the image model 0.4, the image model on the repeated chart 0.2, form 0.2
-and the CLIP word scores 0.2. The word scores were in all seven top weightings. On the held-out
-fair test the right main group is found for 82% of charts (95% interval 68–92%) against 74% for
-the image model alone, and knots 78% against 63%. Animals are still found 2 times in 5 among the
-5 animals in the fair test, too few to tell; in the training charts, which now hold 34 animals
-after the animal page, they are found far more often.
+The learner then gives the CLIP word scores a quarter of the weight, with the image model, the
+upright image model and form (see [Ways to browse](#browse)). The word scores were in all seven top
+weightings. On the held-out fair test the right main group is found for 82% of charts (95% interval
+68–92%) against 74% for the image model alone, and knots 78% against 63%.
+
+Two animal pages (`subjects.py animals`, then `animal-answers`) showed the reviewer the unlabelled
+charts nearest to the known animals, mostly border bands: 12 of the first 60 and 16 of the next 60
+were animals, so there are now 50. Leaving each labelled chart out in turn, its five nearest charts
+now find animals 84% of the time (69% with the image model alone; 41% before the animal pages).
+The fair test holds only 5 animals, too few to confirm this.
 
 Ideas we found and noted but have not used yet:
 
@@ -287,30 +291,28 @@ labelled charts, leaving out the fair test: how often a chart's five nearest cha
 group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
 the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
 the top (within 0.01, about the change one chart makes), so their mean is kept (`make weights.csv`
-in `analysis/subjects`). With 54 knot answers and 34 animals the result is: the image model 0.4, the image model on the
-repeated chart 0.2, form 0.2 and the CLIP word scores 0.2.
+in `analysis/subjects`). With 54 knot answers and 50 animals the result is: the image model, the upright image model, form
+and the CLIP word scores, 0.25 each.
 
 How good is it? On the 38 held-out fair-test charts, with the [CLIP word scores](#clip) and the
-34 animals now labelled:
+50 animals now labelled:
 
 | Weighting | Right main group (95% interval) | Balanced over the four groups | Motifs cut in 3 vs main groups (ARI) |
 |---|---|---|---|
-| Learnt weights | 82% (68–92%) | 56% | 0.28 |
-| Image model alone | 74% (58–87%) | 51% | 0.11 |
+| Learnt weights | 82% (68–92%) | 67% | 0.57 |
+| Image model alone | 74% (58–87%) | 55% | 0.11 |
 | All thirteen distances equally | 71% (55–84%) | 50% | 0.52 |
 | Always guess ornament | 47% | 25% | 0 |
 
 The learnt weights now beat the image model alone, though the intervals still overlap: 38 charts
 are few. The balanced column shows where the work is: the fair test holds only 5 animals (2 found)
-and 2 letter charts (none found). More fair-test charts, chosen at random, would make these
+and 2 letter charts (1 found). More fair-test charts, chosen at random, would make these
 numbers firmer.
 
 The families themselves are kept only as fine as they are stable. The charts were resampled 50
 times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
-Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73; at 5 it falls to
-0.62): geometric ornament in two families (M1, M4), small free figures with animals, letters and
-sprigs (M2), and plant scenes with some animals (M3). Bands give 3 (0.79; at 4 families 0.70 just
-misses). The number moves as the labels and weights change; the stable core (ornament, figures,
+Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.71; at 5 it falls to
+0.65); bands give 3 (0.78; at 4 families 0.70 just misses). The number moves as the labels and weights change; the stable core (ornament, figures,
 plants) has stayed.
 The 24 close families in each part are finer and less stable: good for browsing, not a claim.
 Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we

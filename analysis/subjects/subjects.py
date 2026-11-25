@@ -880,7 +880,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "animals", "features", "learn", "groups", "final", "misses"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "animal-answers", "animals", "features", "learn", "groups", "final", "misses"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -999,6 +999,34 @@ def main():
             p["hint"] = p["charts"][0]["id"]
         (WORK / "knots2" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
         print(f"{len(seeds)} knots, {len(pick)} charts -> {WORK / 'knots2'}")
+    elif a.step == "animal-answers":
+        # answers from an animal page: every answer -> feature_labels.csv (animal yes/no);
+        # each Animal not yet labelled -> subjects.csv as animal-any (kind not set),
+        # a note starting "Letter" -> letters
+        if not a.reviewer:
+            raise SystemExit("Give --reviewer.")
+        feature_answers(a.src, "animal", a.reviewer)
+        rows = read_csv(SUBJECTS)
+        have = {r["id"] for r in rows}
+        today = dt.date.today().isoformat()
+        added = 0
+        for f in sorted(Path(a.src).glob("p*.json")):
+            d = json.loads(f.read_text())
+            d = d.get("data", d)
+            i = d["ids"][0]
+            if i in have:
+                continue
+            subj = ("animal-any" if d.get("subjects") == ["animal"]
+                    else "letters" if d.get("note", "").strip().lower().startswith("letter") else None)
+            if subj:
+                rows.append({"id": i, "subjects": subj, "reviewer": a.reviewer, "date": today,
+                             "note": ("animal page" + (": " + d["note"].strip() if d.get("note", "").strip() else ""))})
+                added += 1
+        with open(SUBJECTS, "w", newline="") as fh:
+            w = csv.DictWriter(fh, list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+        print(f"{added} charts added to {SUBJECTS.name}")
     elif a.step == "animals":
         # unlabelled charts (most are border bands) nearest to the labelled animals: the image
         # model, plus the misses-page clues (facing one way, tips, thin parts, outline)
