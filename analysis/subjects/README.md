@@ -69,7 +69,11 @@ gallery measures) without favouring the one that made the piles.
 - `submotifs.py` cuts every chart into pieces (connected cells, at least 8), matches pieces
   across charts allowing turns, mirrors and small shifts (overlap 0.7 or more), and writes the
   sub-motif library (`work/submotifs/motifs.csv`, `pieces.csv`) and a chart distance from shared
-  sub-motifs (`work/all/submotif_dist.csv`). Not yet used by `learn`.
+  sub-motifs (`work/all/submotif_dist.csv`). It then searches every chart for each sub-motif
+  joined to other figures (`FigureFinder`; `--pieces-only` skips this, ~30 min).
+  Not yet used by `learn`.
+- `timeline.R [MIN_BOOKS] [MIN_CELLS]` draws the recurring sub-motifs by manuscript in time
+  order (`manuscript_dates.csv`) -> `work/submotifs/timeline.png` and `timeline.csv`.
 - `make animals` serves an Animal / No animal page of the 60 unlabelled charts nearest to the
   labelled animals (image model 0.7, clue measures 0.3).
 - `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of

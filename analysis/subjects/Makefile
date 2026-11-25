@@ -107,7 +107,10 @@ work/clip_all_dist.csv: clip_features.py prompts.csv $(CHARTS)
 work/all/submotif_dist.csv: submotifs.py $(CHARTS)
 	$(PY) submotifs.py --txt $(TXT)
 
-EMBEDS := work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
+work/submotifs/timeline.png: timeline.R manuscript_dates.csv work/all/submotif_dist.csv
+	Rscript timeline.R 3 40
+
+work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
 	$(PY) subjects.py learn

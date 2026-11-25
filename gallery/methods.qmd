@@ -268,13 +268,30 @@ against all others, allowing it to be turned, mirrored and shifted by up to two 
 match when they share at least 70% of their filled cells (`submotifs.py`). Matching pieces form one
 sub-motif. No labels are used.
 
-Of 1,785 pieces, 122 sub-motifs recur in two or more charts, and 106 of those in two or more
-manuscripts. A chart can then be described by the sub-motifs it contains, and two charts that share
-rare sub-motifs are close. For now this only reaches the 244 charts that share any piece, and
-figures drawn joined to a branch or a border line are not cut out as pieces. Next steps are to
-cut charts to their smallest repeat first, and to find figures that are joined to others. The
-sub-motif by manuscript table is a first step toward asking how motifs travelled and changed
-between manuscripts from the 17th to the 19th century.
+Cutting into pieces misses a figure that is joined to something else, a bird on a branch or a
+star on a border line. So each sub-motif of at least 20 cells is then searched for everywhere,
+in all its turns and mirrors (`FigureFinder`): a place counts when at least 85% of its filled
+cells are filled there, the chart adds little inside its outline, and the empty cells around it
+are mostly empty. Checked by eye, this finds the pair of birds in six charts across three
+manuscripts, the deer in four, and the eight-petal rose (áttablaðarós) in 54 charts across eight
+manuscripts, while solid blocks and dense lace no longer count.
+
+Of 1,785 pieces, 264 sub-motifs recur in two or more charts, 244 of them in two or more
+manuscripts, and 542 of the 600 charts now share at least one sub-motif with another chart. The
+smallest ones (20 to 30 cells, simple triangles and leaves) turn up almost everywhere and say
+little; a chart's likeness to another counts each shared sub-motif by how rare it is.
+
+As a measure of likeness on its own, shared sub-motifs find the right main group less often than
+the image models (62% leaving each labelled chart out), and mixed in at 0.2 they help knots (85%
+against 80%) but not the fair test (79% against 82%). So they are not yet part of the learnt
+weights. Their main use is the question of how motifs travelled and changed:
+
+![Sub-motifs of at least 40 cells found in three or more manuscripts, the manuscripts in time order (`timeline.R`). Dot size is the number of charts.](images/submotif-timeline.png){width=100%}
+
+Some figures are in nearly every manuscript from the 17th-century Þjms. 1105 to the 1780s, such as
+the eight-petal rose and several eight-pointed stars; others, such as the deer and the pair of
+birds, are shared by only a few. Dates are uncertain for several manuscripts (two have none on
+record), so this is a starting point for the research, not a result.
 
 ## Ways to browse, found by the computer {#browse}
 
