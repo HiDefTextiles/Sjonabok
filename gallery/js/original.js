@@ -10,6 +10,7 @@
 //            Otherwise the view links to the photo on Sarpur instead.
 //   natmus : a Nationalmuseet photo on samlinger.natmus.dk (CC BY-SA),
 //            shown with its credit line.
+//   commons: a public-domain / CC0 scan on Wikimedia Commons.
 // Photos are hotlinked, never copied into the repository.
 //
 // Alignment: original/overlays.csv gives, per pattern and photo, the four
@@ -203,6 +204,16 @@
       url: (r) => `https://samlinger.natmus.dk/${r.image_id}.jpg?maxsize=${Math.max(+r.image_w, +r.image_h)}`,
       record: (r) => `https://samlinger.natmus.dk/dnt/object/${r.record_id}`,
       credit: (r, p, rec) => `Original: CC BY-SA, ${r.credit || "photographer unknown"}, Nationalmuseet, Danmark (${p.source_label}, <a href="${rec}" target="_blank" rel="noopener">record</a>).`,
+    },
+    // commons : a public-domain or CC0 page scan on Wikimedia Commons (for
+    //           example the Met's scans of Sibmacher's Modelbuch, 1597).
+    //           image_id is the file name without "File:".
+    commons: {
+      label: "Commons scan",
+      allowed: () => true,
+      url: (r) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(r.image_id)}?width=${r.image_w}`,
+      record: (r) => `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(r.image_id)}`,
+      credit: (r, p, rec) => `Original: ${r.credit || p.source_label}, via <a href="${rec}" target="_blank" rel="noopener">Wikimedia Commons</a>.`,
     },
   };
 
