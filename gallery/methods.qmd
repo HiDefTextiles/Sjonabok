@@ -289,6 +289,22 @@ All told, 2,187 pieces and repeated figures give 416 sub-motifs that recur in tw
 are too common to tell charts apart and are left out of the likeness. Some matches are still
 wrong, mostly checkered or lattice fillings matching other dense areas.
 
+The first copy the computer finds of a figure is not always a good picture of it. So every
+place a sub-motif occurs is cut out, turned to line up with the others, and voted on: the
+**consensus** keeps the cells that at least half of the charts fill (a chart that repeats the
+figure counts once), and shows in a pale tint the cells that only some charts fill
+(`variants.py`). Each place then gets a fit, its overlap with the consensus; places that
+overlap less than 70% are a stretch and are dropped, and the vote is taken again without them.
+Of 7,089 places, 889 were dropped this way. Some poor matches still pass, mostly where a solid
+block or a plain bar happens to cover the figure.
+
+The same figure is also drawn at different sizes: a rosette with longer arms, a tree a row
+taller. To group these, each consensus figure is scaled onto the same small square and the
+scaled pictures are compared, turned and mirrored, with at most three times as many cells in one
+as in the other. Solid shapes (triangles, corners) are left out, because any two of them look
+alike once scaled. This gives 26 groups of size variants, among them the eight-pointed rosette at
+seven sizes from 77 to 169 cells, and a flower on its stem at four sizes.
+
 As a measure of likeness on its own, shared sub-motifs find the right main group less often than
 the image models (62% leaving each labelled chart out), and mixed in at 0.2 they help knots (85%
 against 80%) but not the fair test (79% against 82%). So they are not yet part of the learnt

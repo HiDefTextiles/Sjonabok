@@ -110,6 +110,10 @@ work/all/submotif_dist.csv: submotifs.py $(CHARTS)
 work/submotifs/timeline.png: timeline.R manuscript_dates.csv work/all/submotif_dist.csv
 	Rscript timeline.R 3 40
 
+# consensus picture of each recurring sub-motif, stretches dropped, size variants grouped
+work/submotifs/kinds.csv: variants.py work/all/submotif_dist.csv
+	$(PY) variants.py --txt $(TXT)
+
 work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
