@@ -78,8 +78,9 @@ GALLERY = gallery
 GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 SYMMETRY_SVG = $(GALLERY)/img/symmetry/p1.svg
 
-$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
+BOOKS_DIR = $(PARENT_DIR)/books
+$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
 
 gallery-data: $(GALLERY_DATA)
 
@@ -101,7 +102,7 @@ PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)
 	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME) --rainbow 1
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
 
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
@@ -125,7 +126,22 @@ $(MAP)/web/index.html: $(MAP)/signatures.csv $(MAP)/manuscripts.csv $(MAP)/place
 motifs: $(MAP)/signatures.csv
 map: $(MAP)/web/index.html
 
-.PHONY: motifs map
+# ── Printed European pattern books (books/) ──────────────────────────────────
+# make travel    : sub-motifs shared by the books and the manuscripts
+#                  -> books/travel/shared.csv, pairs.csv, shared.png
+# make books-map : map + timeline of books and manuscripts -> gallery/map/web/europe.html
+# Charts read from the scans are committed in patterns/books; the scans are
+# not (books/fetch.py gets them, books/digitise.py and books/woodcut.py read them).
+books/travel/shared.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) books/books.csv books/travel.py
+	python3 books/travel.py
+
+$(MAP)/web/europe.html: books/travel/shared.csv books/books.csv $(MAP)/manuscripts.csv $(MAP)/places.csv $(MAP)/books_map.R
+	cd $(MAP) && LC_ALL=C.UTF-8 Rscript books_map.R
+
+travel: books/travel/shared.csv
+books-map: $(MAP)/web/europe.html
+
+.PHONY: motifs map travel books-map
 
 # ── Seeds: smallest piece + symmetry recipe per chart ───────────────────────
 # make seeds       : patterns/seeds.csv (seed, recipe, frieze/point group,

@@ -52,7 +52,7 @@
   ];
 
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), range: {}, q: "", sort: "name" };
+  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), coll: new Set(), range: {}, q: "", sort: "name" };
   let data = [];
   let byId = {};
   let current = null;
@@ -113,6 +113,7 @@
     if (state.q && !p.id.toLowerCase().includes(state.q) && !p.source_label.toLowerCase().includes(state.q)) return false;
     if (skip !== "kind" && state.kind.size && !state.kind.has(p.kind)) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
+    if (skip !== "coll" && state.coll.size && !state.coll.has(p.collection || "iceland")) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
     if (skip !== "sym") {
       for (const s of state.sym) if (s === "none" ? !isAsym(p) : !p[s]) return false;
@@ -156,9 +157,10 @@
     $("count").textContent = `Showing ${shown.length} of ${data.length} patterns`;
     counts($("f-kind"), "kind", (p) => p.kind);
     counts($("f-source"), "source", (p) => p.source);
+    counts($("f-coll"), "coll", (p) => p.collection || "iceland");
     counts($("f-group"), "group", group);
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
-    const active = ["kind", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    const active = ["kind", "sym", "group", "source", "coll"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
     $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
@@ -170,7 +172,7 @@
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
-      <span class="cap"><b>${p.source_label}</b> p. ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
+      <span class="cap"><b>${p.source_label}</b> ${p.collection === "europe" ? "pl." : "p."} ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
       <small>${KIND_LABELS[p.kind]} · ${p.trim_width}×${p.trim_height}</small></span>`;
     return a;
   }
@@ -178,7 +180,7 @@
   // ── URL state (shareable filters) ──────────────────────────────────────
   function saveUrl() {
     const u = new URLSearchParams();
-    for (const k of ["kind", "sym", "group", "source"]) if (state[k].size) u.set(k, [...state[k]].join(","));
+    for (const k of ["kind", "sym", "group", "source", "coll"]) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
     const qs = u.toString();
@@ -187,7 +189,7 @@
 
   function loadUrl() {
     const u = new URLSearchParams(location.search);
-    for (const k of ["kind", "sym", "group", "source"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
+    for (const k of ["kind", "sym", "group", "source", "coll"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
     $("q").value = state.q;
@@ -304,8 +306,14 @@
     const syms = SYM.filter(([k]) => k !== "none" && p[k]).map((s) => s[1]).join(", ") || "None found";
     const grp = p.frieze ? `${p.frieze} (${p.frieze_name})` : p.point ? `${p.point} (${p.point_name})` : "—";
     $("d-facts").innerHTML =
-      fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
-      fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
+      (p.collection === "europe"
+        ? fact("Plate", `${p.number} in <i>${p.book_title}</i> (${p.book_place} ${p.book_year})`) +
+          fact("Designer", p.book_author) +
+          fact("Band", p.part ? `${p.part} of ${p.on_page} on this plate` : null) +
+          fact("Original", `<a href="${p.book_url}" target="_blank" rel="noopener">${p.book_holder}, ${p.book_accession}</a> · ${p.book_rights}`) +
+          fact("Chart", "read from the museum's scan by grid detection; CC BY 4.0, Helga Ingimundardóttir (HiDef Textiles)")
+        : fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
+          fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null)) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
       (p.unit
@@ -407,12 +415,14 @@
     chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
     chips($("f-source"), "source", sources);
+    const colls = [["iceland", "Icelandic manuscripts"], ["europe", "European printed books"]].filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
+    chips($("f-coll"), "coll", colls);
     ranges($("f-range"));
     loadUrl();
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
-      for (const k of ["kind", "sym", "group", "source"]) state[k].clear();
+      for (const k of ["kind", "sym", "group", "source", "coll"]) state[k].clear();
       state.q = ""; $("q").value = "";
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();
