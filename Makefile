@@ -126,3 +126,25 @@ motifs: $(MAP)/signatures.csv
 map: $(MAP)/web/index.html
 
 .PHONY: motifs map
+
+# ── Seeds: smallest piece + symmetry recipe per chart ───────────────────────
+# make seeds       : patterns/seeds.csv (seed, recipe, frieze/point group,
+#                    sizes) and patterns/near.csv (symmetries that almost hold)
+#                    from the full charts in patterns/txt (make originals)
+# make seeds-check : rebuild every chart from seeds.csv and compare it cell for
+#                    cell with patterns/min (and patterns/txt when present)
+# make seeds-sheet : before/after picture, chart beside its seed
+SEEDS = $(PARENT_DIR)/seeds.csv
+
+seeds: $(SEEDS)
+
+$(SEEDS): $(wildcard $(TXT_DIR)/*.txt) $(wildcard $(MIN_DIR)/*.txt) condense.py pattern_processing/fundamental.py
+	$(if $(wildcard $(TXT_DIR)/*.txt),python3 condense.py find $(TXT_DIR) $(PARENT_DIR),@echo "$(TXT_DIR) is empty: run make originals first")
+
+seeds-check:
+	python3 condense.py check $(PARENT_DIR)
+
+seeds-sheet: $(SEEDS)
+	python3 condense.py sheet $(PARENT_DIR) seeds-sheet.png
+
+.PHONY: seeds seeds-check seeds-sheet
