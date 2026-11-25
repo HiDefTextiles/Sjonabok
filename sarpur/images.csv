@@ -8,7 +8,7 @@ oid,image_id,seq,url,page_in_book,pattern_files,match_status
 341264,2329895,2,https://sarpur.is/multimedia/5/multimedia-2329895.large.jpg,,,unmatched
 341264,2329896,3,https://sarpur.is/multimedia/6/multimedia-2329896.large.jpg,,,unmatched
 341264,2329897,4,https://sarpur.is/multimedia/7/multimedia-2329897.large.jpg,,,unmatched
-341264,2329898,5,https://sarpur.is/multimedia/8/multimedia-2329898.large.jpg,,,unmatched
+341264,2329898,5,https://sarpur.is/multimedia/8/multimedia-2329898.large.jpg,36;38?;40,thjms1105_36;thjms1105_40,"visual match, right page (38 unchecked)"
 341264,2329899,6,https://sarpur.is/multimedia/9/multimedia-2329899.large.jpg,,,unmatched
 341264,2329900,7,https://sarpur.is/multimedia/0/multimedia-2329900.large.jpg,,,unmatched
 341264,2329901,8,https://sarpur.is/multimedia/1/multimedia-2329901.large.jpg,,,unmatched
