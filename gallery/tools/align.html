@@ -41,11 +41,12 @@
   <fieldset>
     <legend>2. Page photo</legend>
     <label>Photo on your computer <input id="file" type="file" accept="image/*"></label>
-    <label>or Sarpur photo address <input id="url" type="text" placeholder="https://sarpur.is/multimedia/8/multimedia-2329898.large.jpg"></label>
+    <label>or photo address (Sarpur or Nationalmuseet) <input id="url" type="text" placeholder="https://sarpur.is/multimedia/8/multimedia-2329898.large.jpg"></label>
     <button id="load-url" class="ghost">Load address</button>
     <button id="mock" class="ghost">Use a mockup page</button>
-    <label>Sarpur record id <input id="oid" type="text" placeholder="341264"></label>
-    <p class="hint">For a Sarpur photo, use the <code>.large.jpg</code> address so the corner points match what the gallery shows.</p>
+    <label>Record id (Sarpur item or Nationalmuseet object) <input id="oid" type="text" placeholder="341264"></label>
+    <label>Credit (Nationalmuseet photographer) <input id="credit" type="text" placeholder="Henrik Rønnow"></label>
+    <p class="hint">For a Sarpur photo, use the <code>.large.jpg</code> address. For Nationalmuseet, use the asset address, e.g. <code>https://samlinger.natmus.dk/dnt/asset/130255.jpg?maxsize=2000</code>. The corner points are in the pixels of that exact image.</p>
   </fieldset>
   <fieldset>
     <legend>3. Corners</legend>
@@ -101,8 +102,12 @@
   $("load-url").addEventListener("click", () => {
     const u = $("url").value.trim();
     const im = new Image();
-    im.onload = () => setImage(im, im.naturalWidth, im.naturalHeight, "sarpur", (u.match(/multimedia-(\d+)/) || [])[1] || "");
+    const nm = u.match(/samlinger\.natmus\.dk\/(\w+\/asset\/\d+)/);
+    im.onload = () => nm
+      ? setImage(im, im.naturalWidth, im.naturalHeight, "natmus", nm[1])
+      : setImage(im, im.naturalWidth, im.naturalHeight, "sarpur", (u.match(/multimedia-(\d+)/) || [])[1] || "");
     im.onerror = () => { $("step").textContent = "Could not load that address."; };
+    im.crossOrigin = "anonymous";
     im.src = u;
   });
   $("mock").addEventListener("click", () => {
@@ -115,6 +120,7 @@
   $("fill").addEventListener("change", draw);
   $("who").addEventListener("input", writeRow);
   $("oid").addEventListener("input", writeRow);
+  $("credit").addEventListener("input", writeRow);
   $("copy").addEventListener("click", () => navigator.clipboard.writeText($("row").value));
 
   const scale = () => $("zoom").value / 100;
@@ -176,8 +182,8 @@
     const r = (v) => Math.round(v * 10) / 10;
     const today = new Date().toISOString().slice(0, 10);
     const cols = [$("pid").value.trim(), st.source, $("oid").value.trim(), st.imageId, st.W, st.H,
-      ...st.pts.flat().map(r), $("who").value.trim(), today, "draft", ""];
-    $("row").value = cols.join(",");
+      ...st.pts.flat().map(r), $("who").value.trim(), today, "draft", "", $("credit").value.trim()];
+    $("row").value = cols.map((v) => (/[",]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(",");
   }
 })();
 </script>

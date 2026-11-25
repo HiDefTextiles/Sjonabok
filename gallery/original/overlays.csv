@@ -1,2 +1,2 @@
-pattern_id,source,sarpur_oid,image_id,image_w,image_h,tl_x,tl_y,tr_x,tr_y,br_x,br_y,bl_x,bl_y,aligned_by,aligned_on,status,note
-thjms1105_36,sarpur,341264,2329898,1200,776,585,46,967.5,46,967.5,470,585,470,claude,2026-11-25,draft,rough corners read from a screen view; refine in tools/align.html
+pattern_id,source,record_id,image_id,image_w,image_h,tl_x,tl_y,tr_x,tr_y,br_x,br_y,bl_x,bl_y,aligned_by,aligned_on,status,note,credit
+thjms1105_36,sarpur,341264,2329898,1200,776,585,46,967.5,46,967.5,470,585,470,claude,2026-11-25,draft,"rough corners; tested 2026-11-25: photo loads but the hand-ruled grid does not match a 4-corner fit, needs aligning in tools/align.html",

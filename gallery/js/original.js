@@ -1,13 +1,16 @@
 // Sjónabók gallery: "Original" view. Shows a pattern on a photo of the
 // manuscript page, with the digitised 0/1 chart laid over it.
 //
-// Two sources of "original":
+// Sources of "original":
 //   mockup : a simulated page drawn here from the chart itself (paper, ink,
 //            grid, a tilt). Works for every pattern, holds no museum image.
 //   sarpur : a museum photo on sarpur.is. Shown only when
 //            original/config.json has "sarpur_photos": true, i.e. once
 //            Þjóðminjasafn Íslands has given permission (issue #33).
 //            Otherwise the view links to the photo on Sarpur instead.
+//   natmus : a Nationalmuseet photo on samlinger.natmus.dk (CC BY-SA),
+//            shown with its credit line.
+// Photos are hotlinked, never copied into the repository.
 //
 // Alignment: original/overlays.csv gives, per pattern and photo, the four
 // photo-pixel corners of the chart (top-left, top-right, bottom-right,
@@ -179,6 +182,30 @@
     forPattern(id) { return this.rows.filter((r) => r.pattern_id === id && r.status !== "rejected"); }
   }
 
+  // ── where page photos come from ─────────────────────────────────────────
+  // sarpur : Þjóðminjasafn Íslands and other Icelandic museums. Terms allow
+  //          private, non-commercial use only, so photos show only when
+  //          config.sarpur_photos is true (after written permission, #33).
+  // natmus : Nationalmuseet, Copenhagen. Its own photos are CC BY-SA, so they
+  //          may be shown with the credit "CC BY-SA, photographer, Nationalmuseet".
+  //          image_id is the asset path, e.g. "dnt/asset/130255".
+  const PHOTO_SOURCES = {
+    sarpur: {
+      label: "Sarpur photo",
+      allowed: (data) => data.photosAllowed(),
+      url: (r) => `https://sarpur.is/multimedia/${r.image_id.slice(-1)}/multimedia-${r.image_id}.large.jpg`,
+      record: (r) => `https://sarpur.is/is/collection/item/${r.record_id}/`,
+      credit: (r, p, rec) => `Original: Þjóðminjasafn Íslands, ${p.source_label}, photo via <a href="${rec}" target="_blank" rel="noopener">Sarpur</a>.`,
+    },
+    natmus: {
+      label: "Nationalmuseet photo",
+      allowed: () => true,
+      url: (r) => `https://samlinger.natmus.dk/${r.image_id}.jpg?maxsize=${Math.max(+r.image_w, +r.image_h)}`,
+      record: (r) => `https://samlinger.natmus.dk/dnt/object/${r.record_id}`,
+      credit: (r, p, rec) => `Original: CC BY-SA, ${r.credit || "photographer unknown"}, Nationalmuseet, Danmark (${p.source_label}, <a href="${rec}" target="_blank" rel="noopener">record</a>).`,
+    },
+  };
+
   // ── the view in the detail dialog ───────────────────────────────────────
   class OriginalView {
     constructor(base) {
@@ -208,13 +235,15 @@
       await this.data.ready;
       if (this.p !== pattern) return;
       this.rows = this.data.forPattern(pattern.id);
-      const sarpur = this.rows.filter((r) => r.source === "sarpur");
+      this.photos = this.rows.filter((r) => PHOTO_SOURCES[r.source]);
       const sel = this.$("o-source");
       sel.innerHTML = `<option value="mockup">Mockup (simulated page)</option>` +
-        sarpur.map((r, i) => `<option value="sarpur:${i}">Sarpur photo ${r.image_id}</option>`).join("");
-      this.src = sarpur.length ? "sarpur:0" : "mockup";
+        this.photos.map((r, i) => `<option value="photo:${i}">${PHOTO_SOURCES[r.source].label} ${r.image_id.split("/").pop()}</option>`).join("");
+      // open on a photo that may be shown; otherwise on the mockup
+      const first = this.photos.findIndex((r) => PHOTO_SOURCES[r.source].allowed(this.data));
+      this.src = first >= 0 ? `photo:${first}` : "mockup";
       sel.value = this.src;
-      this.$("d-mode-orig").title = sarpur.length
+      this.$("d-mode-orig").title = this.photos.length
         ? "The manuscript page, with the chart laid over it"
         : "No museum photo aligned yet: shows a simulated page";
       this.setMode(this.mode);
@@ -237,11 +266,10 @@
       stage.innerHTML = "";
       const w = this.m[0].length, h = this.m.length;
       let photo, corners, W, H, caption;
-      if (this.src.startsWith("sarpur:")) {
-        const r = this.rows.filter((x) => x.source === "sarpur")[+this.src.split(":")[1]];
-        const rec = `https://sarpur.is/is/collection/item/${r.sarpur_oid}/`;
-        const url = `https://sarpur.is/multimedia/${r.image_id.slice(-1)}/multimedia-${r.image_id}.large.jpg`;
-        if (!this.data.photosAllowed()) {
+      if (this.src.startsWith("photo:")) {
+        const r = this.photos[+this.src.split(":")[1]], S = PHOTO_SOURCES[r.source];
+        const rec = S.record(r), url = S.url(r);
+        if (!S.allowed(this.data)) {
           stage.style.height = "auto";
           stage.innerHTML = `<div class="o-locked"><p>This pattern is aligned to a museum photo, but photos from Sarpur are not shown here until Þjóðminjasafn Íslands has given permission.</p>
             <p><a href="${url}" target="_blank" rel="noopener">See the photo on Sarpur</a> · <a href="${rec}" target="_blank" rel="noopener">Museum record</a></p>
@@ -254,7 +282,7 @@
         photo.alt = `Manuscript page, ${this.p.source_label}`;
         W = +r.image_w; H = +r.image_h;
         corners = [[+r.tl_x, +r.tl_y], [+r.tr_x, +r.tr_y], [+r.br_x, +r.br_y], [+r.bl_x, +r.bl_y]];
-        caption = `Original: Þjóðminjasafn Íslands, ${this.p.source_label}, photo via <a href="${rec}" target="_blank" rel="noopener">Sarpur</a>. Overlay aligned by ${r.aligned_by || "HiDef Textiles"}.`;
+        caption = `${S.credit(r, this.p, rec)} Overlay aligned by ${r.aligned_by || "HiDef Textiles"}.`;
       } else {
         const mock = MockPage.draw(this.m, this.p.id);
         ({ canvas: photo, corners, W, H } = mock);
@@ -292,7 +320,7 @@
       svg.style.transform = new Homography(corners).css(w, h);
       inner.appendChild(svg);
       stage.appendChild(inner);
-      if (!this.src.startsWith("sarpur:")) stage.insertAdjacentHTML("beforeend", '<span class="o-badge">Mockup</span>');
+      if (!this.src.startsWith("photo:")) stage.insertAdjacentHTML("beforeend", '<span class="o-badge">Mockup</span>');
       $("o-caption").innerHTML = caption;
       this.style();
     }
