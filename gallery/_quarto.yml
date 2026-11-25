@@ -9,6 +9,7 @@ project:
     - img/hi/hi_logo.svg
     - patterns/**
     - js/**
+    - map/web/**
 
 lang: en
 

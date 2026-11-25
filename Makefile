@@ -61,8 +61,10 @@ originals:
 
 repeats: $(PARENT_DIR)/repeats.csv
 
+# Without patterns/txt (git-ignored; restore with `make originals`) the
+# committed units are kept, so editing a script does not wipe patterns/min.
 $(PARENT_DIR)/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py pattern_processing/repeat_unit.py gallery/scripts/build_gallery.py
-	python3 extract_repeats.py $(TXT_DIR) $(PARENT_DIR)
+	$(if $(wildcard $(TXT_DIR)/*.txt),python3 extract_repeats.py $(TXT_DIR) $(PARENT_DIR),@echo "$(TXT_DIR) is empty: keeping the committed repeat units")
 
 .PHONY: originals repeats
 
@@ -70,18 +72,26 @@ $(PARENT_DIR)/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py patte
 # make gallery-data : measure every pattern and draw PNGs in the HI palette
 # make gallery      : build the static site into gallery/_site
 # make gallery-preview : live preview while editing
+# make symmetry-examples : redraw the symmetry pictures on the About page
+#                  (small SVGs in gallery/img/symmetry, committed)
 GALLERY = gallery
 GALLERY_DATA = $(GALLERY)/patterns/patterns.json
+SYMMETRY_SVG = $(GALLERY)/img/symmetry/p1.svg
 
 $(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
 	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
 
 gallery-data: $(GALLERY_DATA)
 
-gallery: $(GALLERY_DATA)
+$(SYMMETRY_SVG): $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/scripts/build_gallery.py
+	python3 $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/img/symmetry
+
+symmetry-examples: $(SYMMETRY_SVG)
+
+gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto render
 
-gallery-preview: $(GALLERY_DATA)
+gallery-preview: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto preview
 
 # make overview-layout : optimise the two overview sheets (bands: Gurobi, needs
@@ -90,10 +100,29 @@ gallery-preview: $(GALLERY_DATA)
 PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)
-	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME)
+	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME) --rainbow 1
 	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
 
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean overview-layout
+.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples overview-layout
+
+# ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
+# make motifs : pick a signature motif per manuscript from patterns/min
+#               -> gallery/map/signatures.csv (+ candidates.png review sheet)
+# make map    : leaflet map with those motifs as markers -> gallery/map/web/
+# Needs R with readr, dplyr, purrr, stringr, tibble, leaflet, htmlwidgets.
+# The built map is committed, so the gallery Action does not need R.
+MAP = $(GALLERY)/map
+
+$(MAP)/signatures.csv: $(wildcard $(MIN_DIR)/*.txt) $(PARENT_DIR)/repeats.csv $(MAP)/signature_motifs.R $(wildcard $(MAP)/picks.csv)
+	LC_ALL=C.UTF-8 Rscript $(MAP)/signature_motifs.R
+
+$(MAP)/web/index.html: $(MAP)/signatures.csv $(MAP)/manuscripts.csv $(MAP)/places.csv $(MAP)/manuscript_map.R
+	cd $(MAP) && LC_ALL=C.UTF-8 Rscript manuscript_map.R
+
+motifs: $(MAP)/signatures.csv
+map: $(MAP)/web/index.html
+
+.PHONY: motifs map
