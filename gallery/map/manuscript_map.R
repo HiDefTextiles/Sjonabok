@@ -80,11 +80,13 @@ unresolved <- books |> filter(!id %in% places$id)
 abroad <- places |> filter(role == "held")
 
 # ── Map ───────────────────────────────────────────────────────────────────────
-m <- leaflet(options = leafletOptions(zoomSnap = 0.25, scrollWheelZoom = FALSE)) |>
-  # OpenStreetMap's own tiles: no API key (CARTO now answers "API key required").
-  # Greyed with CSS below so the motif icons stand out.
-  addTiles(attribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors') |>
-  fitBounds(-24.4, 63.3, -13.4, 66.6)
+# OpenStreetMap's own tiles: no API key (CARTO now answers "API key required").
+# Tinted pale HI blue with CSS below so the motif icons stand out.
+base_map <- function(...) {
+  leaflet(options = leafletOptions(zoomSnap = 0.25, scrollWheelZoom = FALSE, ...)) |>
+    addTiles(attribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors')
+}
+m <- base_map() |> fitBounds(-24.4, 63.3, -13.4, 66.6)
 
 # dashed line from a book's main place to its other places
 for (b in unique(pl_is$id)) {
@@ -103,6 +105,15 @@ add_icons <- function(map, d, size) {
 m <- m |>
   add_icons(filter(pl_is, !first), 28) |>
   add_icons(filter(pl_is, first), 40)
+
+# Denmark beside Iceland (not to scale, no sea in between): where N.453.a is held
+m_dk <- base_map(zoomControl = FALSE, attributionControl = FALSE) |>
+  fitBounds(7.8, 54.5, 14.4, 57.8) |>
+  add_icons(abroad, 32)
+m_dk$elementId <- "map-dk"; m$elementId <- "map-is"
+dk_panel <- tags$div(class = "dk-panel",
+  tags$h4("Denmark"), m_dk,
+  tags$p(HTML(paste0(abroad$order, ". ", abroad$id, " is held in Copenhagen; where it was made is unknown.", collapse = " "))))
 
 # ── Timeline: same icons on a time axis ───────────────────────────────────────
 timeline_svg <- function(d, from = 1600, to = 1900, w = 640) {
@@ -151,9 +162,7 @@ not_mapped <- tags$div(class = "not-mapped",
   tags$h4("Not on the map"),
   tags$ul(
     map(split(unresolved, unresolved$order), function(d)
-      side_item(d, sprintf("%s, place not yet identified.", coalesce(d$where, d$place_type)))),
-    map(split(abroad, abroad$order), function(d)
-      side_item(d, sprintf("held at %s; where it was made is unknown.", d$place)))),
+      side_item(d, sprintf("%s, place not yet identified.", coalesce(d$where, d$place_type))))),
   tags$p(HTML(sprintf("Open questions about places are tracked in <a href='%s' target='_top'>issue #15</a>.", ISSUE))))
 
 page <- m |>
@@ -162,7 +171,15 @@ page <- m |>
     "body { margin: 0; padding: 4px !important; font: 14px sans-serif; color: #222; }
      .timeline h4, .not-mapped h4 { font: 600 14px sans-serif; color: %1$s; margin: 0 0 4px; }
      .timeline { margin-bottom: 6px; }
-     .leaflet-container { width: 100%% !important; height: min(75vw, 75vh) !important; }
+     .timeline svg { max-width: 760px; display: block; }
+     #htmlwidget_container { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+     .timeline, .not-mapped { flex: 0 0 100%%; }
+     #map-is { flex: 4 1 0; min-width: 0; }
+     .dk-panel { flex: 1 1 0; min-width: 96px; }
+     .dk-panel h4 { font: 600 13px sans-serif; color: %1$s; margin: 0 0 3px; }
+     .dk-panel p { font-size: 11px; color: #444; margin: 3px 0 0; }
+     #map-is, #map-dk { width: 100%% !important; height: min(60vw, 75vh) !important; }
+     #map-dk { height: min(45vw, 60vh) !important; }
      .leaflet-tile-pane { filter: grayscale(1) sepia(0.2) hue-rotate(190deg) saturate(1.3) brightness(1.12) contrast(0.72); opacity: 0.85; }
      .leaflet-container { background: #f4f5fb; }
      .key { margin: 2px 0 6px; font-size: 13px; color: #333; }
@@ -181,7 +198,7 @@ page <- m |>
     tags$div(class = "key", HTML(sprintf(
       'Frame: <span style="border-color:%s"></span>made here <span style="border-color:%s"></span>owned here <span style="border-color:%s"></span>later owner, family link or uncertain. Tap an icon for details.',
       HI[["blue"]], HI[["teal"]], HI[["grey"]]))))) |>
-  appendContent(not_mapped)
+  appendContent(dk_panel, not_mapped)
 page$sizingPolicy$browser$fill <- FALSE
 page$sizingPolicy$browser$padding <- 0
 
