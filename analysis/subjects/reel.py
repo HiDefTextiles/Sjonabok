@@ -23,7 +23,7 @@ from submotifs import SHIFT
 from variants import Aligner, Consensus, trim
 
 W, H, FPS = 1080, 1920, 30
-HOLD, MORPH, END = 2.0, 1.4, 4.0
+HOLD, MORPH, END = 2.4, 1.6, 4.0
 BLUE = np.array((16, 9, 159), float)
 PINK = np.array((214, 31, 105), float)
 PAPER = np.array((255, 255, 255), float)
@@ -45,13 +45,28 @@ class BookFigures:
         for p in S.read_csv(OUT / "places.csv"):
             if p["submotif"] in members and p["kept"] == "1":
                 by_book[self.units[p["chart"]].pattern.source][p["submotif"]].append(p)
-        self.figures = []
+        self.figures, self.charts = [], []
         for src in sorted(by_book, key=lambda s: int(self.dates[s]["order"])):
             m, pl = max(by_book[src].items(), key=lambda kv: len({p["chart"] for p in kv[1]}))
             cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
             ref = max((c for *_, c in cuts), key=lambda c: c.sum())
-            fig = trim(Consensus(ref, cuts).settle().cells)
+            con = Consensus(ref, cuts).settle()
+            fig = trim(con.cells)
             self.figures.append((src, fig, len({p["chart"] for p in pl})))
+            # the chart that shows the book's version best, with the figure marked (2)
+            best = max(range(len(pl)), key=lambda i: con.fit[i])
+            self.charts.append(self.marked(pl[best], fig))
+
+    def marked(self, p, fig):
+        y, x, h, w = (int(p[k]) for k in ("row", "col", "height", "width"))
+        m = np.asarray(self.units[p["chart"]].cells).astype(int)
+        cut = m[y:y + h, x:x + w].astype(bool)
+        mk = cut & Aligner(cut).align(fig)[SHIFT:SHIFT + h, SHIFT:SHIFT + w]
+        m[y:y + h, x:x + w][mk] = 2
+        if self.units[p["chart"]].kind in S.BAND_KINDS:     # a band: just the stretch around the figure
+            a, b = max(0, x - 2 * w), min(m.shape[1], x + 3 * w)
+            m = m[:, a:b]
+        return p["chart"], m
 
     def cut(self, p):
         y, x, h, w = (int(p[k]) for k in ("row", "col", "height", "width"))
@@ -62,7 +77,7 @@ class Reel:
     def __init__(self, books, title, subtitle):
         self.books, self.title, self.subtitle = books, title, subtitle
         self.n = max(max(f.shape) for _, f, _ in books.figures) + 2
-        self.cell = 860 // self.n
+        self.cell = 640 // self.n
         self.grids = [self.centre(f) for _, f, _ in books.figures]
         for k in range(1, len(self.grids)):        # turn each to the least change from the last
             g = Aligner(self.grids[k - 1]).align(self.grids[k])
@@ -96,17 +111,18 @@ class Reel:
         dr.text((W // 2, 150), self.title, font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
         dr.text((W // 2, 225), self.subtitle, font=self.f_sub, fill=INK, anchor="mm")
         size = self.cell * self.n
-        x0, y0 = (W - size) // 2, 380
+        x0, y0 = (W - size) // 2, 300
         cells = np.repeat(np.repeat(colours, self.cell, 0), self.cell, 1).astype(np.uint8)
         # thin grid lines, as on a chart
         cells[::self.cell, :] = np.minimum(cells[::self.cell, :], GRID.astype(np.uint8))
         cells[:, ::self.cell] = np.minimum(cells[:, ::self.cell], GRID.astype(np.uint8))
         img.paste(Image.fromarray(cells), (x0, y0))
+        self.chart_panel(img, dr, k, fade)
         name, when = self.label(k)
         a = tuple(int(255 - (255 - c) * fade) for c in BLUE)
         b = tuple(int(255 - (255 - c) * fade) for c in INK)
-        dr.text((W // 2, 1440), name, font=self.f_book, fill=a, anchor="mm")
-        dr.text((W // 2, 1525), when, font=self.f_when, fill=b, anchor="mm")
+        dr.text((W // 2, 1470), name, font=self.f_book, fill=a, anchor="mm")
+        dr.text((W // 2, 1550), when, font=self.f_when, fill=b, anchor="mm")
         # the ten manuscripts as dots in time order, this one filled
         order = [int(self.books.dates[s]["order"]) for s, _, _ in self.books.figures]
         here = order[k]
@@ -114,11 +130,23 @@ class Reel:
             cx = W // 2 + (i - 5.5) * 70
             has = i in order
             fill = tuple(BLUE.astype(int)) if i == here else (tuple(GRID.astype(int)) if has else None)
-            dr.ellipse((cx - 14, 1640 - 14, cx + 14, 1640 + 14), fill=fill,
+            dr.ellipse((cx - 14, 1660 - 14, cx + 14, 1660 + 14), fill=fill,
                        outline=tuple(BLUE.astype(int)) if has else (200, 200, 200), width=3)
-        dr.text((W // 2, 1700), "manuscripts in time order", font=self.f_small, fill=(120, 120, 120), anchor="mm")
+        dr.text((W // 2, 1715), "manuscripts in time order", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         dr.text((W // 2, 1820), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
+
+    def chart_panel(self, img, dr, k, fade):
+        """The chart the figure comes from, figure in pink, fading with the name."""
+        cid, m = self.books.charts[k]
+        lut = np.array([PAPER, BLUE, PINK])
+        rgb = PAPER + (lut[m] - PAPER) * fade
+        z = max(1, min(520 // m.shape[1], 330 // m.shape[0], 12))
+        I = Image.fromarray(rgb.astype(np.uint8)).resize((m.shape[1] * z, m.shape[0] * z), Image.NEAREST)
+        cy = 1150
+        img.paste(I, ((W - I.width) // 2, cy - I.height // 2))
+        grey = tuple(int(255 - (255 - 120) * fade) for _ in range(3))
+        dr.text((W // 2, cy + I.height // 2 + 30), f"in chart {cid}", font=self.f_small, fill=grey, anchor="mm")
 
     def colours(self, g):
         return np.where(g[..., None], BLUE, PAPER)
@@ -126,7 +154,8 @@ class Reel:
     def morph(self, a, b, t):
         """Cells changing from grid a to grid b at time t in [0, 1]."""
         out = self.colours(a)
-        local = np.clip((t - 0.6 * self.delay) / 0.4, 0, 1)[..., None]
+        local = np.clip((t - 0.5 * self.delay) / 0.5, 0, 1)
+        local = (local * local * (3 - 2 * local))[..., None]      # ease in and out
         on, off = b & ~a, a & ~b
         flash = np.where(local < 0.5, PAPER + (PINK - PAPER) * (local / 0.5), PINK + (BLUE - PINK) * ((local - 0.5) / 0.5))
         out = np.where(on[..., None], flash, out)
