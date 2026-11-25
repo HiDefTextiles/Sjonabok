@@ -94,10 +94,19 @@ gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
 gallery-preview: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto preview
 
+# make overview-layout : optimise the two overview sheets (bands: Gurobi, needs
+#                        gurobipy and a licence; motifs: local search, --time as long as you like);
+#                        commit gallery/layout/*.csv
+PACK_TIME = 600
+overview-layout: $(GALLERY_DATA)
+	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)
+	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME) --rainbow 1
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns
+
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples
+.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples overview-layout
 
 # ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
 # make motifs : pick a signature motif per manuscript from patterns/min
