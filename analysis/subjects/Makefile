@@ -114,6 +114,10 @@ work/submotifs/timeline.png: timeline.R manuscript_dates.csv work/all/submotif_d
 work/submotifs/kinds.csv: variants.py work/all/submotif_dist.csv
 	$(PY) variants.py --txt $(TXT)
 
+# charts coloured by the figures found in them (whole HÍ palette, no knitting limits)
+work/submotifs/colour: recolour.py work/submotifs/kinds.csv
+	$(PY) recolour.py --txt $(TXT) --sheet work/submotifs/recoloured.png
+
 work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
