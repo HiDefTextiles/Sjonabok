@@ -58,6 +58,8 @@ from pathlib import Path
 
 import numpy as np
 from scipy.stats import rankdata
+from scipy import ndimage
+from scipy.spatial import ConvexHull
 from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
@@ -193,6 +195,7 @@ class MetaDistance:
                 "source": p.source, "page": f"{p.source}_{p.number}",
                 **KnotScore.measures(u.cells),
                 **self.upright(u.cells, s),
+                **self.clues(u.cells, s),
             })
         self.rows = rows
 
@@ -216,6 +219,38 @@ class MetaDistance:
                 "base": float(max(base_rows) / max(1, max(widths)))}
 
     @staticmethod
+    def clues(cells, s):
+        """Measures for the clues Helga gave on the misses page (misses_clues.csv): what
+        tells a bird from a flower from an ornament when the image model gets it wrong.
+            facing     1 minus left-right mirror agreement: an animal faces one way
+                       ("wings or tail", "head and legs"); a plant or ornament mirrors
+            tips       cells with one filled neighbour per square root of filled cells:
+                       ends of legs, tails, beaks, leaves and stems
+            thin       share of the silhouette that a 3 by 3 opening removes: stems,
+                       legs and tendrils rather than solid petals or blocks
+            solidity   silhouette area over its convex hull: a star, cross or rosette
+                       fills its outline ("outline shape"); a bird or a vine does not
+            rough      log of perimeter squared over area of the silhouette"""
+        m = np.asarray(cells).astype(bool)
+        k8 = np.ones((3, 3)); k8[1, 1] = 0
+        nb = ndimage.convolve(m.astype(int), k8, mode="constant")
+        filled = ndimage.binary_fill_holes(m)
+        opened = ndimage.binary_opening(filled, np.ones((3, 3)))
+        edge = filled & ~ndimage.binary_erosion(filled)
+        ys, xs = np.nonzero(filled)
+        pts = np.c_[xs, ys].astype(float)
+        pts = np.vstack([pts, pts + [1, 0], pts + [0, 1], pts + [1, 1]])
+        try:
+            hull = ConvexHull(pts).volume
+        except Exception:      # a single line of cells has no area
+            hull = float(filled.sum())
+        return {"facing": 1.0 - s.get("lr", 0),
+                "tips": float((m & (nb == 1)).sum() / np.sqrt(max(1, m.sum()))),
+                "thin": float((filled & ~opened).sum() / max(1, filled.sum())),
+                "solidity": float(filled.sum() / max(1.0, hull)),
+                "rough": float(np.log1p(edge.sum() ** 2 / max(1, filled.sum())))}
+
+    @staticmethod
     def spread(x):
         x = np.asarray(x, dtype=float)
         r = x.max() - x.min()
@@ -237,7 +272,9 @@ class MetaDistance:
         rk = lambda k: rankdata(col(k), method="average")
         texture = np.mean([self.spread(rk(k)) for k in ("openings", "diagonal")], axis=0)
         upright = np.mean([self.spread(col(k)) for k in ("lr", "tb", "top_heavy", "base")], axis=0)
-        return {"symmetry": sym, "form": form, "provenance": prov, "texture": texture, "upright": upright}
+        clues = np.mean([self.spread(rk(k)) for k in ("facing", "tips", "thin", "solidity", "rough")], axis=0)
+        return {"symmetry": sym, "form": form, "provenance": prov, "texture": texture, "upright": upright,
+                "clues": clues}
 
     def matrix(self):
         b = self.blocks()
@@ -531,7 +568,7 @@ class WeightLearner:
     The result only sets weights; the clustering that uses them sees no labels.
     """
 
-    def __init__(self, distances, k=5, step=0.1, min_knots=10, tie=0.006):
+    def __init__(self, distances, k=5, step=0.1, min_knots=10, tie=0.01):
         self.names = list(distances)
         self.ids = distances[self.names[0]][0]
         for n in self.names:
@@ -843,7 +880,7 @@ def read_clusters(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "features", "learn", "groups", "final", "misses"])
+    ap.add_argument("step", choices=["units", "shape", "meta", "sheets", "page", "sample", "answers", "labels", "suggest", "fair", "evaluate", "settle", "settled", "knots", "knot-answers", "animals", "features", "learn", "groups", "final", "misses"])
     ap.add_argument("--txt", default=str(ROOT / "patterns" / "txt"), help="folder of 0/1 charts")
     ap.add_argument("--kinds", default=",".join(PILOT_KINDS), help="pattern types to include")
     ap.add_argument("--n", type=int, default=40, help="sample: number of charts")
@@ -962,6 +999,32 @@ def main():
             p["hint"] = p["charts"][0]["id"]
         (WORK / "knots2" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
         print(f"{len(seeds)} knots, {len(pick)} charts -> {WORK / 'knots2'}")
+    elif a.step == "animals":
+        # unlabelled charts (most are border bands) nearest to the labelled animals: the image
+        # model, plus the misses-page clues (facing one way, tips, thin parts, outline)
+        to = {r["subject"]: r["group"] for r in read_csv(VOCABULARY)}
+        seen, seeds = set(), set()
+        for f in (SUBJECTS, FAIRTEST):
+            for r in read_csv(f):
+                seen.add(r["id"])
+                if any(to.get(x) == "animals" for x in r["subjects"].split("|")):
+                    seeds.add(r["id"])
+        seen |= {r["id"] for r in read_csv(FEATURE_LABELS) if r["feature"] == "animal"}
+        ids, img = read_matrix(WORK / "embed_all_dist.csv")
+        cids, clu = read_matrix(ALL / "clues_dist.csv")
+        assert ids == cids
+        d = 0.7 * Evaluation.rank_scale(img) + 0.3 * Evaluation.rank_scale(clu)
+        pick = nearest_to(sorted(seeds), ids, d, seen, a.top)
+        ReviewPage(a.txt).write({k + 1: [i] for k, i in enumerate(pick)}, WORK / "animals", {
+            "run": f"animals-{len(seeds)}", "single": True, "exclusive": True, "title": "Sjónabók: find the animals",
+            "vocabulary": [{"key": "animal", "label": "Animal"}, {"key": "none", "label": "No animal"}],
+            "intro": f"Charts nobody has labelled yet, nearest to your {len(seeds)} animals. Many are border bands: "
+                     "tap a chart to see it repeated. Tap Animal if any bird, deer or other animal is in it."})
+        j = json.loads((WORK / "animals" / "piles.json").read_text())
+        for p in j["piles"]:
+            p["hint"] = p["charts"][0]["id"]
+        (WORK / "animals" / "piles.json").write_text(json.dumps(j, ensure_ascii=False, separators=(",", ":")))
+        print(f"{len(seeds)} animals, {len(pick)} charts -> {WORK / 'animals'}")
     elif a.step == "features":
         ALL.mkdir(parents=True, exist_ok=True)
         units = Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units
@@ -985,7 +1048,7 @@ def main():
         print(f"{len(units)} charts -> {ALL}")
     elif a.step == "learn":
         names = ["image", "image_upright", "image_tiled", "shape", "symmetry", "form", "provenance",
-                 "texture", "texture_tiled", "upright"]
+                 "texture", "texture_tiled", "upright", "clues"]
         files = {"image": WORK / "embed_all_dist.csv", "image_tiled": WORK / "embed_tiled_dist.csv",
                  "image_upright": WORK / "embed_upright_dist.csv",
                  **{n: ALL / f"{n}_dist.csv" for n in names[3:]}}

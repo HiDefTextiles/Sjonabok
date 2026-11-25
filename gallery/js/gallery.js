@@ -226,7 +226,7 @@
     if (!p || !["border", "edging", "vertical band"].includes(current.kind))
       return current.kind === "border" || current.kind === "edging"
         ? layout(3 * w, h, (x, y) => [x % w, y])
-        : layout(3 * w, 3 * h, (x, y) => [x % w, y % h]);
+        : layout(2 * w, 2 * h, (x, y) => [x % w, y % h]);
     const b = inkBounds(m);
     if (along === "x") {
       const end = b.x1 + 1;
@@ -367,6 +367,12 @@
     };
     $("d-canvas").addEventListener("pointermove", cellAt);
     $("d-canvas").addEventListener("pointerdown", cellAt);
+    // tap the chart to switch the repeat on or off (knots and stars often show only repeated)
+    $("d-canvas").addEventListener("click", () => {
+      view.tile = !view.tile;
+      $("d-tile").checked = view.tile;
+      draw();
+    });
     $("detail").addEventListener("close", () => {
       current = null;
       history.replaceState(null, "", location.pathname + location.search);

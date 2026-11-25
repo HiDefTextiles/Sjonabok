@@ -76,6 +76,12 @@ knots: review/index.html features.csv
 	@echo "Open http://localhost:8003 (Ctrl+C to stop)"
 	$(PY) -m http.server 8003 -d work/knots
 
+# unlabelled charts nearest to the labelled animals, to mark Animal or No animal
+animals: review/index.html work/embed_all_dist.csv work/all/texture_dist.csv
+	$(PY) subjects.py animals --txt $(TXT)
+	@echo "Open http://localhost:8004 (Ctrl+C to stop)"
+	$(PY) -m http.server 8004 -d work/animals
+
 # Final groups: features for every chart, weights learnt from the labels,
 # then a clustering that sees no labels, each cluster named by its labelled charts.
 CHARTS := $(wildcard $(TXT)/*.txt)
@@ -110,4 +116,4 @@ families: families.csv
 clean:
 	rm -rf work
 
-.PHONY: all embed sheets review sample labels suggest evaluate settle knots final families clean
+.PHONY: all embed sheets review sample labels suggest evaluate settle knots animals final families clean

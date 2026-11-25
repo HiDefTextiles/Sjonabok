@@ -55,10 +55,10 @@ include-after-body:
 <label>Zoom <input id="d-zoom" type="range" min="2" max="24" value="8"></label>
 <label><input id="d-grid" type="checkbox" checked> Grid</label>
 <span id="d-colours" class="swatches" aria-label="Colours"></span>
-<label title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
+<label title="Show the pattern repeated (2 by 2, or 3 along a band), to judge how it tiles. Tapping the chart does the same."><input id="d-tile" type="checkbox"> Repeat</label>
 </div>
 <div class="d-canvas"><canvas id="d-canvas"></canvas></div>
-<p id="d-cell" class="d-cell">Tap or hover a cell to see its row and column.</p>
+<p id="d-cell" class="d-cell">Tap the chart to see it repeated; hover or tap a cell for its row and column.</p>
 </div>
 <div class="d-info">
 <h2 id="d-title"></h2>

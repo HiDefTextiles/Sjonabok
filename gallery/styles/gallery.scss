@@ -227,6 +227,7 @@ dialog.detail {
 
   .d-canvas {
     overflow: auto;
+    canvas { cursor: pointer; }
     max-height: 68vh;
     background: $hi-paper;
     border: 1px solid $hi-panel;

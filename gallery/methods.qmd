@@ -162,13 +162,14 @@ as *Not yet sorted*.
 ## Main groups {#groups}
 
 Star, cross and geometric are where people disagree, the same person included. So each subject
-also belongs to one of three main groups ([`groups.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/groups.csv)):
+also belongs to one of four main groups ([`groups.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/groups.csv)):
 
 | Main group | Subjects |
 |---|---|
 | Animals | bird, deer or reindeer, other animal |
 | Plants | flower, tree |
-| Ornament | star or rose, cross, heart, letters, geometric |
+| Ornament | star or rose, cross, heart, geometric |
+| Letters | letters, monograms, words |
 
 The gallery offers *Main group* as its first subject filter, because it is the safer one. A chart
 with subjects in two groups, for example a rose with a flower at its centre, is in both, like the
@@ -189,6 +190,30 @@ so cells touch only at their corners. Every chart is ranked by these two measure
 marks the most knot-like ones *Knot* or *No knot* on a phone page. As always, the ranking only
 decides the order; the reviewer decides what is a knot.
 
+## What the computer misses, in the reviewer's words {#clues}
+
+After the weights were learnt, the computer still put 44 labelled charts in the wrong main group.
+The reviewer went through 41 of them on a phone page and tapped what told her the group
+([`misses_clues.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/misses_clues.csv)):
+for animals *wings or tail* (11) and *head and legs* (4); for plants *petals* (7) and *stem or
+leaves* (4); for ornament *outline shape* (7) and *needs repeat* (4). Four labels were wrong and
+were corrected, and letters became a main group of their own.
+
+Each clue became a measure taken straight from the 0/1 chart (`clues` in `subjects.py`):
+*facing* (an animal faces one way, so it does not match itself mirrored left to right),
+*tips* (cells with one neighbour: ends of legs, tails and beaks), *thin* (the share of the
+silhouette that is stem or leg rather than solid), and *solidity* and *roughness* of the outline.
+On their own they tell animals from the rest about as well as one would hope (area under the curve
+0.84 for *facing*), but adding them to the image model did not find more animals: the learner gave
+them no weight, and the fair test holds only five animals, too few to show a difference. Animals
+that come in mirrored pairs, two birds facing each other, also defeat *facing*.
+
+The lesson is that the gap is labels, not features: 22 animals are too few for any measure to
+outvote the plants around them. So the next step uses the measures the other way round, to find
+candidates: 60 unlabelled charts nearest to the known animals (image model 0.7, clue measures 0.3;
+`subjects.py animals`), almost all of them border bands, for the reviewer to mark *Animal* or
+*No animal*.
+
 ## Ways to browse, found by the computer {#browse}
 
 Subjects need a person. The ways of browsing below do not: the computer measures them from the
@@ -198,7 +223,7 @@ related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-
 
 | Filter | What it measures | Words |
 |---|---|---|
-| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M4 for motifs, B1 to B10 for bands, with 24 close families in each part |
+| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M3 for motifs, B1 to B3 for bands, with 24 close families in each part |
 | Fit on 85 needles | A motif's width; a band's height across. With a band on both edges the motif corridor is 85 minus twice the band height | Motif up to 20, 21–40, 41–60, over 60 wide; band up to 7, 8–12, 13–17, over 17 rows |
 | Outline | The figure with its holes filled: does it fill 82% or more of its box? | Fills its square, Stands free, Band |
 | Stroke | The middle length of the runs of filled cells along rows and columns | Thin (under 1.5 cells), Double, Bold (2.5 or more) |
@@ -216,36 +241,43 @@ or an animal (legs below) from an ornament, so the image model also looks at the
 upright and mirrored left to right, and three measures of uprightness were added (left-right and
 top-bottom mirror kept apart, how top-heavy, how narrow the base).
 
-For each weighting of the ten distances on a grid, the computer scored three things on the
+For each weighting of the eleven distances on a grid (the eleventh is the [clue measures](#clues)), the computer scored three things on the
 labelled charts, leaving out the fair test: how often a chart's five nearest charts share its main
 group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
 the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
-the top, so their mean is kept (`make weights.csv` in `analysis/subjects`): the image model 0.4,
-upright 0.2, repeated 0.2, and symmetry 0.2.
+the top (within 0.01, about the change one chart makes), so their mean is kept (`make weights.csv`
+in `analysis/subjects`). With 54 knot answers (18 knots) the result is: the image model 0.33, and
+upright, repeated, symmetry and repeated knot measures 0.17 each. The knot answers are what brought
+the repeated knot measures in.
 
-How good is it? On the 38 held-out fair-test charts:
+How good is it? On the 38 held-out fair-test charts, after letters became a main group of their own
+(2 of the 38 are letters; see [What the computer misses](#clues)):
 
-| Weighting | Right main group (95% interval) | Balanced over the three groups | Motifs cut in 3 vs main groups (ARI) |
+| Weighting | Right main group (95% interval) | Balanced over the four groups | Motifs cut in 3 vs main groups (ARI) |
 |---|---|---|---|
-| Learnt weights | 74% (58–87%) | 64% | 0.47 |
-| Image model alone | 76% (63–89%) | 66% | 0.12 |
-| All ten distances equally | 79% (66–92%) | 69% | 0.44 |
-| Always guess ornament | 53% | 33% | 0 |
+| Learnt weights | 76% (63–89%) | 53% | 0.50 |
+| Image model alone | 71% (55–84%) | 50% | 0.11 |
+| All eleven distances equally | 74% (58–87%) | 51% | 0.45 |
+| Always guess ornament | 47% | 25% | 0 |
 
-So, honestly: for guessing a single chart's group, no weighting beats the image model alone.
+So, honestly: for guessing a single chart's group the learnt weights are a little better than the
+image model alone, but well within the noise of 38 charts.
 What the features change is the shape of the tree. With the image model alone the top split of
-the motifs has almost nothing to do with the groups (ARI 0.12); with the upright, repeated and
-symmetry views it follows them much better (0.47). The balanced column shows where the work is:
-animals are found only 2 times in 5, plants about 3 in 5, ornament nearly always. There are only
-22 animals among the labels, too few to learn from; more animal labels are the next step, and a
-page of the charts the computer still places in the wrong group asks the reviewer what tells them
-apart.
+the motifs has almost nothing to do with the groups (ARI 0.11); with the upright, repeated and
+symmetry views it follows them much better (0.50), and the knot answers are found 76% of the time
+against 63% with the image model alone. The balanced column shows where the work is:
+animals are found only 2 times in 5, letters not at all (two charts), plants about 3 in 4, ornament
+nearly always. There are only 22 animals among the labels, too few to learn from, so more animal
+labels are the next step.
 
 The families themselves are kept only as fine as they are stable. The charts were resampled 50
 times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
-Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73; at 8 families it
-falls to 0.58): roughly large plant scenes, small free figures (animals and sprigs), and two kinds
-of geometric ornament. Bands stay stable up to 10 families, mostly by height and repeat length.
+Jaccard similarity of 0.7 or more. For the motifs that allows 3 families (0.87; at 4 families it
+falls to 0.69): large plant scenes (M1), small free figures, animals and sprigs (M2), and geometric
+ornament (M3, 111 of its 122 labelled charts are ornament). Bands also give 3 (0.72; 4 families
+score 0.70 and just miss), mostly by height and repeat length. With the earlier weights the motifs
+allowed 4 families, so the number moves as the labels grow; the stable core (plants, figures,
+ornament) has stayed.
 The 24 close families in each part are finer and less stable: good for browsing, not a claim.
 Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we
 use it as a practical rule, checked by the resampling.

@@ -54,13 +54,18 @@ gallery measures) without favouring the one that made the piles.
 
 ## Main groups, features and knots
 
-- `vocabulary.csv` gives each subject a main group (`groups.csv`: animals, plants, ornament).
+- `vocabulary.csv` gives each subject a main group (`groups.csv`: animals, plants, ornament, letters).
   The gallery's *Main group* filter comes from it. Reviewers disagree far less on groups than
   on subjects (see the Methods page).
 - `features.csv` lists features any chart can have (knot, small flowers, frame), kept apart
   from subjects.
 - `make knots` ranks every chart by how knot-like it is (enclosed openings, diagonal strokes)
   and serves a Knot / No knot page of the top 60.
+- `misses_clues.csv` holds what the reviewer said tells the group for charts the computer
+  missed; `MetaDistance.clues` turns the clues into measures (facing, tips, thin, solidity,
+  roughness) and `features` writes `work/all/clues_dist.csv`.
+- `make animals` serves an Animal / No animal page of the 60 unlabelled charts nearest to the
+  labelled animals (image model 0.7, clue measures 0.3).
 - `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of
   the charts whose two labels differ, and `subjects.py settled --from <dir>` writes the answers.
 
@@ -71,7 +76,7 @@ gallery measures) without favouring the one that made the piles.
 - `subjects.py features`, `make weights.csv`: distances for all 600 charts and the weights learnt
   from the labels (`weights.csv`, kept in git).
 - `make families` (Rscript families.R): look-alike families, as many as stay stable under
-  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M4 motifs, B1..B10 bands), 24 close
+  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M3 motifs, B1..B3 bands), 24 close
   families per part, the look-alike order and a t-SNE map -> `families.csv`, kept in git so the
   gallery and pattern synthesis can use it without the image model. Needs the R packages Rtsne
   and fpc.
