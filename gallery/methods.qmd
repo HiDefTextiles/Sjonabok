@@ -259,6 +259,23 @@ Ideas we found and noted but have not used yet:
 - **Ornament datasets** (OrnAsia) and **CLIP tuned on art** (CLIP-Art): a model tuned on
   ornament could do better than general CLIP, but would need many labelled charts.
 
+## Sub-motifs that recur {#submotifs}
+
+Many charts are built from smaller figures that turn up again elsewhere: the same eight-pointed
+star, the same pair of birds, the same deer, sometimes in several manuscripts. So the computer cuts
+every chart into its pieces (filled cells that touch, at least 8 of them) and matches each piece
+against all others, allowing it to be turned, mirrored and shifted by up to two cells; two pieces
+match when they share at least 70% of their filled cells (`submotifs.py`). Matching pieces form one
+sub-motif. No labels are used.
+
+Of 1,785 pieces, 122 sub-motifs recur in two or more charts, and 106 of those in two or more
+manuscripts. A chart can then be described by the sub-motifs it contains, and two charts that share
+rare sub-motifs are close. For now this only reaches the 244 charts that share any piece, and
+figures drawn joined to a branch or a border line are not cut out as pieces. Next steps are to
+cut charts to their smallest repeat first, and to find figures that are joined to others. The
+sub-motif by manuscript table is a first step toward asking how motifs travelled and changed
+between manuscripts from the 17th to the 19th century.
+
 ## Ways to browse, found by the computer {#browse}
 
 Subjects need a person. The ways of browsing below do not: the computer measures them from the

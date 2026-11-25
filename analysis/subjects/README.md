@@ -66,6 +66,10 @@ gallery measures) without favouring the one that made the piles.
   roughness) and `features` writes `work/all/clues_dist.csv`.
 - `clip_features.py` (`make work/clip_all_dist.csv`) scores every chart with OpenCLIP against the
   phrases in `prompts.csv` (no labels): an image distance and a word-score distance for `learn`.
+- `submotifs.py` cuts every chart into pieces (connected cells, at least 8), matches pieces
+  across charts allowing turns, mirrors and small shifts (overlap 0.7 or more), and writes the
+  sub-motif library (`work/submotifs/motifs.csv`, `pieces.csv`) and a chart distance from shared
+  sub-motifs (`work/all/submotif_dist.csv`). Not yet used by `learn`.
 - `make animals` serves an Animal / No animal page of the 60 unlabelled charts nearest to the
   labelled animals (image model 0.7, clue measures 0.3).
 - `make evaluate` scores each distance against `fairtest.csv`; `make settle` serves a page of
