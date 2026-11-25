@@ -276,10 +276,18 @@ are mostly empty. Checked by eye, this finds the pair of birds in six charts acr
 manuscripts, the deer in four, and the eight-petal rose (áttablaðarós) in 54 charts across eight
 manuscripts, while solid blocks and dense lace no longer count.
 
-Of 1,785 pieces, 264 sub-motifs recur in two or more charts, 244 of them in two or more
-manuscripts, and 542 of the 600 charts now share at least one sub-motif with another chart. The
-smallest ones (20 to 30 cells, simple triangles and leaves) turn up almost everywhere and say
-little; a chart's likeness to another counts each shared sub-motif by how rare it is.
+Figures that a chart repeats within itself are found too, even when they are joined to the rest
+(`InnerRepeats`): the chart is laid over itself turned, mirrored and shifted, and where the copies
+overlap only in part (not the chart's overall symmetry, which the [seeds](https://github.com/HiDefTextiles/Sjonabok/pull/43)
+describe), the cells that coincide form a figure that occurs at least twice. It is kept only if it
+is a whole figure (at least 85% of the filled cells inside its outline), not a strip or a solid
+block. This adds 1,030 figures, among them birds standing on a border line, a flower on its stem
+between two birds, and the trees of a band.
+
+All told, 2,187 pieces and repeated figures give 416 sub-motifs that recur in two or more charts,
+381 of them in two or more manuscripts. Four sub-motifs, found in more than 15% of all charts,
+are too common to tell charts apart and are left out of the likeness. Some matches are still
+wrong, mostly checkered or lattice fillings matching other dense areas.
 
 As a measure of likeness on its own, shared sub-motifs find the right main group less often than
 the image models (62% leaving each labelled chart out), and mixed in at 0.2 they help knots (85%

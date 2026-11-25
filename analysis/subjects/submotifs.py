@@ -36,12 +36,15 @@ from subjects import ALL, BAND_KINDS, PILOT_KINDS, WORK, Corpus, write_matrix
 MIN_CELLS = 8
 SHIFT = 2
 MATCH = 0.7
+INNER_CELLS = 20     # smallest figure looked for as a repeat inside one chart
+JOINED_CELLS = 30    # smallest sub-motif searched for where joined to other figures
+GENERIC = 0.15       # a sub-motif in more than this share of charts is too common to tell charts apart
 OUT = WORK / "submotifs"
 
 
 class Piece:
-    def __init__(self, chart, source, cells, y, x):
-        self.chart, self.source, self.cells, self.y, self.x = chart, source, cells, y, x
+    def __init__(self, chart, source, cells, y, x, how="piece"):
+        self.chart, self.source, self.cells, self.y, self.x, self.how = chart, source, cells, y, x, how
         self.n = int(cells.sum())
         # the 8 turned and mirrored versions, each padded by SHIFT for shifting
         self.views = [np.pad(np.rot90(b, k), SHIFT) for b in (cells, cells[:, ::-1]) for k in range(4)]
@@ -142,17 +145,69 @@ class FigureFinder:
         return spots if where else hits
 
 
+class InnerRepeats:
+    """Figures repeated inside one chart, also where they are joined to the rest.
+
+    The chart is laid over itself turned, mirrored and shifted (Fourier correlation); at
+    the best few places where the copies overlap only in part (between LO and HI of the
+    filled cells, so not the chart's own overall symmetry, which the seeds in
+    patterns/seeds.csv describe), the cells that coincide are a figure that occurs at least
+    twice. Such a figure is kept only if it is clean: it holds at least CLEAN of the chart's
+    filled cells inside its own bounding box, so it is a whole figure and not a fragment
+    of a larger one."""
+
+    LO, HI, CLEAN, PEAKS = 0.08, 0.75, 0.85, 6
+
+    @staticmethod
+    def find(m, min_cells):
+        from scipy.signal import fftconvolve
+        m = m.astype(bool)
+        n, (H, W) = m.sum(), m.shape
+        out = []
+        for f in (0, 1):
+            for k in range(4):
+                t = np.rot90(m[:, ::-1] if f else m, k)
+                th, tw = t.shape
+                c = np.rint(fftconvolve(m.astype(float), t[::-1, ::-1].astype(float))).astype(int)
+                peak = (c == ndimage.maximum_filter(c, size=7)) & (c >= max(min_cells, InnerRepeats.LO * n))
+                for i, j in sorted(np.argwhere(peak), key=lambda ij: -c[ij[0], ij[1]])[:InnerRepeats.PEAKS]:
+                    dy, dx = i - th + 1, j - tw + 1
+                    if (f, k, dy, dx) == (0, 0, 0, 0) or c[i, j] > InnerRepeats.HI * n:
+                        continue
+                    sh = np.zeros_like(m)
+                    ys, ye, xs, xe = max(0, dy), min(H, dy + th), max(0, dx), min(W, dx + tw)
+                    sh[ys:ye, xs:xe] = t[ys - dy:ye - dy, xs - dx:xe - dx]
+                    lab, q = ndimage.label(m & sh, np.ones((3, 3)))
+                    for sl, r in zip(ndimage.find_objects(lab), range(1, q + 1)):
+                        piece = lab[sl] == r
+                        if piece.sum() >= min_cells and piece.sum() >= InnerRepeats.CLEAN * m[sl].sum():
+                            out.append((sl[0].start, sl[1].start, piece))
+        return out
+
+
 class SubMotifs:
-    def __init__(self, units):
+    def __init__(self, units, inner=True):
         self.units = units
         self.pieces = []
+        seen = set()
         for u in units:
             m = np.asarray(u.cells).astype(bool)
             lab, k = ndimage.label(m, np.ones((3, 3)))
-            for sl, j in zip(ndimage.find_objects(lab), range(1, k + 1)):
-                p = lab[sl] == j
-                if p.sum() >= MIN_CELLS:
-                    self.pieces.append(Piece(u.id, u.pattern.source, p.astype(np.uint8), sl[0].start, sl[1].start))
+            found = [(sl[0].start, sl[1].start, lab[sl] == j, "piece")
+                     for sl, j in zip(ndimage.find_objects(lab), range(1, k + 1))]
+            if inner:
+                found += [(y, x, p, "inner") for y, x, p in InnerRepeats.find(m, INNER_CELLS)]
+            for y, x, p, how in found:
+                if p.sum() < MIN_CELLS or min(p.shape) < 3:     # too small, or a plain line
+                    continue
+                if how == "inner" and not self.telling(p):
+                    continue
+                key = (u.id, min((np.rot90(b, r).shape, np.rot90(b, r).tobytes())
+                                 for b in (p, p[:, ::-1]) for r in range(4)))
+                if key in seen:       # the same figure found twice in one chart
+                    continue
+                seen.add(key)
+                self.pieces.append(Piece(u.id, u.pattern.source, p.astype(np.uint8), y, x, how))
 
     def comparable(self, a, b):
         """Only pieces of similar size can reach MATCH: IoU <= smaller / larger."""
@@ -183,14 +238,21 @@ class SubMotifs:
         self.motif = fcluster(z, t=1.0 - MATCH, criterion="distance")
         return self.motif
 
-    def find_joined(self, min_cells=20):
+    @staticmethod
+    def telling(cells):
+        """A shape worth searching for: not a strip (sides at most 3 : 1) and not a near-solid
+        block (at most 70% of its bounding box filled), which match almost anything dense."""
+        h, w = cells.shape
+        return max(h, w) <= 3 * min(h, w) and cells.mean() <= 0.7
+
+    def find_joined(self, min_cells=JOINED_CELLS):
         """Add the charts where a sub-motif of at least min_cells cells occurs joined to
-        something else (FigureFinder). Every distinct piece of the sub-motif is searched."""
+        something else (FigureFinder). Every distinct telling piece of the sub-motif is searched."""
         ff = FigureFinder(self.units)
         self.joined = defaultdict(set)
         done = {}
         for p, m in zip(self.pieces, self.motif):
-            if p.n < min_cells:
+            if p.n < min_cells or not self.telling(p.cells):
                 continue
             key = min((v.shape, v.tobytes()) for v in p.views)
             if key not in done:
@@ -219,6 +281,7 @@ class SubMotifs:
         df = (X > 0).sum(0)
         X = (X > 0) * np.log(len(ids) / df)          # tf-idf: presence, weighted by rarity
         X[:, df < 2] = 0                             # a sub-motif in one chart only says nothing
+        X[:, df > GENERIC * len(ids)] = 0            # nor does one found almost everywhere
         norm = np.linalg.norm(X, axis=1, keepdims=True)
         Xn = np.divide(X, norm, out=np.zeros_like(X), where=norm > 0)
         d = 1.0 - Xn @ Xn.T
@@ -231,9 +294,9 @@ class SubMotifs:
         OUT.mkdir(parents=True, exist_ok=True)
         with open(OUT / "pieces.csv", "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["chart", "submotif", "cells", "height", "width", "row", "col"])
+            w.writerow(["chart", "submotif", "cells", "height", "width", "row", "col", "how"])
             for p, m in zip(self.pieces, self.motif):
-                w.writerow([p.chart, m, p.n, *p.cells.shape, p.y, p.x])
+                w.writerow([p.chart, m, p.n, *p.cells.shape, p.y, p.x, p.how])
         source = {u.id: u.pattern.source for u in self.units}
         charts, sources, size = self.occurrences(), defaultdict(set), defaultdict(list)
         for p, m in zip(self.pieces, self.motif):
@@ -252,10 +315,11 @@ class SubMotifs:
                     w.writerow([m, c, source[c], int((m, c) in pieceset)])
         with open(OUT / "motifs.csv", "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["submotif", "cells", "charts", "manuscripts", "manuscript_list", "example"])
+            w.writerow(["submotif", "cells", "charts", "manuscripts", "manuscript_list", "example", "generic"])
             for m in sorted(charts, key=lambda m: (-len(charts[m]), m)):
                 w.writerow([m, int(np.median(size[m])), len(charts[m]), len(sources[m]),
-                            "|".join(sorted(sources[m])), example[m]])
+                            "|".join(sorted(sources[m])), example[m],
+                            int(len(charts[m]) > GENERIC * len(self.units))])
         # a small picture of each recurring sub-motif (its first piece), for timeline.R
         from PIL import Image
         (OUT / "png").mkdir(exist_ok=True)
@@ -277,9 +341,10 @@ class SubMotifs:
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--txt", default="../../patterns/txt")
-    ap.add_argument("--pieces-only", action="store_true", help="skip the search for joined figures")
+    ap.add_argument("--pieces-only", action="store_true",
+                    help="only separate pieces: no repeats inside charts, no search for joined figures")
     a = ap.parse_args()
-    sm = SubMotifs(Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units)
+    sm = SubMotifs(Corpus(a.txt, PILOT_KINDS + BAND_KINDS).units, inner=not a.pieces_only)
     sm.cluster()
     if not a.pieces_only:
         sm.find_joined()
