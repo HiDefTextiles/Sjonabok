@@ -78,7 +78,7 @@ gallery measures) without favouring the one that made the piles.
 - `subjects.py features`, `make weights.csv`: distances for all 600 charts and the weights learnt
   from the labels (`weights.csv`, kept in git).
 - `make families` (Rscript families.R): look-alike families, as many as stay stable under
-  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M7 motifs, B1..B4 bands), 24 close
+  resampling (fpc::clusterboot, mean Jaccard 0.7; now M1..M4 motifs, B1..B3 bands), 24 close
   families per part, the look-alike order and a t-SNE map -> `families.csv`, kept in git so the
   gallery and pattern synthesis can use it without the image model. Needs the R packages Rtsne
   and fpc.

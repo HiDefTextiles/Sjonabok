@@ -235,17 +235,15 @@ four scores (animals, plants, ornament, letters), each compared with its average
 and the distance between charts' scores became one more distance for the learner. A larger CLIP
 (ViT-L/14) was no better, so the smaller, faster one is kept.
 
-The learner then gives the CLIP word scores 0.4 of the weight, as much as the image model, with
-form 0.2 (see [Ways to browse](#browse)). On the held-out fair test the right main group is found
-for 84% of charts (95% interval 71–95%) against 74% for the image model alone, and knots 78%
-against 63%.
+The learner kept the CLIP distances in every round since (see [Ways to browse](#browse)). On the
+held-out fair test the right main group is found for 82% of charts (95% interval 68–92%) against
+74% for the image model alone, and knots 80% against 63%.
 
 Two animal pages (`subjects.py animals`, then `animal-answers`) showed the reviewer the unlabelled
 charts nearest to the known animals, mostly border bands: 12 of the first 60 and 16 of the next 60
-were animals, then 15 of a third 60, so there are now 65. Leaving each labelled chart out in turn,
-its five nearest charts now find animals 88% of the time (82% with the image model alone; 41%
-before the animal pages). One motif family (M3) is now almost all animals (10 of 11 labelled, stability
-0.94), and one band family (B2) holds 37 of the 43 band animals.
+were animals, then 15 of a third 60 and 5 of a fourth, so there are now 70 and the search has
+mostly run dry. Leaving each labelled chart out in turn, its five nearest charts now find animals
+89% of the time (41% before the animal pages). One band family (B2) holds 40 of the 48 band animals.
 The fair test holds only 5 animals, too few to confirm this.
 
 Ideas we found and noted but have not used yet:
@@ -270,7 +268,7 @@ related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-
 
 | Filter | What it measures | Words |
 |---|---|---|
-| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M7 for motifs, B1 to B4 for bands, with 24 close families in each part |
+| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M4 for motifs, B1 to B3 for bands, with 24 close families in each part |
 | Fit on 85 needles | A motif's width; a band's height across. With a band on both edges the motif corridor is 85 minus twice the band height | Motif up to 20, 21–40, 41–60, over 60 wide; band up to 7, 8–12, 13–17, over 17 rows |
 | Outline | The figure with its holes filled: does it fill 82% or more of its box? | Fills its square, Stands free, Band |
 | Stroke | The middle length of the runs of filled cells along rows and columns | Thin (under 1.5 cells), Double, Bold (2.5 or more) |
@@ -293,15 +291,17 @@ labelled charts, leaving out the fair test: how often a chart's five nearest cha
 group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
 the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
 the top (within 0.01, about the change one chart makes), so their mean is kept (`make weights.csv`
-in `analysis/subjects`). With 54 knot answers and 65 animals the result is: the image model 0.4, the CLIP word scores 0.4
-and form 0.2.
+in `analysis/subjects`). With 54 knot answers and 70 animals the result is an even mix of six: the image model, the upright
+image model, symmetry, form, the CLIP image model and the CLIP word scores, 0.17 each. The mix moves
+from one round of labels to the next (after 65 animals it was the image model 0.4, CLIP word scores
+0.4 and form 0.2), because many weightings score almost the same; the scores below barely move.
 
 How good is it? On the 38 held-out fair-test charts, with the [CLIP word scores](#clip) and the
-65 animals now labelled:
+70 animals now labelled:
 
 | Weighting | Right main group (95% interval) | Balanced over the four groups | Motifs cut in 3 vs main groups (ARI) |
 |---|---|---|---|
-| Learnt weights | 84% (71–95%) | 69% | 0.62 |
+| Learnt weights | 82% (68–92%) | 67% | 0.55 |
 | Image model alone | 74% (58–87%) | 55% | 0.11 |
 | All thirteen distances equally | 71% (55–84%) | 50% | 0.52 |
 | Always guess ornament | 47% | 25% | 0 |
@@ -313,8 +313,10 @@ numbers firmer.
 
 The families themselves are kept only as fine as they are stable. The charts were resampled 50
 times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
-Jaccard similarity of 0.7 or more. For the motifs that allows 7 families (0.73), among them plant
-scenes (M1), animals (M3) and several kinds of ornament; bands give 4 (0.70). The number moves as the labels and weights change; the stable core (ornament, figures,
+Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73): ornament (M1),
+small figures with animals and letters (M2) and two kinds of plant motif (M3, M4); bands give 3
+(0.81). With the weights of the round before, one motif family was almost all animals; the number
+and the cut move as the weights move. The number moves as the labels and weights change; the stable core (ornament, figures,
 plants) has stayed.
 The 24 close families in each part are finer and less stable: good for browsing, not a claim.
 Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we
