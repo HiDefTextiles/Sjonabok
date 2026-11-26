@@ -35,7 +35,7 @@ MATCH = 0.8
 SHIFT = 1
 NAME_RE = re.compile(r"^(?P<source>.+?)_(?P<number>\d+)(?:_p(?P<part>\d+))?$")
 EIGHT = np.ones((3, 3), int)
-WHITE_LINE = {"quentel1529", "jobin1600", "tagliente1530", "schoensperger1529", "egenolff1535", "gulfferich1553", "quentel1532", "vorsterman1527", "quentel1544", "latomus1608", "martin1599", "bassee1599", "beatus1601", "saintelucie1533", "troveon1545", "belin1515", "lemaistre1565", "latomus1607"}   # black block, empty cells cut out
+WHITE_LINE = {"quentel1529", "jobin1600", "tagliente1530", "schoensperger1529", "egenolff1535", "gulfferich1553", "quentel1532", "vorsterman1527", "quentel1544", "latomus1608", "martin1599", "bassee1599", "beatus1601", "saintelucie1533", "troveon1545", "belin1515", "lemaistre1565", "latomus1607", "latomus1622"}   # black block, empty cells cut out
 
 # Icelandic museum numbers as gallery file prefixes (as in manuscript_map.R)
 def source_of_id(mid):
