@@ -46,9 +46,9 @@ class WoodcutPage:
         M = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
         return cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_LINEAR, borderValue=1.0)
 
-    def deskew(self, crop):
+    def deskew(self, crop, span=2.5):
         best = None
-        for a in np.arange(-2.5, 2.51, 0.05):
+        for a in np.arange(-span, span + 0.01, 0.05):
             r = self.rotate(crop.astype(np.float32), a)
             v = r.mean(axis=1).var() + r.mean(axis=0).var()
             if best is None or v > best[0]:
@@ -112,16 +112,35 @@ class WoodcutGrid:
         b = np.concatenate([[c[0] - p / 2], (c[1:] + c[:-1]) / 2, [c[-1] + p / 2]])
         return np.clip(np.round(b).astype(int), 0, length - 1)
 
-    def fit(self):
+    @staticmethod
+    def refine_axis(v, other, p0):
+        """As refine, for one axis only (cells that are not square)."""
+        best = (0, p0)
+        for p in np.arange(0.85 * p0, 1.2 * p0, 0.01):
+            r = 0
+            for lo in np.arange(other.min(), other.max(), 200):
+                sel = v[(other >= lo) & (other < lo + 200)]
+                if len(sel) > 10:
+                    r += abs(np.exp(2j * np.pi * sel / p).sum())
+            if r > best[0]:
+                best = (r, p)
+        return float(best[1])
+
+    def fit(self, per_axis=False):
         c = self.squares()
         self.n_squares = len(c)
         if len(c) < 30:
             return None
-        p = self.refine(c, self.pitch(c))
-        self.p = p
+        p0 = self.pitch(c)
+        if per_axis:
+            px, py = self.refine_axis(c[:, 0], c[:, 1], p0), self.refine_axis(c[:, 1], c[:, 0], p0)
+        else:
+            px = py = self.refine(c, p0)
+        p = self.p = (px + py) / 2
+        self.px, self.py = px, py
         H, W = self.light.shape
-        self.xs = self.lines(c[:, 0], p, W)
-        self.ys = self.lines(c[:, 1], p, H)
+        self.xs = self.lines(c[:, 0], px, W)
+        self.ys = self.lines(c[:, 1], py, H)
         h, w = len(self.ys) - 1, len(self.xs) - 1
         s = np.zeros((h, w))
         for r in range(h):
@@ -189,6 +208,8 @@ def check_image(light, grid, bands, path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("page"); ap.add_argument("outdir")
+    ap.add_argument("--per-axis", action="store_true", help="fit the pitch on each axis (cells not square)")
+    ap.add_argument("--skew", type=float, default=2.5, help="largest skew to try, degrees")
     a = ap.parse_args()
     out = Path(a.outdir); out.mkdir(parents=True, exist_ok=True)
     page = WoodcutPage(a.page)
@@ -196,8 +217,8 @@ def main():
     if box is None:
         print("[]"); return
     x0, y0, x1, y1 = box
-    crop, angle = page.deskew(page.light[y0:y1, x0:x1])
-    grid = WoodcutGrid(crop, page.path.stem).fit()
+    crop, angle = page.deskew(page.light[y0:y1, x0:x1], a.skew)
+    grid = WoodcutGrid(crop, page.path.stem).fit(a.per_axis)
     if grid is None:
         print("[]"); return
     bands = grid.bands()
@@ -207,8 +228,8 @@ def main():
         cells = grid.cells[ra:rb, cl:cr]
         (out / f"{name}.txt").write_text("\n".join("".join(map(str, r)) for r in cells) + "\n")
         meta.append(dict(name=name, box=[int(x0), int(y0), int(x1), int(y1)], angle=angle,
-                         rows=int(rb - ra), cols=int(cr - cl), pitch_x=round(grid.p, 2),
-                         pitch_y=round(grid.p, 2), threshold=round(grid.threshold, 3),
+                         rows=int(rb - ra), cols=int(cr - cl), pitch_x=round(grid.px, 2),
+                         pitch_y=round(grid.py, 2), threshold=round(grid.threshold, 3),
                          uncertain=int((grid.margin[ra:rb, cl:cr] < 0.05).sum()),
                          fill=round(float(cells.mean()), 3)))
     check_image(crop, grid, bands, out / f"{page.path.stem}_check.jpg")
