@@ -32,6 +32,19 @@ class GraphGrid(WarpedGrid):
         the global Otsu threshold rather than the local contrast."""
         if super().fit(iters) is None:
             return None
+        # hand-drawn dots sit off centre: score a cell by the darker quarter
+        # of its inner window instead of the mean of a small centre patch
+        H, W = self.light.shape; r = 0.35 * min(self.px, self.py)
+        s = np.ones(self.gx.shape)
+        for a in range(s.shape[0]):
+            for b in range(s.shape[1]):
+                x, y = self.gx[a, b], self.gy[a, b]
+                y0, y1, x0, x1 = int(y - r), int(y + r) + 1, int(x - r), int(x + r) + 1
+                if y0 >= 0 and x0 >= 0 and y1 <= H and x1 <= W:
+                    s[a, b] = np.percentile(self.light[y0:y1, x0:x1], 25)
+        self.s = s
+        t, _ = cv2.threshold((s * 255).astype(np.uint8), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        self.threshold = t / 255
         self.cells = (self.s < self.threshold).astype(np.uint8)
         self.margin = np.abs(self.s - self.threshold)
         return self
