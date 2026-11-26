@@ -31,6 +31,30 @@ def cell_features(cell, size=6):
     return (canonical.astype(np.float32) / 255).ravel()
 
 
+def cluster_page_features(feature_groups, kinds):
+    """Cluster glyphs from all chart bands and rank IDs by page frequency."""
+    lengths = [len(group) for group in feature_groups]
+    total = sum(lengths)
+    if not total:
+        return ([np.zeros(0, np.int32) for _ in feature_groups],
+                np.zeros((0, 36), np.float32), np.zeros(0, np.int64))
+    X = np.concatenate(feature_groups).astype(np.float32, copy=False)
+    k = min(kinds, len(X))
+    if k == 1:
+        labels, centres = np.zeros(len(X), np.int32), X[:1]
+    else:
+        cv2.setRNGSeed(1)
+        crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-4)
+        _, labels, centres = cv2.kmeans(X, k, None, crit, 8, cv2.KMEANS_PP_CENTERS)
+        labels = labels.ravel()
+    counts = np.bincount(labels, minlength=k)
+    order = sorted(range(k), key=lambda i: (-counts[i], -centres[i].mean(), i))
+    rank = np.empty(k, dtype=np.int32)
+    rank[order] = np.arange(1, k + 1)
+    groups = np.split(rank[labels], np.cumsum(lengths)[:-1])
+    return groups, centres[order], counts[order]
+
+
 class SymbolRegion(GridRegion):
     kinds = 3
 
@@ -121,7 +145,7 @@ class SymbolRegion(GridRegion):
         self.trim_mark_margins()
         return self
 
-    def classify(self, k, inner=0.2):
+    def mark_features(self, inner=0.2):
         sub = self.ink[self.y0:self.y1, self.x0:self.x1]
         feats, where = [], []
         for r, c in zip(*np.nonzero(self.cells)):
@@ -130,23 +154,18 @@ class SymbolRegion(GridRegion):
             ma, mb = max(1, int(round((b - a) * inner))), max(1, int(round((rr - l) * inner)))
             feats.append(cell_features(sub[a + ma:b - ma + 1, l + mb:rr - mb + 1]))
             where.append((r, c))
+        return (np.asarray(feats, np.float32).reshape(-1, 36), where)
+
+    def set_symbols(self, where, labels, centres):
         self.symbols = np.zeros_like(self.cells)
-        if not feats:
-            return self
-        X = np.array(feats, np.float32)
-        k = min(k, len(X))
-        if k <= 1:
-            self.symbols[self.cells > 0] = 1
-            return self
-        cv2.setRNGSeed(1)
-        crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-4)
-        _, lab, centres = cv2.kmeans(X, k, None, crit, 8, cv2.KMEANS_PP_CENTERS)
-        counts = np.bincount(lab.ravel(), minlength=k)
-        order = sorted(range(k), key=lambda i: (-counts[i], -centres[i].mean(), i))
-        rank = np.empty(k, int); rank[order] = np.arange(1, k + 1)
-        for (r, c), l in zip(where, lab.ravel()):
-            self.symbols[r, c] = rank[l]
-        self.symbol_centres = centres[order]
+        for (r, c), code in zip(where, labels):
+            self.symbols[r, c] = code
+        self.symbol_centres = centres
+
+    def classify(self, k, inner=0.2):
+        X, where = self.mark_features(inner)
+        labels, centres, _ = cluster_page_features([X], k)
+        self.set_symbols(where, labels[0], centres)
         return self
 
     def chart(self):
@@ -160,7 +179,7 @@ class SymbolRegion(GridRegion):
 class MultiSymbolPlateSource(RuledGridSource):
     """Ruled grid with several kinds of mark. options: symbols=3 (kinds)."""
     layout = "symbols"
-    description = "ruled grid with several mark kinds (colours/stitches), clustered per chart"
+    description = "ruled grid with several mark kinds, IDs shared and ranked page-wide"
     region_class = SymbolRegion
     PALETTE = [(40, 40, 230), (40, 170, 40), (200, 90, 20), (160, 40, 160), (20, 160, 200)]
 
@@ -176,8 +195,18 @@ class MultiSymbolPlateSource(RuledGridSource):
 
     def read(self):
         regs = [g.fit().score() for g in self.regions()]
-        self._regions = [g.classify(self.k) for g in regs
+        self._regions = [g for g in regs
                          if g.cells.shape[0] >= 3 and g.cells.shape[1] >= 3]
+        feature_groups, locations = [], []
+        for g in self._regions:
+            current, where = g.mark_features()
+            feature_groups.append(current)
+            locations.append(where)
+        labels, centres, counts = cluster_page_features(feature_groups, self.k)
+        self._symbol_counts = np.zeros(self.k + 1, dtype=int)
+        self._symbol_counts[1:len(counts) + 1] = counts
+        for g, where, codes in zip(self._regions, locations, labels):
+            g.set_symbols(where, codes, centres)
         return [g.chart() for g in self._regions]
 
     def check_image(self, path):

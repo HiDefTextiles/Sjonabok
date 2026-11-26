@@ -15,7 +15,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sources import LAYOUTS, Chart, Provenance, open_source   # noqa: E402
-from sources.symbols import cell_features  # noqa: E402
+from sources.symbols import cell_features, cluster_page_features  # noqa: E402
 
 RNG = np.random.default_rng(7)
 P = 14                                   # pitch in pixels (woodcut)
@@ -123,6 +123,30 @@ def main():
     good &= check("symbols: issue #9 scan grids align and trim page margins",
                   len(scan_charts) == 6 and scan_rows == [19, 11, 6, 8, 7, 17]
                   and pitch_error <= 1.25)
+    good &= check("symbols: issue #9 IDs rank motifs across the full page",
+                  scan._symbol_counts[1:5].tolist() == [2427, 1896, 1575, 829])
+
+    # Same glyphs across bands share IDs; page totals set the rank.
+    motifs = []
+    solid = np.ones((6, 6), np.float32)
+    cross = np.zeros((6, 6), np.float32)
+    cross[np.arange(6), np.arange(6)] = 1
+    cross[np.arange(6), np.arange(5, -1, -1)] = 1
+    dot = np.zeros((6, 6), np.float32); dot[2:4, 2:4] = 1
+    motifs = [cell_features(m) for m in (solid, cross, dot)]
+    group_a = np.concatenate([np.repeat(motifs[i][None, :], n, axis=0)
+                              for i, n in enumerate((180, 100, 50))])
+    group_b = np.concatenate([np.repeat(motifs[i][None, :], n, axis=0)
+                              for i, n in enumerate((30, 180, 150))])
+    ranked, _, page_counts = cluster_page_features([group_a, group_b], 3)
+    expected = {1: 2, 2: 1, 3: 3}  # totals: solid 210, cross 280, dot 200
+    cuts_a = np.cumsum([0, 180, 100, 50])
+    cuts_b = np.cumsum([0, 30, 180, 150])
+    shared = all(set(ranked[0][cuts_a[kind - 1]:cuts_a[kind]]) == {code}
+                 and set(ranked[1][cuts_b[kind - 1]:cuts_b[kind]]) == {code}
+                 for kind, code in expected.items())
+    good &= check("symbols: IDs shared and frequency-ranked across chart bands",
+                  shared and page_counts.tolist() == [280, 210, 200])
 
     drawing_page(tmp / "draw.png")
     ch = open_source(tmp / "draw.png", layout="drawing", cells=30).charts()

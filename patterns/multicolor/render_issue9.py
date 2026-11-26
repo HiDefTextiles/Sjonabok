@@ -41,7 +41,8 @@ def main():
     for chart, region in zip(charts, source._regions):
         symbols = chart.layers["symbols"]
         counts = [int((symbols == code).sum()) for code in range(5)]
-        label = f"{chart.name}  {symbols.shape[0]} x {symbols.shape[1]}"
+        label = (f"{chart.name}  {symbols.shape[0]} x {symbols.shape[1]}  "
+                 "(page-global IDs; counts per band)")
         cv2.putText(preview, label, (MARGIN, y + 16), cv2.FONT_HERSHEY_SIMPLEX,
                     0.48, (35, 35, 35), 1, cv2.LINE_AA)
         legend_y = y + 34
@@ -54,16 +55,22 @@ def main():
                         tuple(int(v) for v in PALETTE[code]), 1, cv2.LINE_AA)
             legend_x += 95
 
-        centres = region.symbol_centres.reshape(-1, 6, 6)
+        sub = region.ink[region.y0:region.y1, region.x0:region.x1]
         for row in range(symbols.shape[0]):
             for col in range(symbols.shape[1]):
                 code = int(symbols[row, col])
                 if not code:
                     continue
-                glyph = cv2.resize(centres[code - 1], (CELL - 2, CELL - 2),
-                                   interpolation=cv2.INTER_NEAREST)
+                top, bottom = region.ys[row], region.ys[row + 1]
+                left, right = region.xs[col], region.xs[col + 1]
+                inset_y = max(1, int(round((bottom - top) * 0.2)))
+                inset_x = max(1, int(round((right - left) * 0.2)))
+                glyph = sub[top + inset_y:bottom - inset_y + 1,
+                            left + inset_x:right - inset_x + 1]
+                glyph = cv2.resize(glyph.astype(np.float32), (CELL - 2, CELL - 2),
+                                   interpolation=cv2.INTER_AREA)
                 tile = np.full((CELL - 2, CELL - 2, 3), 255, np.uint8)
-                tile[glyph > 0.32] = PALETTE[code]
+                tile[glyph > 0.35] = PALETTE[code]
                 top = y + LABEL_HEIGHT + row * CELL + 1
                 left = MARGIN + col * CELL + 1
                 preview[top:top + CELL - 2, left:left + CELL - 2] = tile

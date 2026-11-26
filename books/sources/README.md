@@ -66,7 +66,8 @@ first issue #9 scan attachment. It uses a low-quantile grid profile so dense mar
 fit away from faint ruling. It trims padded page rows using the darker motif area, scores
 a cell by its darkest part and cuts between the empty level and the lightest mark (Otsu
 would drop light marks), then groups marks by a coarse 6x6 picture with k-means (fixed
-seed). It treats rotations and mirrors of a mark as the same shape and numbers each
-chart's kinds by frequency, leaving `0` for empty cells.
+seed). It treats rotations and mirrors of a mark as the same shape, shares IDs across
+all chart bands on the page, and ranks them by total frequency, leaving `0` for empty
+cells.
 `LineDrawingSource` is still a prototype checked only on drawn pages. It fills closed
 outlines and fills a cell when ink covers half of it.
