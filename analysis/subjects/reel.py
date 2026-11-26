@@ -23,12 +23,14 @@ from submotifs import SHIFT
 from variants import Aligner, Consensus, trim
 
 W, H, FPS = 1080, 1920, 30
-HOLD, MORPH, END = 2.4, 1.6, 4.0
+HOLD, MORPH, END, CLOSE = 2.4, 1.6, 4.0, 3.5
 BLUE = np.array((16, 9, 159), float)
 PINK = np.array((214, 31, 105), float)
 PAPER = np.array((255, 255, 255), float)
 GRID = np.array((236, 236, 244), float)
 INK = (38, 38, 38)
+FRAME_BAND = "thjms2008-14_522_p3"   # border band for the frame (patterns/repeat)
+SITE = "hideftextiles.github.io/Sjonabok"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
@@ -73,6 +75,43 @@ class BookFigures:
         return np.asarray(self.units[p["chart"]].cells)[y:y + h, x:x + w].astype(bool)
 
 
+class MitreFrame:
+    """A Sjónabók border band around the picture, mitred at the corners: each cell takes the
+    band row of its distance to the nearest edge and the band column of its distance along
+    that edge from the nearer corner, so the corners mirror on the diagonal and each side
+    mirrors at its middle. The band is a mirror-symmetric repeat unit, turned so that its
+    mirror line falls on the corner."""
+
+    def __init__(self, band, cell=8, margin=28, ink=(183, 181, 226), paper=(245, 245, 245)):
+        u = band
+        for s in range(u.shape[1]):
+            r = np.roll(u, s, 1)
+            if (r[:, ::-1] == r).all():
+                u = r
+                break
+        self.u, self.cell, self.margin, self.ink, self.paper = u, cell, margin, ink, paper
+        self.width = margin + u.shape[0] * cell        # from the edge of the picture to inside the frame
+
+    def background(self):
+        b, c, m = self.u.shape[0], self.cell, self.margin
+        gh, gw = (H - 2 * m) // c, (W - 2 * m) // c       # frame size in cells
+        yy, xx = np.mgrid[:gh, :gw]
+        dist = np.minimum.reduce([yy, xx, gh - 1 - yy, gw - 1 - xx])
+        on_tb = np.minimum(yy, gh - 1 - yy) <= np.minimum(xx, gw - 1 - xx)
+        along = np.where(on_tb, np.minimum(xx, gw - 1 - xx), np.minimum(yy, gh - 1 - yy))
+        inside = dist < b
+        cells = np.zeros((gh, gw), bool)
+        cells[inside] = self.u[dist[inside], along[inside] % self.u.shape[1]].astype(bool)
+        rgb = np.full((H, W, 3), 255, np.uint8)
+        rgb[:] = self.paper
+        y0, x0 = (H - gh * c) // 2, (W - gw * c) // 2
+        inner = np.where(cells[..., None], self.ink, (255, 255, 255)).astype(np.uint8)
+        inner[~inside] = (255, 255, 255)
+        inner[inside & ~cells] = self.paper
+        rgb[y0:y0 + gh * c, x0:x0 + gw * c] = np.repeat(np.repeat(inner, c, 0), c, 1)
+        return Image.fromarray(rgb)
+
+
 class Reel:
     def __init__(self, books, title, subtitle):
         self.books, self.title, self.subtitle = books, title, subtitle
@@ -86,6 +125,8 @@ class Reel:
         yy, xx = np.mgrid[:self.n, :self.n]
         r = np.hypot(yy - c, xx - c)
         self.delay = r / r.max()                     # ripple from the centre outwards
+        band = np.array([[int(c) for c in l.strip()] for l in open(S.HERE / "../../patterns/repeat" / f"{FRAME_BAND}.txt") if l.strip()])
+        self.bg = MitreFrame(band).background()
         self.f_title = ImageFont.truetype(BOLD, 58)
         self.f_sub = ImageFont.truetype(FONT, 36)
         self.f_book = ImageFont.truetype(BOLD, 72)
@@ -106,7 +147,7 @@ class Reel:
 
     def frame(self, colours, k, fade=1.0):
         """colours: n x n x 3 cell colours; k: index of the book named at the bottom."""
-        img = Image.new("RGB", (W, H), tuple(PAPER.astype(int)))
+        img = self.bg.copy()
         dr = ImageDraw.Draw(img)
         dr.text((W // 2, 150), self.title, font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
         dr.text((W // 2, 225), self.subtitle, font=self.f_sub, fill=INK, anchor="mm")
@@ -133,7 +174,7 @@ class Reel:
             dr.ellipse((cx - 14, 1660 - 14, cx + 14, 1660 + 14), fill=fill,
                        outline=tuple(BLUE.astype(int)) if has else (200, 200, 200), width=3)
         dr.text((W // 2, 1715), "manuscripts in time order", font=self.f_small, fill=(120, 120, 120), anchor="mm")
-        dr.text((W // 2, 1820), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
+        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
 
     def chart_panel(self, img, dr, k, fade):
@@ -165,7 +206,7 @@ class Reel:
 
     def end_card(self):
         """All the books' figures side by side."""
-        img = Image.new("RGB", (W, H), tuple(PAPER.astype(int)))
+        img = self.bg.copy()
         dr = ImageDraw.Draw(img)
         dr.text((W // 2, 150), self.title, font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
         dr.text((W // 2, 225), self.subtitle, font=self.f_sub, fill=INK, anchor="mm")
@@ -181,7 +222,22 @@ class Reel:
             img.paste(I, (cx + (tile - I.width) // 2, cy))
             name, when = self.label(i)
             dr.text((cx + tile // 2, cy + I.height + 26), name, font=self.f_small, fill=INK, anchor="mm")
-        dr.text((W // 2, 1820), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
+        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
+        return img
+
+    def closing_card(self):
+        """Where to see more: the site."""
+        img = self.bg.copy()
+        dr = ImageDraw.Draw(img)
+        g = self.grids[-1]
+        z = 360 // self.n
+        I = Image.fromarray(self.colours(g).astype(np.uint8)).resize((self.n * z, self.n * z), Image.NEAREST)
+        img.paste(I, ((W - I.width) // 2, 420))
+        dr.text((W // 2, 1000), "See all 600 patterns", font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
+        dr.text((W // 2, 1090), "from ten Icelandic manuscripts", font=self.f_sub, fill=INK, anchor="mm")
+        dr.rounded_rectangle((W // 2 - 400, 1200, W // 2 + 400, 1300), radius=50, fill=tuple(PINK.astype(int)))
+        dr.text((W // 2, 1250), SITE, font=self.f_when, fill=(255, 255, 255), anchor="mm")
+        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
 
     def write(self, path):
@@ -205,6 +261,9 @@ class Reel:
         end = self.end_card()
         for _ in range(int(END * FPS)):
             put(end)
+        close = self.closing_card()
+        for _ in range(int(CLOSE * FPS)):
+            put(close)
         ff.stdin.close()
         ff.wait()
         end.save(str(path).replace(".mp4", "_end.png"))
