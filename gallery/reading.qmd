@@ -149,9 +149,12 @@ square cut by a diagonal, a *triangle within the square*, usually means a half s
 The reader on this page only knows "ink" and "no ink", so it has to squeeze every mark into 1 or 0.
 Hatched squares are lighter than crossed ones, so some of them come out as 1 and some as 0. That
 is a fault in the translator, not in the book. The next step is a translator for plates like this
-one (`MultiSymbolPlateSource` above) that records which symbol each square holds: empty, cross,
-hatched, diagonal or X. The 0/1 chart is then worked out from that, and a colour chart can be
-made too.
+one that records which mark each square holds. A first version (`NamedMarkPlateSource`, a kind of
+`MultiSymbolPlateSource`) gives every square one character: `.` empty, `#` solid, `+` cross, `x`
+diagonal cross, `|` and `-` hatching, `/` and `\` single diagonals, half-square triangles, and `?`
+for a mark it cannot tell. The 0/1 chart is then worked out from the marks, and a colour chart can
+be made too. On plate 12 about 6% of the squares are still `?`, and those are the ones to check
+first.
 
 ## Reading slips and symmetry
 
