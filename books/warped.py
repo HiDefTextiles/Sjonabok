@@ -14,6 +14,9 @@ from woodcut import WoodcutPage, WoodcutGrid, check_image
 
 
 class WarpedGrid(WoodcutGrid):
+    smooth = 7        # cells over which the local shift field is averaged
+    pull = 0.4        # search radius (in pitches) for the square near a centre
+
     def fit(self, iters=3):
         c = self.squares()
         if len(c) < 30:
@@ -27,12 +30,12 @@ class WarpedGrid(WoodcutGrid):
         gx, gy = np.meshgrid(cx, cy)                     # cell centres, rows x cols
         tree = cKDTree(c)
         for _ in range(iters):                           # pull each centre to the square near it
-            d, i = tree.query(np.c_[gx.ravel(), gy.ravel()], distance_upper_bound=0.4 * min(px, py))
+            d, i = tree.query(np.c_[gx.ravel(), gy.ravel()], distance_upper_bound=self.pull * min(px, py))
             ok = np.isfinite(d)
             dx = np.zeros(gx.size); dy = np.zeros(gx.size); w = ok.astype(float)
             dx[ok] = c[i[ok], 0] - gx.ravel()[ok]; dy[ok] = c[i[ok], 1] - gy.ravel()[ok]
             # smooth the shift field over 7x7 cells (filled cells have no square)
-            k = np.ones((7, 7))
+            k = np.ones((self.smooth, self.smooth))
             ws = ndimage.convolve(w.reshape(gx.shape), k, mode="nearest") + 1e-6
             sx = ndimage.convolve((dx * w).reshape(gx.shape), k, mode="nearest") / ws
             sy = ndimage.convolve((dy * w).reshape(gx.shape), k, mode="nearest") / ws

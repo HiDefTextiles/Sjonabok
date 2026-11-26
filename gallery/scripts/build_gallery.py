@@ -126,11 +126,14 @@ class Pattern:
     def __init__(self, path, unit_row=None):
         self.path = Path(path)
         self.id = self.path.stem
-        self.matrix = self.read(self.path)
+        # manuscripts in two inks are stored 0/1/2 (empty, black, red); the
+        # analysis uses filled vs empty, the images keep the inks
+        self.colours = self.read(self.path)
+        self.matrix = (self.colours > 0).astype(np.uint8)
         self.unit_row = unit_row       # manifest row when the file is one repeat unit
         # a unit keeps its empty edge columns: they belong to the repeat
         self.trim = self.matrix if unit_row else self.trimmed(self.matrix)
-        self.display = self.matrix     # what the images show
+        self.display = self.colours    # what the images show
         m = NAME_RE.match(self.id)
         self.source = m["source"] if m else self.id
         self.number = int(m["number"]) if m else 0
@@ -338,7 +341,7 @@ class Pattern:
 
     # ── images ───────────────────────────────────────────────────────────
     def rgba(self, zoom):
-        palette = np.array(COLOR_PALETTE[:2], dtype=np.uint8)
+        palette = np.array(COLOR_PALETTE[:3], dtype=np.uint8)   # 2 = red ink, shown HI-Pink
         img = palette[self.display]
         return np.kron(img, np.ones((zoom, zoom, 1), dtype=np.uint8))
 
@@ -711,7 +714,7 @@ class MotifSheet(Sheet):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns")
+    ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns (0/1/2 for two-ink charts)")
     ap.add_argument("out_dir", help="folder for patterns.json and images")
     ap.add_argument("--manifest", help="repeats.csv (default: next to txt_dir)")
     ap.add_argument("--extra", action="append", default=[],
