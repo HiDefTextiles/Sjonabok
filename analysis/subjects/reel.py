@@ -69,7 +69,7 @@ class BookFigures:
         self.reference = self.on_grid(alls[int(np.argmax(score))][1], n)
         # each book: its drawing most like the reference; one standing free in its chart is a
         # little preferred
-        pick = {src: max(vs, key=lambda t: self.likeness(t[0], n) * (1.0 if t[2] else 0.9))
+        pick = {src: max(vs, key=lambda t: self.likeness(t[0], n) * (1.0 if t[2] else 0.8))
                 for src, vs in self.versions.items()}
         self.figures, self.charts = [], []
         for src, (fig, chart, charts) in pick.items():
@@ -89,7 +89,12 @@ class BookFigures:
                 piece = lab == 1 + int(np.argmax(sizes))
             ys, xs = np.nonzero(piece)
             fig = piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
-            out.append((fig, self.marked(p["chart"], fig, py + ys.min(), px + xs.min()), int(whole)))
+            y, x = py + ys.min(), px + xs.min()
+            H, W_ = np.asarray(self.units[p["chart"]].cells).shape
+            # cut off by the edge of the chart (a band that stops mid-figure): not whole
+            if y == 0 or x == 0 or y + fig.shape[0] == H or x + fig.shape[1] == W_:
+                whole = False
+            out.append((fig, self.marked(p["chart"], fig, y, x), int(whole)))
         return out
 
     @staticmethod
@@ -134,10 +139,21 @@ class BookFigures:
         ys, xs = np.nonzero(piece)
         touches = ys.min() == 0 or xs.min() == 0 or ys.max() == win.shape[0] - 1 or xs.max() == win.shape[1] - 1
         if len(ys) == 0 or touches:
-            # joined to more pattern: take one ring of cells joined to the place (the tips
-            # of a star's points), not the pattern it runs on into
+            # joined to more pattern: take the cells joined to the place (the tips of a star's
+            # points), not the pattern it runs on into
+            # (one ring), keeping only cells whose mirror images across the figure's centre
+            # are drawn too: the tips are, a line of pattern running off to one side is not
             core = win & inner
             piece = win & ndimage.binary_dilation(core, np.ones((3, 3)))
+            cy, cx = [(a.min() + a.max()) / 2 for a in np.nonzero(core)]
+            yy, xx = np.nonzero(piece)
+            my, mx = np.rint(2 * cy - yy).astype(int), np.rint(2 * cx - xx).astype(int)
+            inside = (my >= 0) & (my < win.shape[0]) & (mx >= 0) & (mx < win.shape[1])
+            keep = np.zeros(len(yy), bool)
+            keep[inside] = piece[my[inside], xx[inside]] & piece[yy[inside], mx[inside]]
+            keep |= core[yy, xx]
+            piece = np.zeros_like(piece)
+            piece[yy[keep], xx[keep]] = True
             ys, xs = np.nonzero(piece)
         return piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1], y0 + ys.min(), x0 + xs.min(), not touches
 
