@@ -41,8 +41,20 @@ def main():
     for chart, region in zip(charts, source._regions):
         symbols = chart.layers["symbols"]
         counts = [int((symbols == code).sum()) for code in range(5)]
+        # These are long horizontal banners. Compare each cell with cells
+        # several columns away to expose the strongest repeated motif spacing
+        # as an independent check on the visual symbol assignments.
+        repeats = []
+        for shift in range(3, symbols.shape[1] // 2 + 1):
+            left, right = symbols[:, :-shift], symbols[:, shift:]
+            active = (left > 0) | (right > 0)
+            coverage = float(active.mean())
+            agreement = float(((left == right) & active).sum() / max(1, active.sum()))
+            repeats.append((agreement, coverage, shift))
+        best = max(repeats, default=(0.0, 0.0, 0))
         label = (f"{chart.name}  {symbols.shape[0]} x {symbols.shape[1]}  "
-                 "(page-global IDs; counts per band)")
+                 f"(page-global IDs; repeat +{best[2]}: "
+                 f"{best[0]:.0%} of marked positions, {best[1]:.0%} coverage)")
         cv2.putText(preview, label, (MARGIN, y + 16), cv2.FONT_HERSHEY_SIMPLEX,
                     0.48, (35, 35, 35), 1, cv2.LINE_AA)
         legend_y = y + 34
