@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 import subjects as S
 from submotifs import OUT
 from submotifs import SHIFT
-from variants import Aligner, Consensus, trim
+from variants import Aligner, Consensus, clean, trim
 
 W, H, FPS = 1080, 1920, 30
 HOLD, MORPH, END, CLOSE = 1.7, 1.1, 2.5, 2.5   # under 30 s: Instagram autoplay and stories
@@ -53,7 +53,7 @@ class BookFigures:
             cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
             ref = max((c for *_, c in cuts), key=lambda c: c.sum())
             con = Consensus(ref, cuts).settle()
-            fig = trim(con.cells)
+            fig = clean(con.cells)   # stray cells dropped, near symmetry evened out
             self.figures.append((src, fig, len({p["chart"] for p in pl})))
             # the chart that shows the book's version best, with the figure marked (2)
             best = max(range(len(pl)), key=lambda i: con.fit[i])
@@ -145,6 +145,7 @@ class Reel:
         self.f_book = ImageFont.truetype(BOLD, 72)
         self.f_when = ImageFont.truetype(FONT, 44)
         self.f_small = ImageFont.truetype(FONT, 28)
+        self.footer(self.bg)
 
     def centre(self, f):
         g = np.zeros((self.n, self.n), bool)
@@ -187,8 +188,20 @@ class Reel:
             dr.ellipse((cx - 14, 1660 - 14, cx + 14, 1660 + 14), fill=fill,
                        outline=tuple(BLUE.astype(int)) if has else (200, 200, 200), width=3)
         dr.text((W // 2, 1715), "manuscripts in time order", font=self.f_small, fill=(120, 120, 120), anchor="mm")
-        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
+
+    def footer(self, img):
+        """University of Iceland logo, faint, beside the project name, on every frame."""
+        logo = Image.open(S.HERE / "assets" / "hi_logo_blue.png").convert("RGBA")
+        h = 42
+        logo = logo.resize((round(logo.width * h / logo.height), h), Image.LANCZOS)
+        a = logo.getchannel("A").point(lambda v: int(v * 0.55))
+        logo.putalpha(a)
+        text = "Íslensk sjónabók · HiDef Textiles"
+        tw = int(self.f_small.getlength(text))
+        x = (W - (logo.width + 28 + tw)) // 2
+        img.paste(logo, (x, 1790 - h // 2), logo)
+        ImageDraw.Draw(img).text((x + logo.width + 28, 1790), text, font=self.f_small, fill=(120, 120, 120), anchor="lm")
 
     def chart_panel(self, img, dr, k, fade):
         """The chart the figure comes from, figure in pink, fading with the name."""
@@ -235,7 +248,6 @@ class Reel:
             img.paste(I, (cx + (tile - I.width) // 2, cy))
             name, when = self.label(i)
             dr.text((cx + tile // 2, cy + I.height + 26), name, font=self.f_small, fill=INK, anchor="mm")
-        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
 
     def closing_card(self):
@@ -250,7 +262,6 @@ class Reel:
         dr.text((W // 2, 1090), "from ten Icelandic manuscripts", font=self.f_sub, fill=INK, anchor="mm")
         dr.rounded_rectangle((W // 2 - 400, 1200, W // 2 + 400, 1300), radius=50, fill=tuple(PINK.astype(int)))
         dr.text((W // 2, 1250), SITE, font=self.f_when, fill=(255, 255, 255), anchor="mm")
-        dr.text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small, fill=(120, 120, 120), anchor="mm")
         return img
 
     def write(self, path):

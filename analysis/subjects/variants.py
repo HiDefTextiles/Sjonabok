@@ -27,6 +27,7 @@ import csv
 from collections import defaultdict
 
 import numpy as np
+from scipy import ndimage
 from PIL import Image
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial import ConvexHull
@@ -100,6 +101,37 @@ def trim(m):
     if len(ys) == 0:
         return m
     return m[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+
+
+def clean(m, agree=0.85):
+    """Tidy a figure: even out the symmetry it nearly has, and drop stray cells.
+
+    Each of the 8 turns and mirrors (with a shift of up to one cell, for figures whose centre
+    falls between cells) that matches the figure on at least `agree` of its cells counts as one
+    of its symmetries; every cell then takes the majority over those symmetric copies, so a
+    cell a scribe added or left out on one arm only is settled by the other arms. Finally a
+    cell touching no other filled cell (a stray pixel) is dropped."""
+    m = trim(m.astype(bool))
+    s = max(m.shape) + 2
+    sq = np.zeros((s, s), bool)
+    y, x = (s - m.shape[0]) // 2, (s - m.shape[1]) // 2
+    sq[y:y + m.shape[0], x:x + m.shape[1]] = m
+    copies = []
+    for v in views(sq):
+        best, bv = 0, None
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                w = np.roll(np.roll(v, dy, 0), dx, 1)
+                o = iou(w, sq)
+                if o > best:
+                    best, bv = o, w
+        if best >= agree:
+            copies.append(bv)
+    vote = np.mean(copies, 0)
+    out = (vote > 0.5) | ((vote == 0.5) & sq)
+    nb = ndimage.convolve(out.astype(int), np.ones((3, 3), int), mode="constant") - out
+    out &= nb > 0
+    return trim(out)
 
 
 class Consensus:

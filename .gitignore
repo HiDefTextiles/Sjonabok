@@ -167,3 +167,4 @@ cython_debug/
 *.png
 # figures for the Methods page, made by analysis scripts that need R (not built by the Action)
 !gallery/images/*.png
+!analysis/subjects/assets/*.png
