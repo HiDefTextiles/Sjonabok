@@ -138,6 +138,39 @@ handle (several symbols, heavy shading or bad printing) are left out until they 
 translator. The list is in
 [`books/charts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/charts.csv).
 
+## More than two kinds of square
+
+Look closely at Sibmacher's plate and there are more than two kinds of square. Most filled squares
+hold a small **cross**, some are **hatched** with fine upright lines, some have a **diagonal** or
+an **X** across them, and the rest are empty. The book prints no key, so we do not know for sure
+which mark means a colour and which means a stitch. Hatching probably means a second colour, and a
+square cut by a diagonal, a *triangle within the square*, usually means a half stitch.
+
+The reader on this page only knows "ink" and "no ink", so it has to squeeze every mark into 1 or 0.
+Hatched squares are lighter than crossed ones, so some of them come out as 1 and some as 0. That
+is a fault in the translator, not in the book. The next step is a translator for plates like this
+one (`MultiSymbolPlateSource` above) that records which symbol each square holds: empty, cross,
+hatched, diagonal or X. The 0/1 chart is then worked out from that, and a colour chart can be
+made too.
+
+## Reading slips and symmetry
+
+Most bands in these books are drawn with exact symmetry: they repeat along their length and are
+mirrored left to right, often top to bottom too. A reading slip breaks that symmetry in a single
+square, while the design itself does not. So for every chart we look for the symmetries that hold
+in at least 95% of its squares. Then we compare each square with all the squares the symmetries
+match it to. When three out of four or more of those squares disagree with it, it is taken as a
+reading slip and changed to agree with them.
+
+![Part of Sibmacher's band before (left) and after (right) the symmetry check. The squares outlined in orange were changed. Most lie along an ink flaw running down the plate.](img/reading/sib1597-slips.webp){fig-alt="Two copies of the same enlarged piece of the band with filled squares in pink. On the right, about ten squares in one column are outlined in orange where the reading was changed."}
+
+The edits are listed one by one in
+[`books/corrections.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/corrections.csv)
+with the value that was read, so they can always be undone. A chart with many disagreeing squares
+is not edited. It is marked for review, because there the "symmetry" may not really be part of
+the design. The check is
+[`books/slips.py`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/slips.py).
+
 ::: {.heimild}
 The charts read from printed books are our interpretation of the scans and are released under
 **CC BY 4.0**. Credit: *Helga Ingimundardóttir, Háskóli Íslands (HiDef Textiles)*, and name the

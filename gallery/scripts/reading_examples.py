@@ -13,6 +13,7 @@ what the gallery holds.
 SCANS_DIR holds the scans by book, e.g. SCANS_DIR/sib1597/DP363485.webp
 (books/fetch.py gets them). Writes small WebP files to OUT_DIR.
 """
+import csv
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ BLUE = (16, 9, 159)       # HI blue
 PINK = (214, 31, 105)     # HI pink
 TEAL = (45, 210, 192)     # HI teal
 PAPER = (245, 245, 245)
+ORANGE = (255, 160, 95)  # HI orange
 
 
 class Example:
@@ -40,7 +42,20 @@ class Example:
     def __init__(self, scans, book, image, chart):
         self.page_path = Path(scans) / book / f"{image}.webp"
         self.chart = chart
-        self.expected = (ROOT / "patterns" / "books" / f"{chart}.txt").read_text()
+        # the reader's own output: the stored chart with any symmetry edits
+        # (books/corrections.csv, books/slips.py) put back to the value read
+        stored = (ROOT / "patterns" / "books" / f"{chart}.txt").read_text()
+        m = np.array([[int(ch) for ch in line] for line in stored.split()])
+        self.slips = []
+        path = ROOT / "books" / "corrections.csv"
+        if path.exists():
+            for r in csv.DictReader(open(path)):
+                if r["chart"] == chart and r["status"] == "applied":
+                    i, j = int(r["row"]), int(r["col"])
+                    m[i, j] = int(r["read"])
+                    self.slips.append((i, j, int(r["proposed"])))
+        self.stored = stored
+        self.expected = "\n".join("".join(map(str, row)) for row in m) + "\n"
 
     def check(self, cells):
         text = "\n".join("".join(map(str, row)) for row in cells) + "\n"
@@ -79,7 +94,18 @@ class Example:
                     p, q = at(xs[c], ys[r]), at(xs[c + 1], ys[r + 1])
                     sub = read[p[1] + 3:q[1] - 2, p[0] + 3:q[0] - 2]
                     sub[:] = (0.35 * sub + 0.65 * np.array(PINK)).astype(np.uint8)
-        pics = dict(scan=base, grid=grid, read=read)
+        fixed = read.copy()
+        for i, j, v in self.slips:
+            if rows[0] <= i < rows[1] and cols[0] <= j < cols[1]:
+                p, q = at(xs[j], ys[i]), at(xs[j + 1], ys[i + 1])
+                if v:
+                    sub = fixed[p[1] + 3:q[1] - 2, p[0] + 3:q[0] - 2]
+                    sub[:] = (0.35 * sub + 0.65 * np.array(PINK)).astype(np.uint8)
+                else:
+                    sub = fixed[p[1] + 3:q[1] - 2, p[0] + 3:q[0] - 2]
+                    sub[:] = read[p[1] + 3:q[1] - 2, p[0] + 3:q[0] - 2] * 0 + grid[p[1] + 3:q[1] - 2, p[0] + 3:q[0] - 2]
+                cv2.rectangle(fixed, (p[0] + 1, p[1] + 1), (q[0] - 1, q[1] - 1), ORANGE, 4)
+        pics = dict(scan=base, grid=grid, read=read, fixed=fixed)
         gap = np.full((base.shape[0], 18, 3), 255, np.uint8)
         row = []
         for name in panels:
@@ -145,11 +171,12 @@ def main():
     sib = GridExample(scans, "sib1597", "DP363485", "sib1597_12_p1").read(0)
     sib.page_picture(out / "sib1597-page.webp")
     sib.steps(out / "sib1597-steps.webp", rows=(1, 17), cols=(20, 44))
-    chart_picture(sib.expected, out / "sib1597-chart.webp")
+    chart_picture(sib.stored, out / "sib1597-chart.webp")
+    sib.steps(out / "sib1597-slips.webp", rows=(28, 45), cols=(0, 26), panels=("read", "fixed"))
 
     qu = WoodcutExample(scans, "quentel1529", "DP361377", "quentel1529_18_p1").read(0)
     qu.steps(out / "quentel1529-steps.webp", rows=(10, 26), cols=(4, 28))
-    chart_picture(qu.expected, out / "quentel1529-chart.webp", cell=4)
+    chart_picture(qu.stored, out / "quentel1529-chart.webp", cell=4)
 
 
 if __name__ == "__main__":
