@@ -57,6 +57,7 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 | *Schön neues Modelbuch* | Jost Martin, Strasbourg 1599 | Library of Congress (scans on [archive.org](https://archive.org/details/martin1599schonloc)) | 51 |
 | *New vnd vollkömmlich Modelbuch* | Romanus Beatus for Nicolaus Bassée, Frankfurt 1599 | Württembergische Landesbibliothek (scans on [archive.org](https://archive.org/details/beatus-1549-new-vnd-vollkomich-wlb)) | 43 |
 | *Schön neues Modelbuch* | Beatus heirs and Bitsch, Frankfurt 1601 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB31962000727465Images)) | 54 |
+| *Livre nouveau dict patrons de lingerie* | Pierre de Sainte-Lucie, Lyon 1533 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/sainctelucie1533livrebnfbpt6k15108450)) | 52 |
 | Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | 12 |
 | *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
 | Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
