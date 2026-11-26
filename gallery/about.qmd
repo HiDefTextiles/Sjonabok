@@ -71,6 +71,11 @@ white squares, so they have their own reader that follows the white squares
 Every chart was checked by eye against the scan; plates drawn with several symbols (crosses,
 wheels, shaded cells) or badly printed are left out for now (`redo` in
 [`books/charts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/charts.csv)).
+Are any of them in colour? The woodcuts are strictly two-tone. Sibmacher's etchings are not:
+of the 65 readable plates left out, 40 use more than solid cells, 24 a hatched second tone and
+26 wheels or star cells (most likely a stitch, such as an eyelet, rather than a colour), and almost
+all add small crosses. The books print no key, so which symbol is a colour and which a stitch is our
+reading, not the author's ([`books/symbols.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/symbols.csv)).
 Charts marked *fair* may have a few wrong cells. The number in a book chart's file name is the
 plate (or leaf) of the book, `_p` the band on that plate.
 
