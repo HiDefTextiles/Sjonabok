@@ -92,7 +92,7 @@ class MitreFrame:
         self.u, self.cell, self.margin, self.ink, self.paper = u, cell, margin, ink, paper
         self.width = margin + u.shape[0] * cell        # from the edge of the picture to inside the frame
 
-    def background(self):
+    def background(self, label=None):
         b, c, m = self.u.shape[0], self.cell, self.margin
         gh, gw = (H - 2 * m) // c, (W - 2 * m) // c       # frame size in cells
         yy, xx = np.mgrid[:gh, :gw]
@@ -109,7 +109,20 @@ class MitreFrame:
         inner[~inside] = (255, 255, 255)
         inner[inside & ~cells] = self.paper
         rgb[y0:y0 + gh * c, x0:x0 + gw * c] = np.repeat(np.repeat(inner, c, 0), c, 1)
-        return Image.fromarray(rgb)
+        img = Image.fromarray(rgb)
+        if label:
+            self.side_label(img, label, x0, b * c)   # left side: Instagram puts its buttons on the right
+        return img
+
+    def side_label(self, img, text, x, width):
+        """The text on a plain strip let into the left side of the frame, reading upwards."""
+        font = ImageFont.truetype(BOLD, int(width * 0.55))
+        tw = int(font.getlength(text)) + 2 * width
+        strip = Image.new("RGB", (tw, width), self.paper)
+        d = ImageDraw.Draw(strip)
+        d.text((tw // 2, width // 2), text, font=font, fill=tuple(int(v) for v in BLUE), anchor="mm")
+        strip = strip.rotate(90, expand=True)
+        img.paste(strip, (x, (H - strip.height) // 2))
 
 
 class Reel:
@@ -126,7 +139,7 @@ class Reel:
         r = np.hypot(yy - c, xx - c)
         self.delay = r / r.max()                     # ripple from the centre outwards
         band = np.array([[int(c) for c in l.strip()] for l in open(S.HERE / "../../patterns/repeat" / f"{FRAME_BAND}.txt") if l.strip()])
-        self.bg = MitreFrame(band).background()
+        self.bg = MitreFrame(band).background(SITE)
         self.f_title = ImageFont.truetype(BOLD, 58)
         self.f_sub = ImageFont.truetype(FONT, 36)
         self.f_book = ImageFont.truetype(BOLD, 72)
