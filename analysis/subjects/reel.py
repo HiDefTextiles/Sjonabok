@@ -293,8 +293,19 @@ class Reel:
             put(close)
         ff.stdin.close()
         ff.wait()
-        end.save(str(path).replace(".mp4", "_end.png"))
-        self.frame(self.colours(g[0]), 0).save(str(path).replace(".mp4", "_cover.png"))
+        end.save(str(path).replace("_silent", "").replace(".mp4", "_end.png"))
+        self.frame(self.colours(g[0]), 0).save(str(path).replace("_silent", "").replace(".mp4", "_cover.png"))
+
+
+def add_music(video, out):
+    """Lay the tvísöngur tune (music.py), cut to the video's length, under the video."""
+    from music import Tvisongur
+    secs = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                          "-of", "csv=p=0", video]))
+    tune = out.replace(".mp4", "_tune.wav")
+    Tvisongur(secs).write(tune)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", tune, "-c:v", "copy",
+                    "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", out], check=True)
 
 
 def main():
@@ -306,7 +317,10 @@ def main():
     a = ap.parse_args()
     books = BookFigures(a.txt, a.kind)
     sub = f"as {len(books.figures)} manuscripts draw it, 1600s–1800s"
-    Reel(books, a.title, sub).write(a.out)
+    reel = Reel(books, a.title, sub)
+    silent = a.out.replace(".mp4", "_silent.mp4")
+    reel.write(silent)
+    add_music(silent, a.out)
     for src, f, n in books.figures:
         print(src, f.shape, int(f.sum()), "cells,", n, "charts")
 
