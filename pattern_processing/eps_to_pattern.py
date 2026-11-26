@@ -207,11 +207,15 @@ def simplify_color_matrix(rgb_matrix, threshold=240):
     """
     gray = np.asarray(Image.fromarray(rgb_matrix).convert('L'))
     regular_cells = _find_regular_grid_cells(gray)
+    monochrome_source = np.median(
+        np.max(rgb_matrix, axis=2) - np.min(rgb_matrix, axis=2)
+    ) < 18
     binary = (gray <= threshold).astype(np.uint8)
     if regular_cells:
         row_lines, col_lines = regular_cells
-        cell_bounds = [(row_lines[i] + 1, row_lines[i + 1],
-                        col_lines[j] + 1, col_lines[j + 1])
+        inset = 2 if monochrome_source else 1
+        cell_bounds = [(row_lines[i] + inset, row_lines[i + 1] - (inset - 1),
+                        col_lines[j] + inset, col_lines[j + 1] - (inset - 1))
                        for i in range(len(row_lines) - 1)
                        for j in range(len(col_lines) - 1)]
         matrix_shape = (len(row_lines) - 1, len(col_lines) - 1)
@@ -241,7 +245,10 @@ def simplify_color_matrix(rgb_matrix, threshold=240):
         interior = rgb_matrix[y0:y1, x0:x1]
         if interior.size == 0:
             continue
-        ink = np.linalg.norm(interior.astype(float) - 255.0, axis=2) > 40
+        if monochrome_source:
+            ink = np.asarray(Image.fromarray(interior).convert('L')) < 128
+        else:
+            ink = np.linalg.norm(interior.astype(float) - 255.0, axis=2) > 40
         pixels = interior[ink]
         if len(pixels) < max(3, int(interior.shape[0] * interior.shape[1] * 0.01)):
             continue
@@ -268,13 +275,10 @@ def simplify_color_matrix(rgb_matrix, threshold=240):
     if not records:
         raise ValueError('No filled chart cells were found')
 
-    grayscale_source = np.median([
-        max(record['color']) - min(record['color']) for record in records
-    ]) < 18
     centers = []
     for record in records:
         sample = record['color']
-        if grayscale_source:
+        if monochrome_source:
             record['color_class'] = 0
             continue
         distances = [np.linalg.norm(sample - center) for center in centers]
