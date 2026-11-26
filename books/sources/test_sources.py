@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Self-test on drawn pages (no scans needed):  python3 books/sources/test_sources.py
+"""Source-reader checks:  python3 books/sources/test_sources.py
 
 Draws a known chart in each layout (ruled grid with crosses, white-line
 woodcut, ruled grid with three kinds of mark, line drawing), reads it back
 with the matching PatternSource and checks the 0/1 chart and the interface.
+The issue #9 scan fixture also guards against a motif-pulled grid fit.
 """
 import sys
 import tempfile
@@ -112,6 +113,16 @@ def main():
                   all(np.array_equal(features, cell_features(image)) for image in
                       [np.rot90(sample, k) for k in range(4)] +
                       [np.fliplr(np.rot90(sample, k)) for k in range(4)]))
+
+    issue9 = Path(__file__).resolve().parents[2] / "patterns/multicolor/issue9-example-1.png"
+    scan = open_source(issue9, layout="symbols", symbols=4)
+    scan_charts = scan.charts()
+    pitch_error = max((float(np.max(np.abs(np.diff(g.ys) - g.py)))
+                       for g in scan._regions if len(g.ys) > 1), default=float("inf"))
+    scan_rows = [chart.cells.shape[0] for chart in scan_charts]
+    good &= check("symbols: issue #9 scan grids align and trim page margins",
+                  len(scan_charts) == 6 and scan_rows == [19, 11, 6, 8, 7, 17]
+                  and pitch_error <= 1.25)
 
     drawing_page(tmp / "draw.png")
     ch = open_source(tmp / "draw.png", layout="drawing", cells=30).charts()

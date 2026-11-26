@@ -34,6 +34,57 @@ def cell_features(cell, size=6):
 class SymbolRegion(GridRegion):
     kinds = 3
 
+    def tighten(self):
+        """Remember the high-contrast motif band inside the ruled-page crop.
+
+        Some scans show the pale cell grid in the margins between charts. The
+        base reader treats that ruling as chart content, so retain a separate
+        extent based on the darker motif ink for trimming padded rows later.
+        """
+        mask = (self.ink > 0.5).astype(np.float32)
+        profile = mask.mean(axis=1)
+        smooth = np.convolve(profile, np.ones(9, np.float32) / 9, mode="same")
+        low, high = np.percentile(smooth, [20, 90])
+        cut = low + 0.2 * (high - low)
+        active = np.flatnonzero(smooth > cut)
+        runs = []
+        for i in active:
+            if not runs or i > runs[-1][-1] + 1:
+                runs.append([int(i)])
+            else:
+                runs[-1].append(int(i))
+        substantial = [run for run in runs if len(run) >= 12]
+        self.mark_y_bounds = ((substantial[0][0], substantial[-1][-1])
+                              if substantial else None)
+        super().tighten()
+
+    def trim_mark_margins(self):
+        """Drop padded rows whose cell centres lie outside the printed motifs."""
+        if self.mark_y_bounds is None or not len(self.ys):
+            return
+        centres = self.y0 + (self.ys[:-1] + self.ys[1:]) / 2
+        keep = np.flatnonzero((centres >= self.mark_y_bounds[0]) &
+                              (centres <= self.mark_y_bounds[1]))
+        if not len(keep):
+            return
+        first, last = int(keep[0]), int(keep[-1])
+        if first == 0 and last == len(self.cells) - 1:
+            return
+        self.cells = self.cells[first:last + 1]
+        self.scores = self.scores[first:last + 1]
+        self.margin = self.margin[first:last + 1]
+        self.ys = self.ys[first:last + 2]
+
+    def fit(self):
+        """Track the pale ruling beneath dense marks, not the marks themselves.
+
+        The general ruled reader uses the 30th percentile so dark marks do not
+        pull the line fit. Multi-symbol plates can fill nearly every cell, so
+        that profile often follows the motifs instead of the faint grid. A
+        lower quantile keeps the regular ruling visible in those scans.
+        """
+        return super().fit(profile_quantile=10)
+
     def score(self, inner=0.2, q=90):
         """As the ruled reader, but a cell is scored by its darkest part
         (the q-th percentile of its interior), not its mean: with several
@@ -65,7 +116,9 @@ class SymbolRegion(GridRegion):
             self.threshold = float((c[0] + c[1]) / 2)
         self.cells = (s > self.threshold).astype(np.uint8)
         self.margin = np.abs(s - self.threshold)
-        self.trim_frame()
+        # A dense symbol chart can have a legitimate fully marked edge row;
+        # trim the padded scan margin by its motif bounds below instead.
+        self.trim_mark_margins()
         return self
 
     def classify(self, k, inner=0.2):

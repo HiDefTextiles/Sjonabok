@@ -61,9 +61,12 @@ On the 129 scans of Sibmacher 1597 and 1604, Quentel 1529 and Jobin 1600 all 596
 (charts, check pictures, json) are identical, and all 87 committed charts in `patterns/books`
 come out unchanged.
 
-The two new layouts are prototypes, checked only on drawn pages so far:
-`MultiSymbolPlateSource` scores a cell by its darkest part and cuts between the empty
-level and the lightest mark (Otsu would drop light marks), then groups marks by a coarse
-6x6 picture with k-means (fixed seed). It treats rotations and mirrors of a mark as the
-same shape and numbers each chart's kinds by frequency, leaving `0` for empty cells.
-`LineDrawingSource` fills closed outlines and fills a cell when ink covers half of it.
+`MultiSymbolPlateSource` remains a prototype; it is tested on the drawn plate and on the
+first issue #9 scan attachment. It uses a low-quantile grid profile so dense marks do not pull the
+fit away from faint ruling. It trims padded page rows using the darker motif area, scores
+a cell by its darkest part and cuts between the empty level and the lightest mark (Otsu
+would drop light marks), then groups marks by a coarse 6x6 picture with k-means (fixed
+seed). It treats rotations and mirrors of a mark as the same shape and numbers each
+chart's kinds by frequency, leaving `0` for empty cells.
+`LineDrawingSource` is still a prototype checked only on drawn pages. It fills closed
+outlines and fills a cell when ink covers half of it.
