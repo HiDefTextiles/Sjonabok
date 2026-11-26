@@ -18,7 +18,7 @@ HI <- c(blue = "#10099F", teal = "#2DD2C0", pink = "#d61f69", grey = "#9E9E9E")
 SHORT <- c(sib = "Sibmacher", quentel = "Quentel", jobin = "Jobin", vavassore = "Vavassore",
            pagano = "Pagano", vinciolo = "Vinciolo", bretschneider = "Bretschneider",
            schoensperger = "Schönsperger", tagliente = "Tagliente", fuerst = "Fürst",
-           egenolff = "Egenolff", gulfferich = "Gülfferich", hoffmann = "Hoffmann", vorsterman = "Vorsterman", latomus = "Latomus", martin = "Martin", bassee = "Bassée", koenig = "König", beatus = "Beatus", saintelucie = "Sainte-Lucie", troveon = "Troveon")
+           egenolff = "Egenolff", gulfferich = "Gülfferich", hoffmann = "Hoffmann", vorsterman = "Vorsterman", latomus = "Latomus", martin = "Martin", bassee = "Bassée", koenig = "König", beatus = "Beatus", saintelucie = "Sainte-Lucie", troveon = "Troveon", belin = "Belin")
 source_of_id <- function(id) case_when(
   id == "N.453.a" ~ "natmus453",
   id == "Þjms. Th 116" ~ "thjmsth_116",
