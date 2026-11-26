@@ -92,7 +92,7 @@ class MitreFrame:
         self.u, self.cell, self.margin, self.ink, self.paper = u, cell, margin, ink, paper
         self.width = margin + u.shape[0] * cell        # from the edge of the picture to inside the frame
 
-    def background(self, label=None):
+    def background(self, label=None, logo=None):
         b, c, m = self.u.shape[0], self.cell, self.margin
         gh, gw = (H - 2 * m) // c, (W - 2 * m) // c       # frame size in cells
         yy, xx = np.mgrid[:gh, :gw]
@@ -112,7 +112,18 @@ class MitreFrame:
         img = Image.fromarray(rgb)
         if label:
             self.side_label(img, label, x0, b * c)   # left side: Instagram puts its buttons on the right
+        if logo:
+            self.bottom_logo(img, logo, y0 + gh * c - b * c, b * c)
         return img
+
+    def bottom_logo(self, img, path, y, width):
+        """A logo on a plain strip let into the bottom of the frame, like the side label."""
+        lg = Image.open(path).convert("RGBA")
+        h = int(width * 0.7)
+        lg = lg.resize((round(lg.width * h / lg.height), h), Image.LANCZOS)
+        strip = Image.new("RGB", (lg.width + 2 * width, width), self.paper)
+        strip.paste(lg, (width, (width - h) // 2), lg)
+        img.paste(strip, ((W - strip.width) // 2, y))
 
     def side_label(self, img, text, x, width):
         """The text on a plain strip let into the left side of the frame, reading upwards."""
@@ -139,7 +150,7 @@ class Reel:
         r = np.hypot(yy - c, xx - c)
         self.delay = r / r.max()                     # ripple from the centre outwards
         band = np.array([[int(c) for c in l.strip()] for l in open(S.HERE / "../../patterns/repeat" / f"{FRAME_BAND}.txt") if l.strip()])
-        self.bg = MitreFrame(band).background(SITE)
+        self.bg = MitreFrame(band).background(SITE, S.HERE / "assets" / "hi_logo_blue.png")
         self.f_title = ImageFont.truetype(BOLD, 58)
         self.f_sub = ImageFont.truetype(FONT, 36)
         self.f_book = ImageFont.truetype(BOLD, 72)
@@ -191,17 +202,9 @@ class Reel:
         return img
 
     def footer(self, img):
-        """University of Iceland logo, faint, beside the project name, on every frame."""
-        logo = Image.open(S.HERE / "assets" / "hi_logo_blue.png").convert("RGBA")
-        h = 42
-        logo = logo.resize((round(logo.width * h / logo.height), h), Image.LANCZOS)
-        a = logo.getchannel("A").point(lambda v: int(v * 0.55))
-        logo.putalpha(a)
-        text = "Íslensk sjónabók · HiDef Textiles"
-        tw = int(self.f_small.getlength(text))
-        x = (W - (logo.width + 28 + tw)) // 2
-        img.paste(logo, (x, 1790 - h // 2), logo)
-        ImageDraw.Draw(img).text((x + logo.width + 28, 1790), text, font=self.f_small, fill=(120, 120, 120), anchor="lm")
+        """The project name at the foot of every frame (the logo sits in the frame)."""
+        ImageDraw.Draw(img).text((W // 2, 1790), "Íslensk sjónabók · HiDef Textiles", font=self.f_small,
+                                 fill=(120, 120, 120), anchor="mm")
 
     def chart_panel(self, img, dr, k, fade):
         """The chart the figure comes from, figure in pink, fading with the name."""
