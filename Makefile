@@ -89,6 +89,14 @@ $(SYMMETRY_SVG): $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/scripts/buil
 
 symmetry-examples: $(SYMMETRY_SVG)
 
+# make reading-examples SCANS=dir : redraw the pictures on the "How we read
+#                  old pattern books" page from Met scans (SCANS/<book>/<image>.webp,
+#                  books/fetch.py gets them). Small WebP files in gallery/img/reading,
+#                  committed; the script stops if a reading differs from patterns/books.
+SCANS ?= books/scans
+reading-examples:
+	python3 $(GALLERY)/scripts/reading_examples.py $(SCANS) $(GALLERY)/img/reading
+
 gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto render
 
@@ -107,7 +115,7 @@ overview-layout: $(GALLERY_DATA)
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples overview-layout
+.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples reading-examples overview-layout
 
 # ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
 # make motifs : pick a signature motif per manuscript from patterns/min

@@ -30,6 +30,8 @@ website:
         href: index.qmd
       - text: "Explore"
         href: explore.qmd
+      - text: "How we read old books"
+        href: reading.qmd
       - text: "About"
         href: about.qmd
     tools:
