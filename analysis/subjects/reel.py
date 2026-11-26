@@ -3,9 +3,10 @@ from book to book in time order, the manuscript named at the bottom.
 
     python reel.py [--kind 40] [--out work/submotifs/reel.mp4] [--txt ../../patterns/txt]
 
-The figure of each manuscript is the vote of its own charts (variants.Consensus over the
-places of the size variant that manuscript uses most), so a book's version is how its
-scribe mostly drew it. Between two books, cells that appear or vanish change in a ripple
+The figure of each manuscript is one drawing from its own charts, exactly as drawn: the
+whole joined figure, the same cells that are marked in the chart shown below it. A drawing
+standing free in its chart is preferred, and among those the one most like what the other
+books draw (a star rather than a broad flower). Between two books, cells that appear or vanish change in a ripple
 from the centre outwards; new cells flash HÍ pink, then settle to HÍ blue.
 1080 x 1920 (9:16) at 30 frames a second, written with ffmpeg.
 """
@@ -21,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 import subjects as S
 from submotifs import OUT
 from submotifs import SHIFT
-from variants import Aligner, Consensus, clean, trim
+from variants import Aligner, trim
 
 W, H, FPS = 1080, 1920, 30
 HOLD, MORPH, END, CLOSE = 1.7, 1.1, 2.5, 2.5   # under 30 s: Instagram autoplay and stories
@@ -40,9 +41,7 @@ BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 class BookFigures:
     """The figure of one size kind, as each manuscript draws it."""
 
-    def __init__(self, txt, kind, eightfold=True):
-        # a rosette has full eightfold symmetry: every turn and mirror votes, a tie drops the cell
-        self.sym = (0.0, True) if eightfold else (0.85, False)
+    def __init__(self, txt, kind):
         self.units = {u.id: u for u in S.Corpus(txt, S.PILOT_KINDS + S.BAND_KINDS).units}
         cons = {r["submotif"]: r for r in S.read_csv(OUT / "consensus.csv")}
         members = {m for m, r in cons.items() if r["kind"] == str(kind)}
@@ -51,36 +50,46 @@ class BookFigures:
         for p in S.read_csv(OUT / "places.csv"):
             if p["submotif"] in members and p["kept"] == "1":
                 by_book[self.units[p["chart"]].pattern.source][p["submotif"]].append(p)
-        # every size variant as each book draws it (the vote of that book's charts)
+        by_book_charts = {src: {p["chart"] for pl in d.values() for p in pl} for src, d in by_book.items()}
+        # every drawing of the figure in each book
         self.versions = {}
         for src in sorted(by_book, key=lambda s: int(self.dates[s]["order"])):
             self.versions[src] = [v for pl in by_book[src].values() for v in self.version(pl)]
         # a book may draw the figure more than one way (a star with thin points, a flower with
         # broad petals); show the way closest to what the books draw most, so that the reel
         # compares like with like
-        first = {src: max(v, key=lambda t: t[2]) for src, v in self.versions.items()}   # each book's main vote
         n = max(max(t[0].shape) for v in self.versions.values() for t in v) + 2
-        self.reference = self.majority([t[0] for t in first.values()], n)
-        for _ in range(3):      # settle: pick per book, take the majority of the picks, pick again
-            pick = {src: max(vs, key=lambda t: (self.likeness(t[0], n), t[2])) for src, vs in self.versions.items()}
-            self.reference = self.majority([t[0] for t in pick.values()], n)
+        # the reference is the drawing most like the drawings of the other books (a medoid):
+        # a real drawing, so no blend of a star and a flower
+        alls = [(src, t[0]) for src, v in self.versions.items() for t in v]
+        score = []
+        for i, (si, fi) in enumerate(alls):
+            self.reference = self.on_grid(fi, n)
+            score.append(np.mean([self.likeness(fj, n) for sj, fj in alls if sj != si]))
+        self.reference = self.on_grid(alls[int(np.argmax(score))][1], n)
+        # each book: its drawing most like the reference; one standing free in its chart is a
+        # little preferred
+        pick = {src: max(vs, key=lambda t: self.likeness(t[0], n) * (1.0 if t[2] else 0.9))
+                for src, vs in self.versions.items()}
         self.figures, self.charts = [], []
         for src, (fig, chart, charts) in pick.items():
-            self.figures.append((src, fig, charts))
+            self.figures.append((src, fig, len({c for c in by_book_charts[src]})))
             self.charts.append(chart)
 
     def version(self, pl):
-        """(figure, marked chart, number of charts) for one book's places of one sub-motif."""
-        cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
-        ref = max((c for *_, c in cuts), key=lambda c: c.sum())
-        con = Consensus(ref, cuts).settle()
-        fig = clean(con.cells, *self.sym)   # stray cells dropped, symmetry evened out
-        best = max(range(len(pl)), key=lambda i: con.fit[i])
-        out = [(fig, self.marked(pl[best], fig), len({p["chart"] for p in pl}))]
-        # and each single drawing, in case the vote blurred a star into a broad flower
-        for p, (*_, c) in zip(pl, cuts):
-            f = clean(c, *self.sym)
-            out.append((f, self.marked(p, f), 1))
+        """(figure, marked chart, whole) for each single drawing of one book's places: the figure
+        is exactly the cells drawn in that chart (the whole joined figure, nothing voted or
+        evened out), and the same cells are the ones marked in the chart."""
+        out = []
+        for p in pl:
+            piece, py, px, whole = self.cut(p)
+            lab, k = ndimage.label(piece, np.ones((3, 3)))
+            if k > 1:            # only the figure itself, not a bit of pattern beside it
+                sizes = ndimage.sum(piece, lab, range(1, k + 1))
+                piece = lab == 1 + int(np.argmax(sizes))
+            ys, xs = np.nonzero(piece)
+            fig = piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+            out.append((fig, self.marked(p["chart"], fig, py + ys.min(), px + xs.min()), int(whole)))
         return out
 
     @staticmethod
@@ -99,16 +108,15 @@ class BookFigures:
         g = Aligner(self.reference).align(self.on_grid(f, n))[SHIFT:SHIFT + n, SHIFT:SHIFT + n]
         return (g & self.reference).sum() / max(1, (g | self.reference).sum())
 
-    def marked(self, p, fig):
-        y, x, h, w = (int(p[k]) for k in ("row", "col", "height", "width"))
-        m = np.asarray(self.units[p["chart"]].cells).astype(int)
-        cut = m[y:y + h, x:x + w].astype(bool)
-        mk = cut & Aligner(cut).align(fig)[SHIFT:SHIFT + h, SHIFT:SHIFT + w]
-        m[y:y + h, x:x + w][mk] = 2
-        if self.units[p["chart"]].kind in S.BAND_KINDS:     # a band: just the stretch around the figure
+    def marked(self, chart, fig, y, x):
+        """The chart with exactly the figure's cells marked 2."""
+        m = np.asarray(self.units[chart].cells).astype(int)
+        h, w = fig.shape
+        m[y:y + h, x:x + w][fig] = 2
+        if self.units[chart].kind in S.BAND_KINDS:     # a band: just the stretch around the figure
             a, b = max(0, x - 2 * w), min(m.shape[1], x + 3 * w)
             m = m[:, a:b]
-        return p["chart"], m
+        return chart, m
 
     def cut(self, p, grow=3):
         """The place, grown to the whole figure: the sub-motif found may be a little smaller
@@ -131,7 +139,7 @@ class BookFigures:
             core = win & inner
             piece = win & ndimage.binary_dilation(core, np.ones((3, 3)))
             ys, xs = np.nonzero(piece)
-        return piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        return piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1], y0 + ys.min(), x0 + xs.min(), not touches
 
 
 class MitreFrame:
