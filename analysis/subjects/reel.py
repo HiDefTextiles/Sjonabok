@@ -30,6 +30,7 @@ PAPER = np.array((255, 255, 255), float)
 GRID = np.array((236, 236, 244), float)
 INK = (38, 38, 38)
 FRAME_BAND = "thjms2008-14_522_p3"   # border band for the frame (patterns/repeat)
+OWN_CENTRE = 3   # each book keeps its own centre square of 2*3+1 cells; arms shared (0: all its own)
 SITE = "hideftextiles.github.io/Sjonabok"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -137,7 +138,7 @@ class MitreFrame:
 
 
 class Reel:
-    def __init__(self, books, title, subtitle):
+    def __init__(self, books, title, subtitle, own_centre=OWN_CENTRE):
         self.books, self.title, self.subtitle = books, title, subtitle
         self.n = max(max(f.shape) for _, f, _ in books.figures) + 2
         self.cell = 640 // self.n
@@ -145,6 +146,13 @@ class Reel:
         for k in range(1, len(self.grids)):        # turn each to the least change from the last
             g = Aligner(self.grids[k - 1]).align(self.grids[k])
             self.grids[k] = g[SHIFT:SHIFT + self.n, SHIFT:SHIFT + self.n]
+        if own_centre:
+            # the arms are shared: the majority of all books; only the centre is each book's own
+            shared = np.mean(self.grids, 0) >= 0.5
+            cy = (self.n - 1) / 2
+            yy, xx = np.mgrid[:self.n, :self.n]
+            centre = np.maximum(abs(yy - cy), abs(xx - cy)) <= own_centre
+            self.grids = [np.where(centre, g, shared) for g in self.grids]
         c = (self.n - 1) / 2
         yy, xx = np.mgrid[:self.n, :self.n]
         r = np.hypot(yy - c, xx - c)
@@ -243,7 +251,7 @@ class Reel:
         cols = 3
         tile = 320
         for i, (src, f, _) in enumerate(figs):
-            g = self.centre(f)
+            g = self.grids[i]
             z = (tile - 40) // self.n
             I = Image.fromarray(self.colours(g).astype(np.uint8)).resize((self.n * z, self.n * z), Image.NEAREST)
             cx = (W - cols * tile) // 2 + (i % cols) * tile
@@ -314,10 +322,12 @@ def main():
     ap.add_argument("--kind", type=int, default=40)
     ap.add_argument("--title", default="The eight-pointed rosette")
     ap.add_argument("--out", default=str(OUT / "reel.mp4"))
+    ap.add_argument("--own-centre", type=int, default=OWN_CENTRE,
+                    help="half-width of the centre each book keeps; the arms are the books' majority (0: off)")
     a = ap.parse_args()
     books = BookFigures(a.txt, a.kind)
     sub = f"as {len(books.figures)} manuscripts draw it, 1600s–1800s"
-    reel = Reel(books, a.title, sub)
+    reel = Reel(books, a.title, sub, a.own_centre)
     silent = a.out.replace(".mp4", "_silent.mp4")
     reel.write(silent)
     add_music(silent, a.out)
