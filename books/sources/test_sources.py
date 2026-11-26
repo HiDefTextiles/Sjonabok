@@ -44,6 +44,19 @@ def ruled_page(sym, path, marks=("cross",), P=PR):
             cv2.rectangle(img, (a + 2, b + 2), (a + P - 2, b + P - 2), 20, -1)
         elif kind == "dot":
             cv2.circle(img, (a + P // 2, b + P // 2), 3, 20, -1)
+        elif kind == "plus":
+            cv2.line(img, (a + P // 2, b + 3), (a + P // 2, b + P - 3), 20, 2)
+            cv2.line(img, (a + 3, b + P // 2), (a + P - 3, b + P // 2), 20, 2)
+        elif kind == "hatch":
+            for x in range(a + 5, a + P - 3, 4):
+                cv2.line(img, (x, b + 3), (x, b + P - 3), 20, 2)
+        elif kind == "fwd":
+            cv2.line(img, (a + 2, b + P - 2), (a + P - 2, b + 2), 20, 2)
+        elif kind == "back":
+            cv2.line(img, (a + 2, b + 2), (a + P - 2, b + P - 2), 20, 2)
+        elif kind == "half":
+            pts = np.array([(a + 2, b + 2), (a + P - 2, b + 2), (a + 2, b + P - 2)], np.int32)
+            cv2.fillPoly(img, [pts], 20)
     img = cv2.GaussianBlur(img, (5, 5), 1.2)         # ink spread of a print
     img = np.clip(img + RNG.normal(0, 6, img.shape), 0, 255).astype(np.uint8)   # paper grain
     cv2.imwrite(str(path), img)
@@ -102,6 +115,17 @@ def main():
     good &= check("symbols: 0/1 chart and three mark kinds kept apart",
                   bool(ch) and (ch[0].cells == (sym > 0)).all() and same_partition)
 
+    names = ("solid", "plus", "hatch", "fwd", "back", "half")
+    chars = np.array(list(".#+|/\\F"))
+    sym = known(16, 26, kinds=len(names))
+    ruled_page(sym, tmp / "marks.png", marks=names, P=20)
+    ch = open_source(tmp / "marks.png", layout="marks").charts()
+    got = ch[0].layers["marks"] if ch else None
+    ok = got is not None and got.shape == sym.shape
+    agree = (got == chars[sym]).mean() if ok else 0
+    good &= check(f"marks: named kinds read back ({agree:.1%} of cells)",
+                  ok and agree > 0.95 and (ch[0].cells == (sym > 0)).mean() > 0.98)
+
     drawing_page(tmp / "draw.png")
     ch = open_source(tmp / "draw.png", layout="drawing", cells=30).charts()
     c = ch[0].cells if ch else np.zeros((1, 1))
@@ -120,7 +144,7 @@ def main():
                   and (tmp / "out" / f"{ch.name}.json").exists() and "layout" not in out[0])
     good &= check("interface: every layout is a PatternSource returning Chart",
                   all(isinstance(c, Chart) for c in src.charts()) and set(LAYOUTS) ==
-                  {"ruled", "woodcut", "symbols", "drawing"})
+                  {"ruled", "woodcut", "symbols", "marks", "drawing"})
     sys.exit(0 if good else 1)
 
 

@@ -8,7 +8,8 @@
 Layouts (PatternSource subclasses):
     ruled     RuledGridSource         printed ruled grid, a mark per filled cell
     woodcut   WhiteLineWoodcutSource  black block, empty cells cut out white
-    symbols   MultiSymbolPlateSource  ruled grid, several kinds of mark
+    symbols   MultiSymbolPlateSource  ruled grid, several kinds of mark (unnamed clusters)
+    marks     NamedMarkPlateSource    ruled grid, every cell named (. # + | / \\ ...)
     drawing   LineDrawingSource       free line drawing, grid chosen by us
 
 With book= and no layout=, the layout comes from the book's "kind" in
@@ -20,9 +21,11 @@ from .ruled import RuledGridSource
 from .woodcut import WhiteLineWoodcutSource
 from .symbols import MultiSymbolPlateSource
 from .drawing import LineDrawingSource
+from .marked import NamedMarkPlateSource
 
 LAYOUTS = {cls.layout: cls for cls in
-           (RuledGridSource, WhiteLineWoodcutSource, MultiSymbolPlateSource, LineDrawingSource)}
+           (RuledGridSource, WhiteLineWoodcutSource, MultiSymbolPlateSource, NamedMarkPlateSource,
+            LineDrawingSource)}
 
 # books whose layout the "kind" column does not tell (add as books arrive)
 LAYOUT_BY_BOOK = {}
@@ -50,5 +53,5 @@ def open_source(path, book=None, layout=None, **options) -> PatternSource:
 
 
 __all__ = ["Chart", "PatternSource", "Provenance", "RuledGridSource", "WhiteLineWoodcutSource",
-           "MultiSymbolPlateSource", "LineDrawingSource", "LAYOUTS", "open_source", "layout_for",
+           "MultiSymbolPlateSource", "NamedMarkPlateSource", "LineDrawingSource", "LAYOUTS", "open_source", "layout_for",
            "CHART_LICENCE", "CREDIT"]

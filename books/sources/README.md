@@ -13,7 +13,8 @@ prints its charts. Every subclass returns the same thing, a list of `Chart` obje
 ```
 PatternSource (abstract: read(), check_image())
 ├── RuledGridSource          "ruled"    ruled counted grid, one mark per filled cell   (Sibmacher)
-│   └── MultiSymbolPlateSource "symbols" ruled grid, several kinds of mark            (prototype, Fürst-type plates)
+│   ├── MultiSymbolPlateSource "symbols" ruled grid, several kinds of mark, unnamed clusters (prototype)
+│   └── NamedMarkPlateSource   "marks"   ruled grid, every cell named: . # + | / \ ...  (prototype, Sibmacher)
 ├── WhiteLineWoodcutSource   "woodcut"  black block, empty cells cut out white         (Quentel, Jobin, Schönsperger)
 └── LineDrawingSource        "drawing"  free drawing, no grid: filled, put on a chosen grid (prototype)
 ```
@@ -48,6 +49,30 @@ for ch in src.charts():
 
 A new book with a layout `kind` does not name goes in `LAYOUT_BY_BOOK` in `__init__.py`.
 A new layout is a new subclass with a `layout` key, added to `LAYOUTS`.
+
+## Named marks (layout "marks")
+
+Sibmacher's cells are not only filled or empty. `NamedMarkPlateSource` gives every cell one
+character (`books/sources/marks.py`):
+
+| | kind | | kind |
+|---|---|---|---|
+| `.` | empty | `#` | solid |
+| `+` | plus (cross on the cell's axes) | `x` | diagonal cross |
+| `\|` | vertical hatching | `-` | horizontal hatching |
+| `/` `\` | one diagonal (four of them, `\ /` over `/ \`, draw the large star) | `< > ^ v` | wedge: two diagonals meeting mid-side |
+| `F 7 L J` | half cell, the triangle in that corner is inked | `?` | a mark none of the above fits |
+
+The kinds go to `<chart>.marks.txt` (with `--sidecars`), their counts to the json, and each
+2x2 star to `meta["stars"]`. The 0/1 chart is derived from the kinds: `--option filled=#+`
+counts only solid and plus as 1; the default counts every mark.
+
+Each cell is cut between its own ruling lines, found again near the cell (Sibmacher's ruling
+drifts up to a third of a cell from the fitted comb, and a rule left inside a cell reads as a
+plus or a hatch). On plate 12 of Sibmacher 1597 (sib1597_12_p1) about 6 % of cells come out `?`,
+mostly a cell whose cut still holds part of a rule. Against the committed 0/1 chart of that
+plate: plus cells are 1 (2197 of 2263), hatched cells mostly 1 (496 of 547), the star diagonals
+0 (114 of 120), and the `?` cells split about evenly, so they are the cells to check by eye.
 
 ## Checks
 
