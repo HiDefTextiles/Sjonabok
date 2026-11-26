@@ -11,6 +11,7 @@
 //   natmus : a Nationalmuseet photo on samlinger.natmus.dk (CC BY-SA),
 //            shown with its credit line.
 //   commons: a public-domain / CC0 scan on Wikimedia Commons.
+//   open   : any other openly licensed image, by full address.
 // Photos are hotlinked, never copied into the repository.
 //
 // Alignment: original/overlays.csv gives, per pattern and photo, the four
@@ -215,6 +216,17 @@
       record: (r) => `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(r.image_id)}`,
       credit: (r, p, rec) => `Original: ${r.credit || p.source_label}, via <a href="${rec}" target="_blank" rel="noopener">Wikimedia Commons</a>.`,
     },
+    // open : any openly licensed image (CC0, CC BY, CC BY-SA, public domain),
+    //        e.g. DigitaltMuseum photos found through Europeana. image_id is the
+    //        full image address, record_id the full record address, and credit
+    //        holds the licence line the provider asks for.
+    open: {
+      label: "Open-licence photo",
+      allowed: () => true,
+      url: (r) => r.image_id,
+      record: (r) => r.record_id,
+      credit: (r, p, rec) => `Original: ${r.credit || p.source_label} (<a href="${rec}" target="_blank" rel="noopener">record</a>).`,
+    },
   };
 
   // ── the view in the detail dialog ───────────────────────────────────────
@@ -249,7 +261,7 @@
       this.photos = this.rows.filter((r) => PHOTO_SOURCES[r.source]);
       const sel = this.$("o-source");
       sel.innerHTML = `<option value="mockup">Mockup (simulated page)</option>` +
-        this.photos.map((r, i) => `<option value="photo:${i}">${PHOTO_SOURCES[r.source].label} ${r.image_id.split("/").pop()}</option>`).join("");
+        this.photos.map((r, i) => `<option value="photo:${i}">${PHOTO_SOURCES[r.source].label} ${r.image_id.split("/").pop().split("?")[0]}</option>`).join("");
       // open on a photo that may be shown; otherwise on the mockup
       const first = this.photos.findIndex((r) => PHOTO_SOURCES[r.source].allowed(this.data));
       this.src = first >= 0 ? `photo:${first}` : "mockup";
