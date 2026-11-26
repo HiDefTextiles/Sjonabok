@@ -165,6 +165,8 @@ class RulingGrid(GraphGrid):
         for (r, k), j in at.items():
             gx[r - r0, k - k0], gy[r - r0, k - k0] = c[j]
         self.px = float(np.nanmedian(np.diff(gx, axis=1))); self.py = float(np.nanmedian(np.diff(gy, axis=0)))
+        if not (np.isfinite(self.px) and np.isfinite(self.py)) or len(at) < 30:
+            return None
         self.p = (self.px + self.py) / 2
         for _ in range(max(h, w)):                         # fill holes from neighbours
             miss = np.isnan(gx)
@@ -240,7 +242,7 @@ def main():
         rgb = cv2.cvtColor(cv2.imread(a.colour, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
         assert rgb.shape[:2] == (H, W), "colour page must match the grey page"
         g = RulingGrid(rgb[y0:y1, x0:x1], crop, page.path.stem).fit()
-    else:
+    if g is None:
         g = GraphGrid(crop, page.path.stem).fit()
     if g is not None:
         if a.colour and a.red_is == "ink":
