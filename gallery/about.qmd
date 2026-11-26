@@ -50,6 +50,8 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 | *Ein new getruckt model Büchli* | Johann Schönsperger the Younger, Augsburg 1529 | The Met, 18.66.2 | 62 |
 | *Modelbuch aller art nehens und stickens* | Christian Egenolff, Frankfurt 1535 | The Met (scans on [archive.org](https://archive.org/details/Egenolff1535ModelbuchAllerMET)) | 2 |
 | *Modelbuch new aller art nehens und stickens* | Hermann Gülfferich, Frankfurt 1553 (first ed. 1545) | The Met (scans on [archive.org](https://archive.org/details/Gulfferich1553ModelbuchMET)) | 27 |
+| *Eyn newe kunstlich moetdelboech* | Peter Quentel, Cologne 1532 | The Met (scans on [archive.org](https://archive.org/details/Quentel1532EynNeweMET)) | 8 |
+| *Ce est ung tractat de la noble art de leguille* | Willem Vorsterman, Antwerp 1527 | The Met (scans on [archive.org](https://archive.org/details/VostermanAf1527CeEstUngMET)) | 40 |
 | Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | 12 |
 | *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
 | Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
