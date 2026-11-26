@@ -47,6 +47,7 @@ class WarpedGrid(WoodcutGrid):
                 if y0 < 0 or x0 < 0 or y1 > H or x1 > W:
                     s[a, b] = 0; continue
                 s[a, b] = self.light[y0:y1, x0:x1].mean()
+        self.s = s
         t, _ = cv2.threshold((s * 255).astype(np.uint8), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         self.threshold = t / 255
         hi = ndimage.percentile_filter(s, 92, size=11, mode="nearest")
