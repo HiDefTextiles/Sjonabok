@@ -54,6 +54,7 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 | *Ce est ung tractat de la noble art de leguille* | Willem Vorsterman, Antwerp 1527 | The Met (scans on [archive.org](https://archive.org/details/VostermanAf1527CeEstUngMET)) | 40 |
 | *Eyn new kunstlich Modelbuech* | Peter Quentel, Cologne 1544 | BnF Gallica (copy on [archive.org](https://archive.org/details/quentell-1544-eyn-new-kuenstich-bnfbpt-6k-1510823d)) | 1 |
 | *Schön newes Modelbuch* | Sigismund Latomus, Frankfurt 1608 | The Met, 24.43 (scans on [archive.org](https://archive.org/details/Latomus1608SchonMET)) | 82 |
+| *Schön newes Modelbuch von hundert und achtzig* | Sigismund Latomus, Frankfurt 1607 | Koninklijke Bibliotheek (scans on [archive.org](https://archive.org/details/latomus-1607-schon-newes-modelbuch-kb)) | 47 |
 | *Schön neues Modelbuch* | Jost Martin, Strasbourg 1599 | Library of Congress (scans on [archive.org](https://archive.org/details/martin1599schonloc)) | 51 |
 | *New vnd vollkömmlich Modelbuch* | Romanus Beatus for Nicolaus Bassée, Frankfurt 1599 | Württembergische Landesbibliothek (scans on [archive.org](https://archive.org/details/beatus-1549-new-vnd-vollkomich-wlb)) | 43 |
 | *Schön neues Modelbuch* | Beatus heirs and Bitsch, Frankfurt 1601 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB31962000727465Images)) | 54 |
