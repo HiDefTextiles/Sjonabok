@@ -103,7 +103,7 @@ def trim(m):
     return m[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
 
 
-def clean(m, agree=0.85):
+def clean(m, agree=0.85, strict=False):
     """Tidy a figure: even out the symmetry it nearly has, and drop stray cells.
 
     Each of the 8 turns and mirrors (with a shift of up to one cell, for figures whose centre
@@ -111,7 +111,8 @@ def clean(m, agree=0.85):
     of its symmetries; every cell then takes the majority over those symmetric copies, so a
     cell a scribe added or left out on one arm only is settled by the other arms. Finally a
     cell touching no other filled cell (a stray pixel) is dropped, and so is anything not
-    joined to the figure's largest piece (bits of the neighbouring pattern)."""
+    joined to the figure's largest piece (bits of the neighbouring pattern). With agree=0 and
+    strict=True every turn and mirror counts and a tie drops the cell: full eightfold symmetry."""
     m = trim(m.astype(bool))
     s = max(m.shape) + 2
     sq = np.zeros((s, s), bool)
@@ -129,7 +130,8 @@ def clean(m, agree=0.85):
         if best >= agree:
             copies.append(bv)
     vote = np.mean(copies, 0)
-    out = (vote > 0.5) | ((vote == 0.5) & sq)
+    # strict: a tie drops the cell (for a figure known to be fully symmetric, like a rosette)
+    out = (vote > 0.5) | ((vote == 0.5) & sq & (not strict))
     nb = ndimage.convolve(out.astype(int), np.ones((3, 3), int), mode="constant") - out
     out &= nb > 0
     # only the figure itself: the largest joined piece (cells touching at a corner count)

@@ -15,6 +15,7 @@ import subprocess
 from collections import Counter, defaultdict
 
 import numpy as np
+from scipy import ndimage
 from PIL import Image, ImageDraw, ImageFont
 
 import subjects as S
@@ -39,7 +40,9 @@ BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 class BookFigures:
     """The figure of one size kind, as each manuscript draws it."""
 
-    def __init__(self, txt, kind):
+    def __init__(self, txt, kind, eightfold=True):
+        # a rosette has full eightfold symmetry: every turn and mirror votes, a tie drops the cell
+        self.sym = (0.0, True) if eightfold else (0.85, False)
         self.units = {u.id: u for u in S.Corpus(txt, S.PILOT_KINDS + S.BAND_KINDS).units}
         cons = {r["submotif"]: r for r in S.read_csv(OUT / "consensus.csv")}
         members = {m for m, r in cons.items() if r["kind"] == str(kind)}
@@ -58,9 +61,11 @@ class BookFigures:
         first = {src: max(v, key=lambda t: t[2]) for src, v in self.versions.items()}   # each book's main vote
         n = max(max(t[0].shape) for v in self.versions.values() for t in v) + 2
         self.reference = self.majority([t[0] for t in first.values()], n)
+        for _ in range(3):      # settle: pick per book, take the majority of the picks, pick again
+            pick = {src: max(vs, key=lambda t: (self.likeness(t[0], n), t[2])) for src, vs in self.versions.items()}
+            self.reference = self.majority([t[0] for t in pick.values()], n)
         self.figures, self.charts = [], []
-        for src, vs in self.versions.items():
-            fig, chart, charts = max(vs, key=lambda t: (self.likeness(t[0], n), t[2]))
+        for src, (fig, chart, charts) in pick.items():
             self.figures.append((src, fig, charts))
             self.charts.append(chart)
 
@@ -69,12 +74,12 @@ class BookFigures:
         cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
         ref = max((c for *_, c in cuts), key=lambda c: c.sum())
         con = Consensus(ref, cuts).settle()
-        fig = clean(con.cells)   # stray cells dropped, near symmetry evened out
+        fig = clean(con.cells, *self.sym)   # stray cells dropped, symmetry evened out
         best = max(range(len(pl)), key=lambda i: con.fit[i])
         out = [(fig, self.marked(pl[best], fig), len({p["chart"] for p in pl}))]
         # and each single drawing, in case the vote blurred a star into a broad flower
         for p, (*_, c) in zip(pl, cuts):
-            f = clean(c)
+            f = clean(c, *self.sym)
             out.append((f, self.marked(p, f), 1))
         return out
 
@@ -105,9 +110,28 @@ class BookFigures:
             m = m[:, a:b]
         return p["chart"], m
 
-    def cut(self, p):
+    def cut(self, p, grow=3):
+        """The place, grown to the whole figure: the sub-motif found may be a little smaller
+        than the figure drawn (a star without its points), so the joined piece of the chart
+        around it is taken, within `grow` cells, unless it runs on into other pattern."""
         y, x, h, w = (int(p[k]) for k in ("row", "col", "height", "width"))
-        return np.asarray(self.units[p["chart"]].cells)[y:y + h, x:x + w].astype(bool)
+        m = np.asarray(self.units[p["chart"]].cells).astype(bool)
+        y0, x0 = max(0, y - grow), max(0, x - grow)
+        win = m[y0:y + h + grow, x0:x + w + grow]
+        inner = np.zeros_like(win)
+        inner[y - y0:y - y0 + h, x - x0:x - x0 + w] = True
+        lab, k = ndimage.label(win, np.ones((3, 3)))
+        ids = np.unique(lab[inner & win])
+        piece = np.isin(lab, ids[ids > 0])
+        ys, xs = np.nonzero(piece)
+        touches = ys.min() == 0 or xs.min() == 0 or ys.max() == win.shape[0] - 1 or xs.max() == win.shape[1] - 1
+        if len(ys) == 0 or touches:
+            # joined to more pattern: take one ring of cells joined to the place (the tips
+            # of a star's points), not the pattern it runs on into
+            core = win & inner
+            piece = win & ndimage.binary_dilation(core, np.ones((3, 3)))
+            ys, xs = np.nonzero(piece)
+        return piece[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
 
 
 class MitreFrame:
