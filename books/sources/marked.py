@@ -12,7 +12,17 @@ a cell is 1 when its kind is in `filled` (default: every mark). The kinds
 are kept as chart.layers["marks"] (written as <chart>.marks.txt with
 --sidecars), with their counts in meta["marks"]. A 2x2 block of diagonals
 drawn as one X (\\ / over / \\) is listed in meta["stars"] by its top-left cell.
+
+Colours: different marks usually mean different colours (Helga: filled and
+crossed cells are two colours), so the marks are also turned into a chart
+of digits, 0 = empty, 1, 2, ... (chart.layers["colours"], written as
+<chart>.colours.txt with --sidecars). The mapping mark -> digit is
+books/sources/mark_colours.csv: rows for book "*" are the default, rows
+for a book code override them; the option colours="#=1,+=1" overrides both.
 """
+import csv
+from pathlib import Path
+
 import cv2
 import numpy as np
 
@@ -23,9 +33,29 @@ COLOURS = {"#": (20, 20, 20), "+": (40, 40, 230), "x": (160, 40, 160), "|": (40,
            "-": (40, 150, 150), "/": (220, 90, 20), "\\": (220, 160, 20), "?": (0, 140, 255)}
 
 
+COLOURS_CSV = Path(__file__).with_name("mark_colours.csv")
+
+
+def colour_map(book=None, override=None):
+    """mark -> digit for a book: defaults, then the book's rows, then the option."""
+    m = {}
+    with open(COLOURS_CSV, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    for want in ("*", book):
+        for r in rows:
+            if want and r["book"] == want:
+                m[r["mark"]] = int(r["colour"])
+    for item in (override or "").split(","):
+        if "=" in item:
+            k, v = item.rsplit("=", 1)
+            m[k.strip()] = int(v)
+    return m
+
+
 class MarkRegion(GridRegion):
     classifier = MarkClassifier()
     filled = FILLED
+    colour_map = colour_map()
 
     def score(self):
         sub = self.ink[self.y0:self.y1, self.x0:self.x1]
@@ -68,6 +98,10 @@ class MarkRegion(GridRegion):
         order = {k: i for i, k in enumerate(KINDS)}
         ch.meta["marks"] = {str(k): int(v) for k, v in sorted(zip(kinds, n), key=lambda t: order.get(t[0], 99))}
         ch.meta["stars"] = self.stars()
+        cmap = self.colour_map
+        ch.layers["colours"] = np.vectorize(lambda k: cmap.get(k, 9), otypes=[np.uint8])(self.marks) \
+            if self.marks.size else np.zeros(self.marks.shape, np.uint8)
+        ch.meta["colours"] = {k: v for k, v in cmap.items() if k in ch.meta["marks"]}
         return ch
 
 
@@ -76,17 +110,20 @@ class NamedMarkPlateSource(RuledGridSource):
 
     options: filled="#+x|-/\\<>^vF7LJ?"  kinds that count as 1 in the 0/1 chart
              (default every mark; e.g. filled="#+" for solid and plus only)
+             colours="#=1,+=2"  mark -> colour digit, over mark_colours.csv
     """
     layout = "marks"
     description = "ruled grid, every cell named: empty, solid, plus, hatching, diagonals, half cells"
 
-    def __init__(self, path, provenance=None, filled=None, **options):
+    def __init__(self, path, provenance=None, filled=None, colours=None, **options):
         super().__init__(path, provenance, **options)
         self.filled = set(filled) if filled else FILLED
-        filled_set = self.filled
+        self.colours = colour_map(provenance.book if provenance else None, colours)
+        filled_set, cmap = self.filled, self.colours
 
         class Region(MarkRegion):
             filled = filled_set
+            colour_map = cmap
         self.region_class = Region
 
     def check_image(self, path):
