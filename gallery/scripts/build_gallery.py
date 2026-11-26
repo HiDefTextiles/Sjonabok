@@ -61,6 +61,9 @@ SOURCE_LABELS = {
     "sib1597": "Sibmacher 1597",
     "sib1604": "Sibmacher 1604",
     "quentel1529": "Quentel 1529",
+    "jobin1600": "Jobin 1600",
+    "schoensperger1529": "Schönsperger 1529",
+    "tagliente1530": "Tagliente 1530", "fuerst1660": "Fürst 1660",
 }
 
 # Which collection a source belongs to: the Icelandic manuscripts of
@@ -83,7 +86,7 @@ BOOKS = read_books()
 SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
     "#d6336c", "#e8590c", "#d99a00", "#82a31a", "#2f9e44",
     "#0c9a9a", "#1c7ed6", "#3b4cc0", "#7048e8", "#ae3ec9",
-    "#5c5f66", "#868e96", "#343a40",  # printed books: greys
+    "#5c5f66", "#868e96", "#343a40", "#495057", "#adb5bd", "#212529", "#6c757d",  # printed books: greys
 ]))
 
 # Plain-language names, written for a band running left to right
