@@ -124,7 +124,23 @@ def main():
                   len(scan_charts) == 6 and scan_rows == [19, 11, 6, 8, 7, 17]
                   and pitch_error <= 1.25)
     good &= check("symbols: issue #9 IDs rank motifs across the full page",
-                  scan._symbol_counts[1:5].tolist() == [2427, 1896, 1575, 829])
+                  scan._symbol_counts[1:5].tolist() == [3153, 2045, 938, 618])
+    widths = {chart.cells.shape[1] for chart in scan_charts}
+    edges = all(chart.cells[:, 0].any() and chart.cells[:, -1].any() for chart in scan_charts)
+    good &= check("symbols: issue #9 bands share one column grid, no padded columns",
+                  widths == {115} and edges)
+
+    # Each banner repeats; a grid that straddles glyphs breaks the repeat.
+    def repeat_agreement(symbols):
+        best = 0.0
+        for shift in range(3, symbols.shape[1] // 2 + 1):
+            left, right = symbols[:, :-shift], symbols[:, shift:]
+            active = (left > 0) | (right > 0)
+            best = max(best, float(((left == right) & active).sum() / max(1, active.sum())))
+        return best
+    agreement = [repeat_agreement(chart.layers["symbols"]) for chart in scan_charts]
+    good &= check("symbols: issue #9 banners repeat (>= 97% of marked cells agree)",
+                  min(agreement) >= 0.97)
 
     # Same glyphs across bands share IDs; page totals set the rank.
     motifs = []

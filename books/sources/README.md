@@ -62,8 +62,13 @@ On the 129 scans of Sibmacher 1597 and 1604, Quentel 1529 and Jobin 1600 all 596
 come out unchanged.
 
 `MultiSymbolPlateSource` remains a prototype; it is tested on the drawn plate and on the
-first issue #9 scan attachment. It uses a low-quantile grid profile so dense marks do not pull the
-fit away from faint ruling. It trims padded page rows using the darker motif area, scores
+issue #9 page capture. It uses a low-quantile grid profile so dense marks do not pull the
+fit away from faint ruling. The followed lines are then replaced by one evenly spaced
+lattice per axis (a robust fit, so a heavy major line that pulled the follower a few pixels
+off for a stretch no longer cuts glyphs in half), nudged by at most 1.5 px so its lines run
+through the white gaps between glyphs. Chart bands on one unrotated page share a single
+column lattice, pooled from all bands, so every banner gets the same width. It trims padded
+page rows and columns using the darker motif area (columns page-wide), scores
 a cell by its darkest part and cuts between the empty level and the lightest mark (Otsu
 would drop light marks), then groups marks by a coarse 6x6 picture with k-means (fixed
 seed). It treats rotations and mirrors of a mark as the same shape, shares IDs across

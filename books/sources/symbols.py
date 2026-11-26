@@ -55,31 +55,104 @@ def cluster_page_features(feature_groups, kinds):
     return groups, centres[order], counts[order]
 
 
+def mark_profile(ink, axis, q=10):
+    """How much mark ink lies on each line across `axis`.
+
+    A ruling line (and the soft edge of a blurred one) is equally dark
+    along its whole length, so the low quantile of each line is
+    subtracted: what is left is the marks only, and the narrow white gaps
+    between neighbouring glyphs show up as minima."""
+    return np.clip(ink.mean(axis=axis) - np.percentile(ink, q, axis=axis), 0, None)
+
+
+def fit_lattice(lines, tol=1.5):
+    """Fit x = phase + i * pitch to the line follower's snapped lines.
+
+    The follower snaps each line within +-3 px, which absorbs paper
+    stretch, but on a clean capture a heavy major line (every tenth) can
+    pull it a few pixels off for a stretch. Lines more than `tol` px off
+    the fit are dropped and the fit repeated. Returns (pitch, phase), or
+    None for fewer than four lines."""
+    lines = np.asarray(lines, float)
+    if len(lines) < 4:
+        return None
+    i = np.arange(len(lines))
+    keep = np.ones(len(lines), bool)
+    for _ in range(5):
+        pitch, phase = np.polyfit(i[keep], lines[keep], 1)
+        new = np.abs(lines - (phase + pitch * i)) <= tol
+        if new.sum() < 4 or (new == keep).all():
+            break
+        keep = new
+    return float(pitch), float(phase)
+
+
+def gap_lattice(profile, pitch, phase0, lo, hi, span=0.03, shift=1.5, fixed_pitch=False):
+    """Refine a ruling lattice so its lines run through the glyph gaps.
+
+    Start from the fitted ruling (pitch, phase0) and search pitch within
+    +-span and phase within +-shift px for the evenly spaced
+    boundaries with the least mark ink between `lo` and `hi`. A screen
+    capture rendered at a fractional pitch then stays within half a pixel
+    of the glyphs across the whole page; on a blurred print, where marks
+    have no clear gaps, the profile is flat and the ruling wins.
+    Returns (pitch, phase)."""
+    pitches = [pitch] if fixed_pitch else np.arange(pitch - span, pitch + span, 0.002)
+    x = np.arange(len(profile))
+    best = (np.inf, pitch, 0.0)
+    # The same boundaries (counted from the left end of the motif) are
+    # compared for every candidate, so a smaller pitch cannot win by
+    # squeezing in an extra boundary over empty paper.
+    k = np.arange(0, int(round((hi - lo) / pitch)) + 2)
+    for p in pitches:
+        # phase0 moved to the left end of the motif, +- `shift` px
+        base = phase0 + p * np.floor((lo - p - phase0) / p)
+        phases = base + np.arange(-shift, shift + 1e-9, 0.1)
+        pos = phases[:, None] + p * k[None, :]
+        cost = np.interp(pos, x, profile).mean(axis=1)
+        i = int(np.argmin(cost))
+        if cost[i] < best[0] - 1e-9:
+            best = (float(cost[i]), float(p), float(phases[i] % p))
+    return best[1], best[2]
+
+
+def lattice_lines(pitch, phase, size):
+    """Every lattice line phase + k * pitch inside [0, size)."""
+    first = int(np.ceil(-phase / pitch))
+    last = int(np.floor((size - 1 - phase) / pitch))
+    return np.rint(phase + pitch * np.arange(first, last + 1)).astype(int)
+
+
+def mark_bounds(mask, axis):
+    """First and last index of the dark motif area along one axis.
+
+    Pale graph paper around and between charts is ruled like the chart
+    itself, so the chart's extent comes from the darker mark ink instead:
+    the span from the first to the last substantial run of marked lines."""
+    profile = mask.mean(axis=axis)
+    smooth = np.convolve(profile, np.ones(9, np.float32) / 9, mode="same")
+    low, high = np.percentile(smooth, [20, 90])
+    cut = low + 0.2 * (high - low)
+    active = np.flatnonzero(smooth > cut)
+    runs = np.split(active, np.flatnonzero(np.diff(active) > 1) + 1) if len(active) else []
+    substantial = [run for run in runs if len(run) >= 12]
+    return (int(substantial[0][0]), int(substantial[-1][-1])) if substantial else None
+
+
 class SymbolRegion(GridRegion):
     kinds = 3
 
     def tighten(self):
-        """Remember the high-contrast motif band inside the ruled-page crop.
+        """Remember the high-contrast motif area inside the ruled-page crop.
 
         Some scans show the pale cell grid in the margins between charts. The
-        base reader treats that ruling as chart content, so retain a separate
-        extent based on the darker motif ink for trimming padded rows later.
+        base reader treats that ruling as chart content, so keep a separate
+        extent based on the darker motif ink for trimming padded rows and
+        columns later (crop coordinates).
         """
         mask = (self.ink > 0.5).astype(np.float32)
-        profile = mask.mean(axis=1)
-        smooth = np.convolve(profile, np.ones(9, np.float32) / 9, mode="same")
-        low, high = np.percentile(smooth, [20, 90])
-        cut = low + 0.2 * (high - low)
-        active = np.flatnonzero(smooth > cut)
-        runs = []
-        for i in active:
-            if not runs or i > runs[-1][-1] + 1:
-                runs.append([int(i)])
-            else:
-                runs[-1].append(int(i))
-        substantial = [run for run in runs if len(run) >= 12]
-        self.mark_y_bounds = ((substantial[0][0], substantial[-1][-1])
-                              if substantial else None)
+        self.mark_y_bounds = mark_bounds(mask, axis=1)
+        self.mark_x_bounds = mark_bounds(mask, axis=0)
         super().tighten()
 
     def trim_mark_margins(self):
@@ -100,14 +173,70 @@ class SymbolRegion(GridRegion):
         self.ys = self.ys[first:last + 2]
 
     def fit(self):
-        """Track the pale ruling beneath dense marks, not the marks themselves.
+        """Track the pale ruling beneath dense marks, then cut between glyphs.
 
         The general ruled reader uses the 30th percentile so dark marks do not
         pull the line fit. Multi-symbol plates can fill nearly every cell, so
         that profile often follows the motifs instead of the faint grid. A
-        lower quantile keeps the regular ruling visible in those scans.
+        lower quantile keeps the regular ruling visible in those scans; it
+        gives the pitch. The cell lattice itself is then placed in the gaps
+        between the glyphs (gap_lattice), one evenly spaced lattice per axis.
+        Padding rows and columns are trimmed later by the motif extent.
         """
-        return super().fit(profile_quantile=10)
+        super().fit(profile_quantile=10)
+        sub = self.ink[self.y0:self.y1, self.x0:self.x1]
+        ylo, yhi = self.motif_span(self.mark_y_bounds, self.y0, sub.shape[0])
+        xlo, xhi = self.motif_span(self.mark_x_bounds, self.x0, sub.shape[1])
+        band = sub[ylo:yhi + 1]
+        self.col_profile = mark_profile(band, axis=0)
+        px, phx = fit_lattice(self.xs) or (self.px, float(self.xs[0]))
+        self.px, phx = gap_lattice(self.col_profile, px, phx, xlo, xhi)
+        self.py = self.px
+        self.x_phase = phx
+        _, phy = gap_lattice(mark_profile(sub[:, xlo:xhi + 1], axis=1), self.py,
+                             float(self.ys[0]), ylo, yhi, fixed_pitch=True)
+        # stay within the ruled area the line follower found
+        self.ruled_x = (int(self.xs[0]), int(self.xs[-1]))
+        self.xs = self.within(lattice_lines(self.px, phx, sub.shape[1]), self.ruled_x, self.px)
+        self.ys = self.within(lattice_lines(self.py, phy, sub.shape[0]),
+                              (int(self.ys[0]), int(self.ys[-1])), self.py)
+        return self
+
+    @staticmethod
+    def within(lines, span, pitch):
+        """Lattice lines inside the ruled span, allowing a half-cell shift."""
+        ok = (lines >= span[0] - pitch / 2) & (lines <= span[1] + pitch / 2)
+        return lines[ok] if ok.sum() >= 2 else lines
+
+    @staticmethod
+    def motif_span(bounds, offset, size):
+        """Motif extent in crop-box coordinates (whole box if unknown)."""
+        if bounds is None:
+            return 0, size - 1
+        return max(0, bounds[0] - offset), min(size - 1, bounds[1] - offset)
+
+    @property
+    def page_x(self):
+        """Offset from crop columns to page columns."""
+        return self.page_box[0] + self.x0
+
+    def set_columns(self, pitch, page_phase):
+        """Use a page-wide column lattice (given in page pixels)."""
+        sub_w = self.x1 - self.x0
+        self.xs = self.within(lattice_lines(pitch, page_phase - self.page_x, sub_w),
+                              self.ruled_x, pitch)
+
+    def column_centres(self):
+        """Column centres in page pixels."""
+        return self.page_x + (self.xs[:-1] + self.xs[1:]) / 2
+
+    def keep_columns(self, keep):
+        """Keep columns [first, last] (inclusive), lines and layers in step."""
+        first, last = keep
+        self.cells = self.cells[:, first:last + 1]
+        self.scores = self.scores[:, first:last + 1]
+        self.margin = self.margin[:, first:last + 1]
+        self.xs = self.xs[first:last + 2]
 
     def score(self, inner=0.2, q=90):
         """As the ruled reader, but a cell is scored by its darkest part
@@ -194,9 +323,12 @@ class MultiSymbolPlateSource(RuledGridSource):
         return regs
 
     def read(self):
-        regs = [g.fit().score() for g in self.regions()]
+        regs = [g.fit() for g in self.regions()]
+        self.share_columns(regs)
+        regs = [g.score() for g in regs]
         self._regions = [g for g in regs
                          if g.cells.shape[0] >= 3 and g.cells.shape[1] >= 3]
+        self.trim_page_columns()
         feature_groups, locations = [], []
         for g in self._regions:
             current, where = g.mark_features()
@@ -208,6 +340,51 @@ class MultiSymbolPlateSource(RuledGridSource):
         for g, where, codes in zip(self._regions, locations, labels):
             g.set_symbols(where, codes, centres)
         return [g.chart() for g in self._regions]
+
+    def share_columns(self, regs):
+        """Give every chart band on the page one column lattice.
+
+        Banners laid out on one sheet share their columns. Pooling the mark
+        profiles of all bands fixes pitch and phase better than any single
+        sparse band can. Skipped when a band had to be deskewed, since its
+        columns are then not the page's."""
+        if len(regs) < 2 or any(abs(g.angle) > 0.2 for g in regs):
+            return
+        width = max(g.page_x + len(g.col_profile) for g in regs)
+        pooled = np.zeros(width)
+        spans = []
+        for g in regs:
+            pooled[g.page_x:g.page_x + len(g.col_profile)] += g.col_profile
+            lo, hi = g.motif_span(g.mark_x_bounds, g.x0, len(g.col_profile))
+            spans.append((g.page_x + lo, g.page_x + hi))
+        lo, hi = min(sp[0] for sp in spans), max(sp[1] for sp in spans)
+        pitch = float(np.median([g.px for g in regs]))
+        # the bands' own phases on the page, folded onto one cell
+        folded = np.array([(g.page_x + g.x_phase) % pitch for g in regs])
+        angles = folded / pitch * 2 * np.pi
+        phase0 = (np.angle(np.exp(1j * angles).mean()) / (2 * np.pi) * pitch) % pitch
+        pitch, phase = gap_lattice(pooled, pitch, phase0, lo, hi)
+        for g in regs:
+            g.px = g.py = pitch
+            g.set_columns(pitch, phase)
+
+    def trim_page_columns(self):
+        """Drop grid-only margin columns, page-wide.
+
+        Banners on one sheet share their columns, and a sparse band can
+        legitimately start or end with empty columns, so the margin is set
+        by the dark motif extent of the whole page, not band by band. With
+        the shared column lattice every band then has the same width."""
+        bounds = [(g.page_x - g.x0 + b[0], g.page_x - g.x0 + b[1])
+                  for g in self._regions if (b := g.mark_x_bounds)]
+        if len(self._regions) < 2 or not bounds:
+            return
+        lo, hi = min(b[0] for b in bounds), max(b[1] for b in bounds)
+        for g in self._regions:
+            centres = g.column_centres()
+            keep = np.flatnonzero((centres >= lo) & (centres <= hi))
+            if len(keep):
+                g.keep_columns((int(keep[0]), int(keep[-1])))
 
     def check_image(self, path):
         tiles = []
