@@ -124,15 +124,15 @@ def main():
     ok = got is not None and got.shape == sym.shape
     agree = (got == chars[sym]).mean() if ok else 0
     good &= check(f"marks: named kinds read back ({agree:.1%} of cells)",
-                  ok and agree > 0.95 and (ch[0].cells == (sym > 0)).mean() > 0.98)
-    col = ch[0].layers.get("colours") if ch else None
-    good &= check("marks: colour digits follow mark_colours.csv (solid 1, plus 2, hatching 3)",
+                  ok and agree > 0.95 and (ch[0].layers["filled"] == (sym > 0)).mean() > 0.98)
+    col = ch[0].cells if ch else None
+    good &= check("marks: chart holds colour digits from mark_colours.csv (solid 1, plus 2, hatching 3)",
                   col is not None and col.shape == sym.shape and
                   (col[(got == "#")] == 1).all() and (col[(got == "+")] == 2).all() and
                   (col[(got == "|")] == 3).all() and (col[(got == ".")] == 0).all())
     ch2 = open_source(tmp / "marks.png", layout="marks", colours="+=1").charts()
     good &= check("marks: colours option overrides the table",
-                  bool(ch2) and (ch2[0].layers["colours"][ch2[0].layers["marks"] == "+"] == 1).all())
+                  bool(ch2) and (ch2[0].cells[ch2[0].layers["marks"] == "+"] == 1).all())
 
     drawing_page(tmp / "draw.png")
     ch = open_source(tmp / "draw.png", layout="drawing", cells=30).charts()

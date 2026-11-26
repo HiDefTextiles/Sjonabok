@@ -7,16 +7,17 @@ so the same mark means the same thing on every page and in every book.
 
 The grid is found as for RuledGridSource. Each cell is cut out between its
 own ruling lines (refound locally, so paper stretch does not put a rule
-inside a cell) and classified. The 0/1 chart is derived from the kinds:
-a cell is 1 when its kind is in `filled` (default: every mark). The kinds
+inside a cell) and classified. The any-mark 0/1 reading: a cell is 1 when its kind is in `filled` (default: every mark). The kinds
 are kept as chart.layers["marks"] (written as <chart>.marks.txt with
 --sidecars), with their counts in meta["marks"]. A 2x2 block of diagonals
 drawn as one X (\\ / over / \\) is listed in meta["stars"] by its top-left cell.
 
-Colours: different marks usually mean different colours (Helga: filled and
-crossed cells are two colours), so the marks are also turned into a chart
-of digits, 0 = empty, 1, 2, ... (chart.layers["colours"], written as
-<chart>.colours.txt with --sidecars). The mapping mark -> digit is
+Colours: different marks mean different colours (Helga: filled and crossed
+cells are two colours), so <chart>.txt holds one digit per colour, 0 = empty,
+1, 2, ... (indices into the gallery's COLOR_PALETTE), and the any-mark 0/1
+reading is kept as chart.layers["filled"] (<chart>.filled.txt with
+--sidecars). Marks with no colour of their own (diagonals, half cells,
+unclear) are 0 in the colour chart and stay in <chart>.marks.txt. The mapping mark -> digit is
 books/sources/mark_colours.csv: rows for book "*" are the default, rows
 for a book code override them; the option colours="#=1,+=1" overrides both.
 """
@@ -99,8 +100,12 @@ class MarkRegion(GridRegion):
         ch.meta["marks"] = {str(k): int(v) for k, v in sorted(zip(kinds, n), key=lambda t: order.get(t[0], 99))}
         ch.meta["stars"] = self.stars()
         cmap = self.colour_map
-        ch.layers["colours"] = np.vectorize(lambda k: cmap.get(k, 9), otypes=[np.uint8])(self.marks) \
+        colours = np.vectorize(lambda k: cmap.get(k, 0), otypes=[np.uint8])(self.marks) \
             if self.marks.size else np.zeros(self.marks.shape, np.uint8)
+        # the chart itself holds the colour digits (Helga: "in txt it is 0 1 2");
+        # the any-mark 0/1 reading is kept as a layer
+        ch.layers["filled"] = ch.cells
+        ch.cells = colours
         ch.meta["colours"] = {k: v for k, v in cmap.items() if k in ch.meta["marks"]}
         return ch
 

@@ -64,14 +64,16 @@ character (`books/sources/marks.py`):
 | `F 7 L J` | half cell, the triangle in that corner is inked | `?` | a mark none of the above fits |
 
 The kinds go to `<chart>.marks.txt` (with `--sidecars`), their counts to the json, and each
-2x2 star to `meta["stars"]`. The 0/1 chart is derived from the kinds: `--option filled=#+`
-counts only solid and plus as 1; the default counts every mark.
+2x2 star to `meta["stars"]`. An any-mark 0/1 reading is derived from the kinds: `--option filled=#+`
+counts only solid and plus in that 0/1 reading; the default counts every mark.
 
-Different marks usually mean different colours (filled and crossed cells are two colours), so
-the marks are also written as a chart of digits, `<chart>.colours.txt`: 0 empty, 1 solid, 2 plus
-or cross, 3 hatching, 4 diagonals/stars, 5 half cells, 9 unclear. The mapping is
-`books/sources/mark_colours.csv`: rows for book `*` are the default, rows with a book code
-override them for that book, and `--option colours=#=1,+=1` overrides both for one run.
+Different marks mean different colours (filled and crossed cells are two colours), so for this
+layout `<chart>.txt` holds one digit per colour, indices into the gallery's palette: 0 empty,
+1 solid, 2 plus, 3 hatching, 4 diagonal cross. Diagonals, wedges, half cells and unclear marks
+have no colour of their own yet: they are 0 there and stay in `<chart>.marks.txt`. The any-mark
+0/1 reading is `<chart>.filled.txt`. The mapping is `books/sources/mark_colours.csv`: rows for
+book `*` are the default, rows with a book code override them for that book, and
+`--option colours=#=1,+=1` overrides both for one run.
 
 Each cell is cut between its own ruling lines, found again near the cell (Sibmacher's ruling
 drifts up to a third of a cell from the fitted comb, and a rule left inside a cell reads as a

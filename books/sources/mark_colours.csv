@@ -2,17 +2,17 @@ book,mark,colour,note
 *,.,0,empty
 *,#,1,solid: first colour
 *,+,2,plus/cross: second colour (Helga 2026-11-26: filled and crosses are different colours)
-*,x,2,diagonal cross: as plus
 *,|,3,vertical hatching: third tone
 *,-,3,horizontal hatching: as vertical
-*,/,4,diagonal stroke (stars over 2x2 cells): own stitch
-*,\,4,as /
-*,<,4,wedge: as diagonals
-*,>,4,
-*,^,4,
-*,v,4,
-*,F,5,half cell
-*,7,5,
-*,L,5,
-*,J,5,
-*,?,9,unclear mark: check by eye
+*,x,4,diagonal cross: stitch or colour still undecided
+*,/,0,diagonal stroke (stars over 2x2 cells): kept in .marks.txt only
+*,\,0,as /
+*,<,0,wedge: kept in .marks.txt only
+*,>,0,
+*,^,0,
+*,v,0,
+*,F,0,half cell: kept in .marks.txt only
+*,7,0,
+*,L,0,
+*,J,0,
+*,?,0,unclear mark: kept in .marks.txt only (check by eye)
