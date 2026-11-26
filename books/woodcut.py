@@ -15,6 +15,7 @@ import numpy as np
 
 from sources import WhiteLineWoodcutSource, Provenance
 from sources.base import deskew as _deskew, rotate as _rotate
+from sources.base import paint_cells
 from sources.woodcut import WoodcutGrid       # noqa: F401  (old import path)
 
 
@@ -27,6 +28,19 @@ class WoodcutPage(WhiteLineWoodcutSource):
 
     def deskew(self, crop):
         return _deskew(crop.astype(np.float32), border=1.0)
+
+
+def check_image(light, grid, bands, path):
+    """The PR #46 function (books/fuerst.py uses it): cells painted on the
+    deskewed block, bands boxed."""
+    import cv2
+    img = cv2.cvtColor((light * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+    paint_cells(img, grid.cells, grid.margin, grid.xs, grid.ys)
+    for i, (a, b, l, r) in enumerate(bands, 1):
+        cv2.rectangle(img, (grid.xs[l], grid.ys[a]), (grid.xs[r], grid.ys[b]), (200, 120, 0), 2)
+        cv2.putText(img, f"b{i} {b - a}x{r - l}", (grid.xs[l] + 4, grid.ys[a] + 18),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 80, 0), 2)
+    cv2.imwrite(str(path), img)
 
 
 def main():
