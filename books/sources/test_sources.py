@@ -14,6 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sources import LAYOUTS, Chart, Provenance, open_source   # noqa: E402
+from sources.symbols import cell_features  # noqa: E402
 
 RNG = np.random.default_rng(7)
 P = 14                                   # pitch in pixels (woodcut)
@@ -101,6 +102,16 @@ def main():
         len(set(s[sym == k])) == 1 for k in (1, 2, 3)) and len({s[sym == k][0] for k in (1, 2, 3)}) == 3
     good &= check("symbols: 0/1 chart and three mark kinds kept apart",
                   bool(ch) and (ch[0].cells == (sym > 0)).all() and same_partition)
+    frequencies = np.bincount(s.ravel(), minlength=4) if s is not None else np.zeros(4, int)
+    good &= check("symbols: kind IDs ranked by frequency",
+                  bool(np.all(np.diff(frequencies[1:]) <= 0)))
+    sample = np.zeros((6, 6), np.float32)
+    sample[[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]] = 1
+    features = cell_features(sample)
+    good &= check("symbols: rotations and mirrors share one feature",
+                  all(np.array_equal(features, cell_features(image)) for image in
+                      [np.rot90(sample, k) for k in range(4)] +
+                      [np.fliplr(np.rot90(sample, k)) for k in range(4)]))
 
     drawing_page(tmp / "draw.png")
     ch = open_source(tmp / "draw.png", layout="drawing", cells=30).charts()

@@ -6,7 +6,8 @@ The grid is found exactly as for RuledGridSource. Then every filled cell is
 described by a coarse 6x6 picture of its mark, and the filled cells are grouped into
 `symbols` kinds by k-means with a fixed seed, so a page reads the same
 every time. The 0/1 chart is "any mark"; the kinds are an extra layer
-(chart.layers["symbols"]: 0 = empty, 1 = the darkest kind, 2, ...).
+(chart.layers["symbols"]: 0 = empty, 1 = the most frequent mark, 2 = next
+most frequent, ...). Rotations and mirrors are canonicalised before grouping.
 """
 import cv2
 import numpy as np
@@ -17,10 +18,17 @@ from .ruled import GridRegion, RuledGridSource
 
 def cell_features(cell, size=6):
     """The cell's interior shrunk to size x size (area average): a coarse
-    picture of the mark, so solid, cross, dot, diagonal and ring differ."""
+    picture of the mark, so solid, cross, dot, diagonal and ring differ.
+    Canonicalise its rotations and mirrors so a symmetric symbol does not
+    become a new kind solely because it appears in another orientation."""
     if cell.shape[0] < 2 or cell.shape[1] < 2:
         return np.zeros(size * size, np.float32)
-    return cv2.resize(cell.astype(np.float32), (size, size), interpolation=cv2.INTER_AREA).ravel()
+    small = cv2.resize(cell.astype(np.float32), (size, size), interpolation=cv2.INTER_AREA)
+    small = np.clip(np.rint(small * 255), 0, 255).astype(np.uint8)
+    rotations = [np.rot90(small, k) for k in range(4)]
+    rotations += [np.fliplr(image) for image in rotations]
+    canonical = min(rotations, key=lambda image: image.tobytes())
+    return (canonical.astype(np.float32) / 255).ravel()
 
 
 class SymbolRegion(GridRegion):
@@ -80,7 +88,8 @@ class SymbolRegion(GridRegion):
         cv2.setRNGSeed(1)
         crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-4)
         _, lab, centres = cv2.kmeans(X, k, None, crit, 8, cv2.KMEANS_PP_CENTERS)
-        order = np.argsort(-centres.mean(axis=1))           # darkest kind first
+        counts = np.bincount(lab.ravel(), minlength=k)
+        order = sorted(range(k), key=lambda i: (-counts[i], -centres[i].mean(), i))
         rank = np.empty(k, int); rank[order] = np.arange(1, k + 1)
         for (r, c), l in zip(where, lab.ravel()):
             self.symbols[r, c] = rank[l]

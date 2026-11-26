@@ -64,5 +64,6 @@ come out unchanged.
 The two new layouts are prototypes, checked only on drawn pages so far:
 `MultiSymbolPlateSource` scores a cell by its darkest part and cuts between the empty
 level and the lightest mark (Otsu would drop light marks), then groups marks by a coarse
-6x6 picture with k-means (fixed seed). `LineDrawingSource` fills closed outlines and fills a
-cell when ink covers half of it.
+6x6 picture with k-means (fixed seed). It treats rotations and mirrors of a mark as the
+same shape and numbers each chart's kinds by frequency, leaving `0` for empty cells.
+`LineDrawingSource` fills closed outlines and fills a cell when ink covers half of it.
