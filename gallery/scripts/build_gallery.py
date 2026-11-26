@@ -64,7 +64,7 @@ SOURCE_LABELS = {
     "jobin1600": "Jobin 1600",
     "schoensperger1529": "Schönsperger 1529",
     "tagliente1530": "Tagliente 1530", "fuerst1660": "Fürst 1660", "egenolff1535": "Egenolff 1535", "gulfferich1553": "Gülfferich 1553",
-    "quentel1532": "Quentel 1532", "quentel1544": "Quentel 1544", "latomus1608": "Latomus 1608", "martin1599": "Martin 1599", "vorsterman1527": "Vorsterman 1527",
+    "quentel1532": "Quentel 1532", "quentel1544": "Quentel 1544", "latomus1608": "Latomus 1608", "martin1599": "Martin 1599", "bassee1599": "Bassée 1599", "vorsterman1527": "Vorsterman 1527",
 }
 
 # Which collection a source belongs to: the Icelandic manuscripts of
