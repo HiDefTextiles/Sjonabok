@@ -53,6 +53,7 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 | *Eyn newe kunstlich moetdelboech* | Peter Quentel, Cologne 1532 | The Met (scans on [archive.org](https://archive.org/details/Quentel1532EynNeweMET)) | 8 |
 | *Ce est ung tractat de la noble art de leguille* | Willem Vorsterman, Antwerp 1527 | The Met (scans on [archive.org](https://archive.org/details/VostermanAf1527CeEstUngMET)) | 40 |
 | *Eyn new kunstlich Modelbuech* | Peter Quentel, Cologne 1544 | BnF Gallica (copy on [archive.org](https://archive.org/details/quentell-1544-eyn-new-kuenstich-bnfbpt-6k-1510823d)) | 1 |
+| *Schön newes Modelbuch* | Sigismund Latomus, Frankfurt 1608 | The Met, 24.43 (scans on [archive.org](https://archive.org/details/Latomus1608SchonMET)) | 82 |
 | Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | 12 |
 | *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
 | Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
