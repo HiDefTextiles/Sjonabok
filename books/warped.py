@@ -76,25 +76,26 @@ def check_local(light, g, bands, path):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("page"); ap.add_argument("outdir")
+    ap.add_argument("--all-blocks", action="store_true", help="read every large dark block, not only the largest")
     a = ap.parse_args(); out = Path(a.outdir); out.mkdir(parents=True, exist_ok=True)
-    page = WoodcutPage(a.page); box = page.block()
-    if box is None:
-        print("[]"); return
-    x0, y0, x1, y1 = box
-    crop = page.light[y0:y1, x0:x1].astype(np.float32)
-    g = WarpedGrid(crop, page.path.stem).fit()
-    if g is None:
-        print("[]"); return
-    bands = g.bands(); meta = []
-    for i, (ra, rb, cl, cr) in enumerate(bands, 1):
-        name = f"{page.path.stem}_b{i}"; cells = g.cells[ra:rb, cl:cr]
-        (out / f"{name}.txt").write_text("\n".join("".join(map(str, r)) for r in cells) + "\n")
-        meta.append(dict(name=name, box=[int(x0), int(y0), int(x1), int(y1)], angle=0.0, rows=int(rb - ra), cols=int(cr - cl),
-                         pitch_x=round(g.px, 2), pitch_y=round(g.py, 2), threshold=round(g.threshold, 3),
-                         uncertain=int((g.margin[ra:rb, cl:cr] < 0.05).sum()), fill=round(float(cells.mean()), 3)))
-    check_local(crop, g, bands, out / f"{page.path.stem}_check.jpg")
+    page = WoodcutPage(a.page)
+    boxes = page.blocks() if a.all_blocks else [b for b in [page.block()] if b is not None]
+    meta = []; k = 0
+    for j, (x0, y0, x1, y1) in enumerate(boxes):
+        crop = page.light[y0:y1, x0:x1].astype(np.float32)
+        g = WarpedGrid(crop, page.path.stem).fit()
+        if g is None:
+            continue
+        bands = g.bands()
+        for ra, rb, cl, cr in bands:
+            k += 1; name = f"{page.path.stem}_b{k}"; cells = g.cells[ra:rb, cl:cr]
+            (out / f"{name}.txt").write_text("\n".join("".join(map(str, r)) for r in cells) + "\n")
+            meta.append(dict(name=name, box=[int(x0), int(y0), int(x1), int(y1)], angle=0.0, rows=int(rb - ra), cols=int(cr - cl),
+                             pitch_x=round(g.px, 2), pitch_y=round(g.py, 2), threshold=round(g.threshold, 3),
+                             uncertain=int((g.margin[ra:rb, cl:cr] < 0.05).sum()), fill=round(float(cells.mean()), 3)))
+        suffix = "" if j == 0 else f"_{j + 1}"
+        check_local(crop, g, bands, out / f"{page.path.stem}_check{suffix}.jpg")
     print(json.dumps(meta))
-
 
 if __name__ == "__main__":
     main()

@@ -40,6 +40,25 @@ class WoodcutPage:
         x, y, w, h, _ = st[i]
         return x, y, x + w, y + h
 
+    def blocks(self, min_frac=0.25):
+        """Bounding boxes of all dark blocks at least min_frac of the largest, top to bottom."""
+        dark = (self.light < 0.6).astype(np.uint8)
+        dark = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
+        dark = cv2.morphologyEx(dark, cv2.MORPH_OPEN, np.ones((41, 41), np.uint8))
+        n, lab, st, _ = cv2.connectedComponentsWithStats(dark)
+        if n < 2:
+            return []
+        H, W = dark.shape
+        def edges(r):   # how many page edges a block touches (scanner background, binding)
+            x, y, w, h = r[:4]
+            return int(x <= 2) + int(y <= 2) + int(x + w >= W - 2) + int(y + h >= H - 2)
+        cand = [st[i] for i in range(1, n) if edges(st[i]) < 2]
+        if not cand:
+            return []
+        big = max(r[cv2.CC_STAT_AREA] for r in cand)
+        keep = [r for r in cand if r[cv2.CC_STAT_AREA] >= min_frac * big]
+        return [(x, y, x + w, y + h) for x, y, w, h, _ in sorted(keep, key=lambda r: (r[1], r[0]))]
+
     @staticmethod
     def rotate(img, angle):
         h, w = img.shape
