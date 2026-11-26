@@ -121,6 +121,7 @@ work/submotifs/colour: recolour.py work/submotifs/kinds.csv
 # vertical video: the eight-pointed rosette (size kind 40) morphing from book to book
 work/submotifs/reel.mp4: reel.py manuscript_dates.csv work/submotifs/kinds.csv
 	$(PY) reel.py --txt $(TXT) --kind 40 --out $@
+	$(PY) reel.py --txt $(TXT) --kind 40 --short --out work/submotifs/reel_short.mp4
 
 work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 

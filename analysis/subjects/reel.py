@@ -289,7 +289,11 @@ def main():
     ap.add_argument("--kind", type=int, default=40)
     ap.add_argument("--title", default="The eight-pointed rosette")
     ap.add_argument("--out", default=str(OUT / "reel.mp4"))
+    ap.add_argument("--short", action="store_true", help="a cut under 30 seconds, for stories and autoplay")
     a = ap.parse_args()
+    if a.short:
+        global HOLD, MORPH, END, CLOSE
+        HOLD, MORPH, END, CLOSE = 1.4, 1.0, 2.5, 2.5
     books = BookFigures(a.txt, a.kind)
     sub = f"as {len(books.figures)} manuscripts draw it, 1600s–1800s"
     Reel(books, a.title, sub).write(a.out)
