@@ -1,6 +1,6 @@
 ---
 title: "Sjónabók pattern gallery"
-subtitle: "About 600 Icelandic embroidery patterns, digitised as 0/1 charts, next to charts from printed European pattern books in the public domain. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
+subtitle: "About 600 Icelandic embroidery patterns and 50 alphabets, digitised as charts, next to charts from printed European pattern books in the public domain. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
 page-layout: full
 toc: false
 include-after-body:
@@ -19,7 +19,7 @@ include-after-body:
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
 <details open><summary>Symmetry</summary><p class="hint">Mirror: two halves match. Turn: same when turned. Glide: flipped and shifted, like footprints. <a href="about.html#symmetry">More, with pictures</a></p><div id="f-sym" class="chips"></div></details>
 <details><summary>Symmetry group</summary><p class="hint">One code for all of a pattern's symmetry: <b>p…</b> for bands, <b>C</b> (turns) or <b>D</b> (turns and mirrors) for motifs. Hover a code for its meaning, or <a href="about.html#symmetry">see the pictures</a>.</p><div id="f-group" class="chips"></div></details>
-<details open><summary>Collection</summary><p class="hint">Icelandic manuscripts (Íslensk sjónabók) or printed pattern books from elsewhere in Europe. <a href="about.html#books">About the books</a></p><div id="f-coll" class="chips"></div></details>
+<details open><summary>Collection</summary><p class="hint">Where the charts come from: Icelandic manuscripts (Íslensk sjónabók) or printed pattern books from mainland Europe. <a href="about.html#books">About the books</a></p><div id="f-coll" class="chips"></div></details>
 <details open><summary>Source</summary><div id="f-source" class="chips"></div></details>
 <details open><summary>Size and density</summary><div id="f-range" class="ranges"></div></details>
 <label class="sort">Sort by
@@ -56,7 +56,7 @@ include-after-body:
 <div class="d-info">
 <h2 id="d-title"></h2>
 <dl id="d-facts" class="facts-list"></dl>
-<p class="d-dl"><a id="d-txt" download>0/1 chart (.txt)</a> · <a id="d-png" download>Image (.png)</a> · <a id="d-link">Link to this pattern</a></p>
+<p class="d-dl"><a id="d-txt" download>Chart (.txt)</a> · <a id="d-png" download>Image (.png)</a> · <a id="d-link">Link to this pattern</a></p>
 <h3>Similar patterns</h3>
 <p class="hint">Similar in shape, wherever a band starts and however it is mirrored. <a href="about.html#similar">How they are chosen</a></p>
 <div id="d-similar" class="similar"></div>
