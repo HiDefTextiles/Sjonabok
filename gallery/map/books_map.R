@@ -16,7 +16,8 @@ suppressPackageStartupMessages({
 
 HI <- c(blue = "#10099F", teal = "#2DD2C0", pink = "#d61f69", grey = "#9E9E9E")
 SHORT <- c(sib = "Sibmacher", quentel = "Quentel", jobin = "Jobin", vavassore = "Vavassore",
-           pagano = "Pagano", vinciolo = "Vinciolo", bretschneider = "Bretschneider")
+           pagano = "Pagano", vinciolo = "Vinciolo", bretschneider = "Bretschneider",
+           schoensperger = "Schönsperger", tagliente = "Tagliente", fuerst = "Fürst")
 source_of_id <- function(id) case_when(
   id == "N.453.a" ~ "natmus453",
   id == "Þjms. Th 116" ~ "thjmsth_116",
@@ -85,7 +86,7 @@ m <- m |>
 
 # ── Timeline: books and manuscripts on one axis, shared figures joined ─────────
 timeline_svg <- function(from = 1520, to = 1900, w = 760) {
-  x0 <- 150; x1 <- w - 10
+  x0 <- 178; x1 <- w - 10
   sx <- function(y) x0 + (y - from) / (to - from) * (x1 - x0)
   b <- books |> arrange(first) |> mutate(y = 22 + (row_number() - 1) * 18)
   d <- mss |> filter(!is.na(when_start)) |> arrange(when_start) |>
