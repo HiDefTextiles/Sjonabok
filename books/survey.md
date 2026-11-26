@@ -23,6 +23,7 @@ One row per title (Lotz class), at its first known edition. Columns:
 | pages | image count of the scan, when the Internet Archive record gives one |
 | scan_holder, scan_url | the best copy we found; Internet Archive links mirror the holder's scan |
 | contact | who to ask, for `ask_access` rows |
+| issue | sub-issue of the umbrella issue #51 (books that are charted, in the gallery, or need asking) |
 
 `library_terms.csv` records each holder's terms of use and whether they limit our use. We publish
 only extracted 0/1 grids (CC BY 4.0), never the scans, but we flag terms that restrict reuse
