@@ -52,9 +52,10 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 | *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
 | Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
 | Johann Sibmacher, *Newes Modelbuch in Kupffer* | Nuremberg 1604 (first ed. 1601) | The Met, 29.59.3(1-70) | 26 |
+| Rosina Helena Fürst, *Das Neue Modelbuch*, parts I–IV | Paulus Fürst, Nuremberg, about 1660 to 1689 | Clark Art Institute (scans on [archive.org](https://archive.org/details/modelbucht1400frst)); part I also at the Met, 28.45.5 | 189 |
 
 More books are listed in [`books/books.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/books.csv)
-with their places, dates, holders and rights; Rosina Helena Fürst's *Neues Modelbuch* (Nuremberg, about 1660) is next. Alphabets found in the books are not added here: they go to the [Sjónabók alphabets](https://github.com/HiDefTextiles/Sjonabok-stafrof) project.
+with their places, dates, holders and rights. Fürst is the closest of these books in time to the Icelandic manuscripts; her charts draw outlines solid and fillings hatched, and some plates are drawn on a net turned 45 degrees (read as a square grid here). Alphabets found in the books are not added here: they go to the [Sjónabók alphabets](https://github.com/HiDefTextiles/Sjonabok-stafrof) project.
 
 **Rights.** The books are in the public domain and the museum scans are marked public domain
 (The Met Open Access). We do not copy the scans into the repository; each chart links to the
@@ -71,6 +72,11 @@ white squares, so they have their own reader that follows the white squares
 Every chart was checked by eye against the scan; plates drawn with several symbols (crosses,
 wheels, shaded cells) or badly printed are left out for now (`redo` in
 [`books/charts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/charts.csv)).
+Are any of them in colour? The woodcuts are strictly two-tone. Sibmacher's etchings are not:
+of the 65 readable plates left out, 40 use more than solid cells, 24 a hatched second tone and
+26 wheels or star cells (most likely a stitch, such as an eyelet, rather than a colour), and almost
+all add small crosses. The books print no key, so which symbol is a colour and which a stitch is our
+reading, not the author's ([`books/symbols.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/symbols.csv)).
 Charts marked *fair* may have a few wrong cells. The number in a book chart's file name is the
 plate (or leaf) of the book, `_p` the band on that plate.
 

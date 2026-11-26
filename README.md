@@ -2,7 +2,7 @@
 
 ## Overview
 
-This open-source project aims to digitize and transform Icelandic medieval patterns from the Sjónabók, published by Heimilisiðnaðarfélagið, into a simple matrix format suitable for machine knitting projects, specifically for HiDef Textiles. The Sjónabók is a treasure trove of historical designs that offer a glimpse into Icelandic artistic heritage.
+This open-source project digitises historical patterns from *Íslensk sjónabók* and other pattern books into reusable grids for study, comparison and machine knitting. The original digitisation focused on bicolour cross-stitch patterns; the expanded collection includes books with different motifs, symbols and colour schemes.
 
 ### About Sjónabók and Heimilisiðnaðarfélagið
 
@@ -14,20 +14,26 @@ The Sjónabók, published by Heimilisiðnaðarfélagið, is a collection of Icel
 2. **Open Source Contribution**: Make the digitized patterns available as an open-source resource.
 3. **Facilitate Machine Knitting**: Enable the use of these historical patterns in contemporary machine knitting projects by HiDef Textiles.
 
-## Attribution
+## Main contributors
 
-This project acknowledges and attributes the following institutions for their invaluable resources and support:
+- **Snæfríður Ebba Ásgeirsdóttir (@snaefi)** created the original codebase as a **Student Innovation Fund (Nýsköpunarsjóður námsmanna) project**, digitising the bicolour patterns from the EPS files accompanying *Íslensk sjónabók* (2009). The original project and report materials are in the [HiDefTextiles/NSN-2024 repository](https://github.com/HiDefTextiles/NSN-2024).
+- **Helga Ingimundardóttir (@tungufoss)** has since developed the codebase into a scalable, reusable project and added new features and pattern-book sources.
+
+The original digitisation focused on bicolour patterns. The expanded collection can represent varied motifs and multi-colour charts with integer-coded grids such as `0`–`4`. [Issue #9](https://github.com/HiDefTextiles/Sjonabok/issues/9) tracks early processing problems with motifs in source EPS files that use different colours.
+
+### Institutional acknowledgements
+
+This project acknowledges the following institutions for their invaluable resources and support:
 
 - **Heimilisiðnaðarfélagið (Icelandic Home Crafts Association)**
 - **Listaháskóli Íslands (Iceland University of the Arts)**
 - **Þjóðminjasafnið (The National Museum of Iceland)**
-
 ## Requirements
 
 The project uses a simple Python program for converting the patterns. The required packages are listed in the `requirements.txt` file.
 
 ## File Format
-To ensure efficient storage, the patterns are stored as matrices of 1s and 0s in text files. This format is chosen for its simplicity and small file size.
+Patterns are stored as text grids. Integer codes such as `0`–`4` distinguish the symbols or colours used in each chart; `0` represents the background. This supports varied motifs and multi-colour patterns instead of assuming every source is a binary cross grid.
 
 ## Usage
 With the path to the Sjonabok folder the program can be run with the following line:
