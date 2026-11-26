@@ -2,6 +2,8 @@
 
 from PIL import Image
 import os
+import json
+from collections import Counter
 import numpy as np
 
 
@@ -13,9 +15,19 @@ def convert_eps_to_pattern(input_eps, output_txt):
     :return: saves a simplified pattern in TXT format
     '''
 
-    matrix = convert_image_to_binary_matrix(input_eps)
-    matrix = simplify_binary_matrix(matrix)
-    np.savetxt(output_txt, matrix, fmt='%d', delimiter='')
+    with Image.open(os.path.expanduser(input_eps)) as source:
+        rgba = source.convert('RGBA')
+        background = Image.new('RGBA', rgba.size, (255, 255, 255, 255))
+        rgb = np.asarray(Image.alpha_composite(background, rgba).convert('RGB'))
+
+    matrix, colors = simplify_color_matrix(rgb)
+    delimiter = '' if int(matrix.max(initial=0)) < 10 else ' '
+    np.savetxt(output_txt, matrix, fmt='%d', delimiter=delimiter)
+
+    if len(colors) > 1:
+        palette_path = os.path.splitext(output_txt)[0] + '.palette.json'
+        with open(palette_path, 'w', encoding='utf-8') as palette_file:
+            json.dump({'colors': colors}, palette_file, ensure_ascii=False, indent=2)
 
 
 def convert_image_to_binary_matrix(image_path, threshold=240):
@@ -54,18 +66,31 @@ def get_grid_layout(matrix):
          that each grid line has the width one row/column in the matrix.
     Post: rows, cols contain the indexes of each grid row and column of matrix.
     '''
-    rows = []
-    cols = []
-    n, m = matrix.shape
+    def long_lines(profile):
+        candidates = np.flatnonzero(profile >= max(0.8, profile.max() * 0.9))
+        groups = []
+        for index in candidates:
+            if groups and index <= groups[-1][-1] + 1:
+                groups[-1].append(int(index))
+            else:
+                groups.append([int(index)])
+        return [group[-1] for group in groups]
 
-    # get grid row indexes
-    for i in range(n):
-        if np.sum(matrix[i, 0:4]) >= 3:  # if mostly zeros we have a grid line
-            rows.append(i)
+    rows = long_lines(np.mean(matrix, axis=1))
+    cols = long_lines(np.mean(matrix, axis=0))
 
-    for j in range(m):
-        if np.sum(matrix[0:4, j]) >= 3:
-            cols.append(j)
+    # Retain the original edge-based method for EPS files whose grid does not
+    # span most of the raster (for example, a chart surrounded by margins).
+    if len(rows) < 3 or len(cols) < 3:
+        rows = []
+        cols = []
+        n, m = matrix.shape
+        for i in range(n):
+            if np.sum(matrix[i, 0:4]) >= 3:
+                rows.append(i)
+        for j in range(m):
+            if np.sum(matrix[0:4, j]) >= 3:
+                cols.append(j)
     return rows, cols
 
 
@@ -84,7 +109,7 @@ def remove_grid(matrix):
     return matrix
 
 
-def remove_outside_of_pattern(matrix, grid_rows, grid_cols):  # and update grid indx
+def remove_outside_of_pattern(matrix, grid_rows, grid_cols, return_bounds=False):  # and update grid indx
     '''
     Use: new_matrix, updated_grid_rows, update_grid_cols = remove_outside_of_pattern(matrix,grid_rows,grid_cols)
     Pre: matrix is a numpy matrix binary pattern on a grid where 1 represents black pixels and 0 white pixels. It is assumed
@@ -121,7 +146,8 @@ def remove_outside_of_pattern(matrix, grid_rows, grid_cols):  # and update grid 
             matrix = matrix[:, l + 1:]
             left = l
         grid_cols = grid_cols[1:]
-    grid_cols = [x - l for x in grid_cols]  # update indices of grid columns
+    column_offset = l + 1 if return_bounds else l
+    grid_cols = [x - column_offset for x in grid_cols]  # update indices of grid columns
 
     # slice off bottom
     while top == -1:
@@ -130,12 +156,163 @@ def remove_outside_of_pattern(matrix, grid_rows, grid_cols):  # and update grid 
             matrix = matrix[t + 1:, :]
             top = t
         grid_rows = grid_rows[1:]
-    grid_rows = [x - t for x in grid_rows]  # update indices of grid rows
+    row_offset = t + 1 if return_bounds else t
+    grid_rows = [x - row_offset for x in grid_rows]  # update indices of grid rows
 
     if top >= bottom or left >= right:
         raise ValueError('removing the outside of pattern went wrong')
 
+    if return_bounds:
+        # The slices above remove the outer grid rules themselves.
+        return matrix, grid_rows, grid_cols, (t + 1, b - 1, l + 1, r - 1)
     return matrix, grid_rows, grid_cols
+
+
+def _find_regular_grid_cells(gray):
+    """Find regular gray chart rules in rasterized book-page screenshots."""
+    rule_pixels = ((gray >= 130) & (gray <= 210)).astype(float)
+    row_profile = rule_pixels.mean(axis=1)
+    col_profile = rule_pixels.mean(axis=0)
+
+    def find_lines(profile):
+        candidates = np.flatnonzero(profile >= 0.35)
+        groups = np.split(candidates, np.flatnonzero(np.diff(candidates) > 1) + 1)
+        groups = [group for group in groups if len(group)]
+        if len(groups) < 8:
+            return None
+        positions = [int(group[np.argmax(profile[group])]) for group in groups]
+        gaps = [right - left for left, right in zip(positions, positions[1:])
+                if 5 <= right - left <= 60]
+        if not gaps:
+            return None
+        period = Counter(gaps).most_common(1)[0][0]
+        # The first rule is a strong registration point; later antialiased
+        # rules can shift by a pixel, so do not infer phase from every peak.
+        return list(range(positions[0], positions[-1] + 1, period))
+
+    rows, cols = find_lines(row_profile), find_lines(col_profile)
+    if rows and cols:
+        return rows, cols
+    return None
+
+
+def simplify_color_matrix(rgb_matrix, threshold=240):
+    """Reduce a colour or symbol chart to one integer code per cell.
+
+    The geometric grid is detected from a grayscale ink mask, while the
+    source RGB values and glyph shapes are sampled inside each cell. Similar
+    antialiased RGB values and repeated glyphs are grouped. Code 0 is the
+    empty/background cell; each foreground colour/symbol combination gets
+    its own integer code.
+    """
+    gray = np.asarray(Image.fromarray(rgb_matrix).convert('L'))
+    regular_cells = _find_regular_grid_cells(gray)
+    binary = (gray <= threshold).astype(np.uint8)
+    if regular_cells:
+        row_lines, col_lines = regular_cells
+        cell_bounds = [(row_lines[i] + 1, row_lines[i + 1],
+                        col_lines[j] + 1, col_lines[j + 1])
+                       for i in range(len(row_lines) - 1)
+                       for j in range(len(col_lines) - 1)]
+        matrix_shape = (len(row_lines) - 1, len(col_lines) - 1)
+    else:
+        grid_rows, grid_cols = get_grid_layout(binary)
+        if len(grid_rows) < 3 or len(grid_cols) < 3:
+            raise ValueError('Could not identify a complete chart grid in the EPS image')
+        if (len(grid_rows) > binary.shape[0] // 4 or
+                len(grid_cols) > binary.shape[1] // 4):
+            raise ValueError('Could not distinguish chart rules from dense chart artwork')
+        without_grid = remove_grid(binary.copy())
+        cropped_binary, grid_rows, grid_cols, bounds = remove_outside_of_pattern(
+            without_grid, list(grid_rows), list(grid_cols), return_bounds=True)
+        top, bottom, left, right = bounds
+        rgb_matrix = rgb_matrix[top:bottom, left:right]
+        n, m = cropped_binary.shape
+        grid_rows = [0] + grid_rows + [n]
+        grid_cols = [0] + grid_cols + [m]
+        cell_bounds = [(grid_rows[i], grid_rows[i + 1], grid_cols[j], grid_cols[j + 1])
+                       for i in range(len(grid_rows) - 1)
+                       for j in range(len(grid_cols) - 1)]
+        matrix_shape = (len(grid_rows) - 1, len(grid_cols) - 1)
+
+    records = []
+    for index, (y0, y1, x0, x1) in enumerate(cell_bounds):
+        row, col = divmod(index, matrix_shape[1])
+        interior = rgb_matrix[y0:y1, x0:x1]
+        if interior.size == 0:
+            continue
+        ink = np.linalg.norm(interior.astype(float) - 255.0, axis=2) > 40
+        pixels = interior[ink]
+        if len(pixels) < max(3, int(interior.shape[0] * interior.shape[1] * 0.01)):
+            continue
+        # Coarse quantisation absorbs edge antialiasing without merging
+        # clearly distinct yarn or symbol colours.
+        quantized = (pixels // 16) * 16
+        unique, counts = np.unique(quantized, axis=0, return_counts=True)
+        sample = unique[int(np.argmax(counts))].astype(float)
+        ys, xs = np.where(ink)
+        glyph = ink[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        scale = min(12 / glyph.shape[0], 12 / glyph.shape[1])
+        glyph_size = (max(1, round(glyph.shape[1] * scale)),
+                      max(1, round(glyph.shape[0] * scale)))
+        glyph_image = Image.fromarray((glyph * 255).astype(np.uint8)).resize(
+            glyph_size, Image.Resampling.NEAREST)
+        signature = np.zeros((16, 16), dtype=bool)
+        left_pad = (16 - glyph_size[0]) // 2
+        top_pad = (16 - glyph_size[1]) // 2
+        signature[top_pad:top_pad + glyph_size[1],
+                  left_pad:left_pad + glyph_size[0]] = np.asarray(glyph_image) > 127
+        records.append({'row': row, 'col': col, 'color': sample,
+                        'signature': signature, 'density': float(ink.mean())})
+
+    if not records:
+        raise ValueError('No filled chart cells were found')
+
+    grayscale_source = np.median([
+        max(record['color']) - min(record['color']) for record in records
+    ]) < 18
+    centers = []
+    for record in records:
+        sample = record['color']
+        if grayscale_source:
+            record['color_class'] = 0
+            continue
+        distances = [np.linalg.norm(sample - center) for center in centers]
+        if not distances or min(distances) > 48:
+            centers.append(sample.copy())
+            record['color_class'] = len(centers) - 1
+        else:
+            record['color_class'] = int(np.argmin(distances))
+
+    matrix = np.zeros(matrix_shape, dtype=np.int16)
+    shape_centers = {}
+    class_codes = {}
+    for record in records:
+        color_class = record['color_class']
+        candidates = shape_centers.setdefault(color_class, [])
+        signature = record['signature']
+        distances = []
+        for center in candidates:
+            union = np.logical_or(signature, center).sum()
+            intersection = np.logical_and(signature, center).sum()
+            distances.append(1.0 - intersection / max(1, union))
+        if not distances or min(distances) > 0.65:
+            candidates.append(signature)
+            symbol_class = len(candidates) - 1
+        else:
+            symbol_class = int(np.argmin(distances))
+        key = (color_class, symbol_class)
+        if key not in class_codes:
+            class_codes[key] = len(class_codes) + 1
+        matrix[record['row'], record['col']] = class_codes[key]
+
+    colors = []
+    if len(centers) > 1:
+        for (color_class, shape_class), value in class_codes.items():
+            center = centers[color_class]
+            rgb = [int(min(255, max(0, channel + 8))) for channel in center]
+            colors.append({'value': value, 'rgb': rgb, 'shape_class': shape_class})
+    return matrix, colors
 
 
 def simplify_binary_matrix(Matrix):

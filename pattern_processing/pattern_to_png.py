@@ -1,5 +1,8 @@
 from PIL import Image
 import numpy as np
+import colorsys
+import json
+import os
 from .utils import read_txt_to_matrix, get_matrix_size
 
 COLOR_PALETTE = [
@@ -25,11 +28,31 @@ def apply_color_palette(matrix, palette):
     for i in range(len(palette)):
         color_image[matrix == i] = palette[i]
 
-    # Have a warning if there is a color in the matrix that is not in the palette
-    assert len(np.unique(matrix)) <= len(
-        palette), "There are more colors in the matrix than in the palette."
+    if matrix.min(initial=0) < 0 or matrix.max(initial=0) >= len(palette):
+        raise ValueError("The matrix contains a cell code with no palette colour.")
 
     return color_image
+
+
+def get_matrix_palette(input_txt, matrix):
+    """Load an EPS source palette, or extend the default palette as needed."""
+    palette_path = os.path.splitext(input_txt)[0] + '.palette.json'
+    palette = list(COLOR_PALETTE)
+    if os.path.exists(palette_path):
+        with open(palette_path, 'r', encoding='utf-8') as palette_file:
+            source = json.load(palette_file)
+        for entry in source.get('colors', []):
+            value = int(entry['value'])
+            while len(palette) <= value:
+                palette.append((0, 0, 0, 255))
+            palette[value] = tuple(entry['rgb']) + (255,)
+
+    max_value = int(matrix.max(initial=0))
+    while len(palette) <= max_value:
+        hue = (0.11 + (len(palette) - 1) * 0.61803398875) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(hue, 0.68, 0.88)
+        palette.append((round(red * 255), round(green * 255), round(blue * 255), 255))
+    return palette
 
 
 def zoom_in(matrix, zoom_factor):
@@ -112,7 +135,7 @@ def convert_txt_to_png(input_txt, output_png, width_px, height_px, zoom_factor=1
 
     matrix = zoom_in(matrix, zoom_factor)
     matrix = resize_with_crop_or_padding(matrix, width_px, height_px)
-    matrix = apply_color_palette(matrix, COLOR_PALETTE)
+    matrix = apply_color_palette(matrix, get_matrix_palette(input_txt, matrix))
 
     # Create a PIL image from the matrix
     image = Image.fromarray(matrix, mode='RGBA')

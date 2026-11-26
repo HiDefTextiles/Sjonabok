@@ -47,6 +47,7 @@ $(PNG_DIR)/%.png: $(TXT_DIR)/%.txt convert_to_png.py pattern_processing/pattern_
 # Clean all generated files
 clean:
 	find $(TXT_DIR) -name '*.txt' -delete
+	find $(TXT_DIR) -name '*.palette.json' -delete
 	find $(PNG_DIR) -name '*.png' -delete
 
 # ── Minimal charts (committed) ──────────────────────────────────────────────
