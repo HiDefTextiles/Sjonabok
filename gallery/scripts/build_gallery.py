@@ -57,7 +57,25 @@ SOURCE_LABELS = {
     "thjms5898": "Þjms. 5898",
     "thjms6950": "Þjms. 6950",
     "thjmsth_116": "Þjms. Th 116",
+    # printed European pattern books (books/books.csv)
+    "sib1597": "Sibmacher 1597",
+    "sib1604": "Sibmacher 1604",
+    "quentel1529": "Quentel 1529",
 }
+
+# Which collection a source belongs to: the Icelandic manuscripts of
+# Íslensk sjónabók, or printed pattern books from elsewhere in Europe.
+BOOKS_CSV = Path(__file__).resolve().parents[2] / "books" / "books.csv"
+
+
+def read_books(path=BOOKS_CSV):
+    if not path.exists():
+        return {}
+    with open(path, newline="", encoding="utf-8") as f:
+        return {r["code"]: r for r in csv.DictReader(f)}
+
+
+BOOKS = read_books()
 
 # One colour per source on the overview sheets: a rainbow in SOURCE_LABELS
 # order, darkened where needed to read on white. The page legend names every
@@ -65,6 +83,7 @@ SOURCE_LABELS = {
 SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
     "#d6336c", "#e8590c", "#d99a00", "#82a31a", "#2f9e44",
     "#0c9a9a", "#1c7ed6", "#3b4cc0", "#7048e8", "#ae3ec9",
+    "#5c5f66", "#868e96", "#343a40",  # printed books: greys
 ]))
 
 # Plain-language names, written for a band running left to right
@@ -355,6 +374,15 @@ class Pattern:
         return RepeatUnit.tile(self.band_unit(), 0, length)
 
     # ── record ───────────────────────────────────────────────────────────
+    def book_fields(self):
+        b = BOOKS.get(self.source)
+        if not b:
+            return {"collection": "iceland"}
+        return {"collection": "europe", "book_title": b["title"], "book_author": b["author"],
+                "book_place": b["place"], "book_country": b["country"], "book_year": int(b["year"]),
+                "book_holder": b["holder"], "book_accession": b["accession"],
+                "book_url": b["record_url"], "book_rights": b["rights"]}
+
     def record(self):
         h, w = self.matrix.shape
         th, tw = self.trim.shape
@@ -392,6 +420,7 @@ class Pattern:
             "float_fg": self.float_fg,
             "float_bg": self.float_bg,
             "color": SOURCE_COLORS.get(self.source),
+            **self.book_fields(),
             "thumb_zoom": max(2, THUMB_PX // max(self.display.shape)),
         }
 
@@ -399,10 +428,13 @@ class Pattern:
 class Gallery:
     """All patterns, their similarity links and the generated files."""
 
-    def __init__(self, txt_dir, out_dir, manifest=None):
+    def __init__(self, txt_dir, out_dir, manifest=None, extra=()):
         self.out = Path(out_dir)
         units = self.read_units(Path(manifest) if manifest else Path(txt_dir).parent / "repeats.csv")
-        self.patterns = [Pattern(p, units.get(p.stem)) for p in sorted(Path(txt_dir).glob("*.txt"))]
+        paths = sorted(Path(txt_dir).glob("*.txt"))
+        for d in extra:                       # e.g. patterns/books
+            paths += sorted(Path(d).glob("*.txt"))
+        self.patterns = [Pattern(p, units.get(p.stem)) for p in paths]
 
     @staticmethod
     def read_units(path):
@@ -462,11 +494,13 @@ class Gallery:
         columns, and
         everything else (motifs, rosettes, bands that do not repeat). Each
         source in order, manuscript 1 at the top. Layouts made
-        by pack_overview.py (Gurobi) are used when they match the charts."""
-        bands = BandColumns(BAND_COLUMNS, BAND_LENGTH).add_all([p for p in self.patterns if p.is_band()])
+        by pack_overview.py (Gurobi) are used when they match the charts.
+        Only the Icelandic manuscripts: the sheets map Íslensk sjónabók."""
+        own = [p for p in self.patterns if p.source not in BOOKS]
+        bands = BandColumns(BAND_COLUMNS, BAND_LENGTH).add_all([p for p in own if p.is_band()])
         bands.save_items(self.out / "overview-band-items.csv")
         bands.save(self.out / "overview-bands.png", LAYOUT_DIR / "bands.csv")
-        motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in self.patterns if not p.is_band()])
+        motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in own if not p.is_band()])
         motifs.save_items(self.out / "overview-motif-items.csv")
         motifs.save(self.out / "overview-motifs.png", LAYOUT_DIR / "motifs.csv")
 
@@ -676,8 +710,10 @@ def main():
     ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns")
     ap.add_argument("out_dir", help="folder for patterns.json and images")
     ap.add_argument("--manifest", help="repeats.csv (default: next to txt_dir)")
+    ap.add_argument("--extra", action="append", default=[],
+                    help="another folder of charts, e.g. patterns/books (repeatable)")
     args = ap.parse_args()
-    Gallery(args.txt_dir, args.out_dir, args.manifest).build()
+    Gallery(args.txt_dir, args.out_dir, args.manifest, args.extra).build()
 
 
 if __name__ == "__main__":

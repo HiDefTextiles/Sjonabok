@@ -63,6 +63,15 @@ Everything is done by an open script, so anyone can rerun it and get the same ic
 A person checks the result: the script also draws a sheet of the six best candidates per manuscript, and a pick can be swapped by hand in `gallery/map/picks.csv`. Places and dates come from museum records ([`manuscripts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/manuscripts.csv), [`places.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/places.csv)); the map is drawn with R and leaflet (`make map`). Open questions about places are tracked in [issue #15](https://github.com/HiDefTextiles/Sjonabok/issues/15).
 :::
 
+## Do patterns travel?
+
+The Icelandic manuscripts next to the printed pattern books of Germany, Italy and France. Pink lines join a book and a manuscript that hold the same figure; grey dashes are copying between books that the museums record. Read more on the [About page](about.html#books).
+
+```{=html}
+<iframe class="manuscript-map" src="map/web/europe.html" title="Map and timeline of printed pattern books and the Icelandic manuscripts" loading="lazy"
+  onload="const f=this, fit=()=>{try{f.style.height=(f.contentDocument.getElementById('htmlwidget_container').offsetHeight+16)+'px'}catch(e){}}; fit(); new ResizeObserver(fit).observe(f.contentDocument.body);"></iframe>
+```
+
 ## Sources and types
 
 Each file name starts with the manuscript or museum number it was taken from. Borders (long bands) dominate most sources; rosettes and figurative motifs cluster in a few.
