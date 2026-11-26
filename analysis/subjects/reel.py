@@ -30,7 +30,7 @@ PAPER = np.array((255, 255, 255), float)
 GRID = np.array((236, 236, 244), float)
 INK = (38, 38, 38)
 FRAME_BAND = "thjms2008-14_522_p3"   # border band for the frame (patterns/repeat)
-OWN_CENTRE = 3   # each book keeps its own centre square of 2*3+1 cells; arms shared (0: all its own)
+OWN_CENTRE = 0   # >0: each book keeps only its centre square of 2*k+1 cells, arms shared (Helga preferred whole figures)
 SITE = "hideftextiles.github.io/Sjonabok"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -48,17 +48,51 @@ class BookFigures:
         for p in S.read_csv(OUT / "places.csv"):
             if p["submotif"] in members and p["kept"] == "1":
                 by_book[self.units[p["chart"]].pattern.source][p["submotif"]].append(p)
-        self.figures, self.charts = [], []
+        # every size variant as each book draws it (the vote of that book's charts)
+        self.versions = {}
         for src in sorted(by_book, key=lambda s: int(self.dates[s]["order"])):
-            m, pl = max(by_book[src].items(), key=lambda kv: len({p["chart"] for p in kv[1]}))
-            cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
-            ref = max((c for *_, c in cuts), key=lambda c: c.sum())
-            con = Consensus(ref, cuts).settle()
-            fig = clean(con.cells)   # stray cells dropped, near symmetry evened out
-            self.figures.append((src, fig, len({p["chart"] for p in pl})))
-            # the chart that shows the book's version best, with the figure marked (2)
-            best = max(range(len(pl)), key=lambda i: con.fit[i])
-            self.charts.append(self.marked(pl[best], fig))
+            self.versions[src] = [v for pl in by_book[src].values() for v in self.version(pl)]
+        # a book may draw the figure more than one way (a star with thin points, a flower with
+        # broad petals); show the way closest to what the books draw most, so that the reel
+        # compares like with like
+        first = {src: max(v, key=lambda t: t[2]) for src, v in self.versions.items()}   # each book's main vote
+        n = max(max(t[0].shape) for v in self.versions.values() for t in v) + 2
+        self.reference = self.majority([t[0] for t in first.values()], n)
+        self.figures, self.charts = [], []
+        for src, vs in self.versions.items():
+            fig, chart, charts = max(vs, key=lambda t: (self.likeness(t[0], n), t[2]))
+            self.figures.append((src, fig, charts))
+            self.charts.append(chart)
+
+    def version(self, pl):
+        """(figure, marked chart, number of charts) for one book's places of one sub-motif."""
+        cuts = [(p["chart"], int(p["row"]), int(p["col"]), self.cut(p)) for p in pl]
+        ref = max((c for *_, c in cuts), key=lambda c: c.sum())
+        con = Consensus(ref, cuts).settle()
+        fig = clean(con.cells)   # stray cells dropped, near symmetry evened out
+        best = max(range(len(pl)), key=lambda i: con.fit[i])
+        out = [(fig, self.marked(pl[best], fig), len({p["chart"] for p in pl}))]
+        # and each single drawing, in case the vote blurred a star into a broad flower
+        for p, (*_, c) in zip(pl, cuts):
+            f = clean(c)
+            out.append((f, self.marked(p, f), 1))
+        return out
+
+    @staticmethod
+    def on_grid(f, n):
+        g = np.zeros((n, n), bool)
+        y, x = (n - f.shape[0]) // 2, (n - f.shape[1]) // 2
+        g[y:y + f.shape[0], x:x + f.shape[1]] = f[:n, :n]
+        return g
+
+    def majority(self, figs, n):
+        grids = [self.on_grid(f, n) for f in figs]
+        al = [grids[0]] + [Aligner(grids[0]).align(g)[SHIFT:SHIFT + n, SHIFT:SHIFT + n] for g in grids[1:]]
+        return np.mean(al, 0) >= 0.5
+
+    def likeness(self, f, n):
+        g = Aligner(self.reference).align(self.on_grid(f, n))[SHIFT:SHIFT + n, SHIFT:SHIFT + n]
+        return (g & self.reference).sum() / max(1, (g | self.reference).sum())
 
     def marked(self, p, fig):
         y, x, h, w = (int(p[k]) for k in ("row", "col", "height", "width"))

@@ -110,7 +110,8 @@ def clean(m, agree=0.85):
     falls between cells) that matches the figure on at least `agree` of its cells counts as one
     of its symmetries; every cell then takes the majority over those symmetric copies, so a
     cell a scribe added or left out on one arm only is settled by the other arms. Finally a
-    cell touching no other filled cell (a stray pixel) is dropped."""
+    cell touching no other filled cell (a stray pixel) is dropped, and so is anything not
+    joined to the figure's largest piece (bits of the neighbouring pattern)."""
     m = trim(m.astype(bool))
     s = max(m.shape) + 2
     sq = np.zeros((s, s), bool)
@@ -131,6 +132,11 @@ def clean(m, agree=0.85):
     out = (vote > 0.5) | ((vote == 0.5) & sq)
     nb = ndimage.convolve(out.astype(int), np.ones((3, 3), int), mode="constant") - out
     out &= nb > 0
+    # only the figure itself: the largest joined piece (cells touching at a corner count)
+    lab, k = ndimage.label(out, np.ones((3, 3)))
+    if k > 1:
+        sizes = ndimage.sum(out, lab, range(1, k + 1))
+        out = lab == 1 + int(np.argmax(sizes))
     return trim(out)
 
 
