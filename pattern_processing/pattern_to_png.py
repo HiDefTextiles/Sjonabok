@@ -7,7 +7,8 @@ COLOR_PALETTE = [
     (16, 9, 159, 255),  # HI-Blue for 1
     (214, 31, 105, 255),  # HI-Pink for 2
     (244, 184, 206, 255),  # HI-Light Pink for 3
-    (45, 210, 192, 255)  # HI-Green for 4
+    (45, 210, 192, 255),  # HI-Green for 4
+    (250, 197, 91, 255)  # HI-Yellow for 5 (half cells in the multi-mark charts)
 ]
 
 

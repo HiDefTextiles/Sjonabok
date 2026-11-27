@@ -1,0 +1,17 @@
+JJJJJ..xxxx..JJJ..xxxx..JJJJJooJJJJJJJJJ...x...JJJJJJJJJooJJJJJ..xxxx..JJJ..xxxx..JJJJJooJJJJJJJJJ...x...JJJJJJJJJo
+JJJJ..xxxxxx..J..xxxxxx..JJJJooJJJJJJJJ...xxx...JJJJJJJJooJJJJ..xxxxxx..J..xxxxxx..JJJJooJJJJJJJJ...xxx...JJJJJJJJo
+JJJ..xx....xx...xx....xx..JJJooJJJJJJJ...xxxxx...JJJJJJJooJJJ..xx....xx...xx....xx..JJJooJJJJJJJ...xxxxx...JJJJJJJo
+JJ..xx....J.xx.xx.x....xx..JJooJJJJJJ.....xxx.....JJJJJJooJJ..xx....J.xx.xx.x....xx..JJooJJJJJJ.....xxx.....JJJJJJo
+J..xx....J..xxxxx..x....xx..JoJJJJJJ.......x.......JJJJJJoJ..xx....J..xxxxx..x....xx..JoJJJJJJ.......x.......JJJJJJ
+..xx...O..JJJ.x.xxx..O...xx..J......O.xxx..x..xxx.O......J..xx...O..JJJ.x.xxx..O...xx..J......O.xxx..x..xxx.O......
+.xx..J.O......x......O.J..xx..JJJJJ.Oxxxxx.x.xxxxxO.JJJJJ..xx..J.O......x......O.J..xx..JJJJJ.Oxxxxx.x.xxxxxO.JJJJJ
+xx..JJ.O.xxx..x..xxx.O.JJ..xx..JJJJ.OxxxxxxxxxxxxxO.JJJJ..xx..JJ.O.xxx..x..xxx.O.JJ..xx..JJJJ.OxxxxxxxxxxxxxO.JJJJ.
+x..JJJ.Oxxxxx.x.xxxxxO.JJJ..xx..JJJ.Oxxxxx.x.xxxxxO.JJJ..xx..JJJ.Oxxxxx.x.xxxxxO.JJJ..xx..JJJ.Oxxxxx.x.xxxxxO.JJJ..
+..JJJJ.OxxxxxxxxxxxxxO.JJJJ..xx..JJ.O.xxx..x..xxx.O.JJ..xx..JJJJ.OxxxxxxxxxxxxxO.JJJJ..xx..JJ.O.xxx..x..xxx.O.JJ..x
+.JJJJJ.Oxxxxx.x.xxxxxO.JJJJJ..xx..J.O......x......O.J..xx..JJJJJ.Oxxxxx.x.xxxxxO.JJJJJ..xx..J.O......x......O.J..xx
+J......O.xxx..x..xxx.O......J..xx...O..JJJ.x.xxx..O...xx..J......O.xxx..x..xxx.O......J..xx...O..JJJ.x.xxx..O...xx.
+oJJJJJJ.......x.......JJJJJJoJ..xx....J...xxx...x....xx..JoJJJJJJ.......x.......JJJJJJoJ..xx....J...xxx...x....xx..
+ooJJJJJJ.....xxx.....JJJJJJooJJ..xx....J.xx.xx.x....xx..JJooJJJJJJ.....xxx.....JJJJJJooJJ..xx....J.xx.xx.x....xx..J
+ooJJJJJJJ...xxxxx...JJJJJJJooJJJ..xx....xx...xx....xx..JJJooJJJJJJJ...xxxxx...JJJJJJJooJJJ..xx....xx...xx....xx..JJ
+ooJJJJJJJJ...xxx...JJJJJJJJooJJJJ..xxxxxx..J..xxxxxx..JJJJooJJJJJJJJ...xxx...JJJJJJJJooJJJJ..xxxxxx..J..xxxxxx..JJJ
+ooJJJJJJJJJ...x...JJJJJJJJJooJJJJJ..xxxx..JJJ..xxxx..JJJJJooJJJJJJJJJ...x...JJJJJJJJJooJJJJJ..xxxx..JJJ..xxxx..JJJJ

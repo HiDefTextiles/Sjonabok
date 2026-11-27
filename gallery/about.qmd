@@ -31,9 +31,70 @@ The file name starts with the source: the manuscript or museum number the patter
 for example `thjms5898` for Þjms. 5898 at the National Museum of Iceland. The number after it
 is the page in *Íslensk sjónabók* (2009), so `natmus453_706_p4` is the 4th motif on page 706. A page often holds several motifs; the `_p` numbering is ours, from splitting the page, not from the book.
 
+Some 43 pages draw their charts with several kinds of mark (a filled diamond, a cross, a circled
+cross, a round dot, a half-filled cell), which in the manuscripts are different colours or
+stitches. Their files hold one digit per mark instead of `1`: `1` diamond, `2` cross, `3` circled
+cross, `4` dot, `5` half cell; the gallery shows each digit in its own HI colour. The 50 alphabet
+sheets are kept whole, one chart each, on the [Alphabets](alphabets.html) page; to type with them,
+use the fonts made from the same charts in
+[Sjónabókarstafróf](https://github.com/HiDefTextiles/Sjonabok-stafrof).
+
 The charts, the converters and this gallery live in the
 [HiDefTextiles/Sjonabok](https://github.com/HiDefTextiles/Sjonabok) repository. Every pattern in
 the gallery can be downloaded as its `.txt` chart or as a PNG image.
+
+## Printed European pattern books {#books}
+
+Next to the Icelandic manuscripts the gallery holds charts from **printed pattern books** of the
+16th and 17th centuries, filter *Collection: European printed books*. These books were sold all
+over Europe, and their designs were copied from book to book: the museum records note that
+Quentel's patterns (Cologne, 1527 onwards) closely copy Schönsperger's (Augsburg), that Jobin
+(Strasbourg, 1579 onwards) copies Vavassore, Pagano, Quentel and others, and that Sibmacher's
+first title follows Jobin. They are one of the routes by which patterns could have reached Iceland.
+
+| Book | Printed | Held by | Charts so far |
+|---|---|---|---|
+| *Eyn New Kunstlichboich* | Peter Quentel, Cologne 1529 (first ed. 1527) | The Met, 20.50.2(1-49) | 26 |
+| *Ein new getruckt model Büchli* | Johann Schönsperger the Younger, Augsburg 1529 | The Met, 18.66.2 | 62 |
+| Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | 12 |
+| *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
+| Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
+| Johann Sibmacher, *Newes Modelbuch in Kupffer* | Nuremberg 1604 (first ed. 1601) | The Met, 29.59.3(1-70) | 26 |
+| Rosina Helena Fürst, *Das Neue Modelbuch*, parts I–IV | Paulus Fürst, Nuremberg, about 1660 to 1689 | Clark Art Institute (scans on [archive.org](https://archive.org/details/modelbucht1400frst)); part I also at the Met, 28.45.5 | 189 |
+
+More books are listed in [`books/books.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/books.csv)
+with their places, dates, holders and rights. Fürst is the closest of these books in time to the Icelandic manuscripts; her charts draw outlines solid and fillings hatched, and some plates are drawn on a net turned 45 degrees (read as a square grid here). Alphabets found in the books are not added here: they go to the [Sjónabók alphabets](https://github.com/HiDefTextiles/Sjonabok-stafrof) project.
+
+**Rights.** The books are in the public domain and the museum scans are marked public domain
+(The Met Open Access). We do not copy the scans into the repository; each chart links to the
+museum record. The charts in the gallery are read from the scans by us: they are our
+interpretation, released under **CC BY 4.0**. Credit: *Helga Ingimundardóttir, Háskóli Íslands
+(HiDef Textiles)*, and name the book.
+
+**How the charts are read.** (Step by step with pictures: [How we read old pattern books](reading.qmd).) A script finds each ruled chart on a scanned page, straightens it,
+finds the grid lines and calls a cell filled when its centre is inked
+([`books/digitise.py`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/digitise.py)).
+Most of the earlier woodcuts (Quentel, Schönsperger, Tagliente, Jobin) are cut the other way round, a black block with the empty cells cut out as
+white squares, so they have their own reader that follows the white squares
+([`books/woodcut.py`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/woodcut.py)).
+Every chart was checked by eye against the scan; plates drawn with several symbols (crosses,
+wheels, shaded cells) or badly printed are left out for now (`redo` in
+[`books/charts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/charts.csv)).
+Are any of them in colour? The woodcuts are strictly two-tone. Sibmacher's etchings are not:
+of the 65 readable plates left out, 40 use more than solid cells, 24 a hatched second tone and
+26 wheels or star cells (most likely a stitch, such as an eyelet, rather than a colour), and almost
+all add small crosses. The books print no key, so which symbol is a colour and which a stitch is our
+reading, not the author's ([`books/symbols.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/symbols.csv)).
+Charts marked *fair* may have a few wrong cells. The number in a book chart's file name is the
+plate (or leaf) of the book, `_p` the band on that plate.
+
+**Do patterns travel?** [`books/travel.py`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/travel.py)
+looks for whole figures (at least 10 cells, free on all sides) that occur both in a printed book
+and in an Icelandic manuscript, allowing turns, mirroring and a cell of difference. The figures
+it finds are shown on the [map and timeline](map/web/europe.html). For example a 17×17 eight-pointed
+star is cell for cell the same in Sibmacher's book of 1597 and in Þjms. 1105 (17th century).
+A shared figure does not prove copying, since simple geometric figures can be invented twice,
+but large identical figures and the dates make a printed source likely.
 
 ## How the gallery is made
 

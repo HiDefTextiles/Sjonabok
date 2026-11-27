@@ -18,7 +18,16 @@
     rosette: "Rosette / star",
     motif: "Motif",
     "vertical band": "Vertical band",
+    alphabet: "Alphabet",
   };
+  // Charts with several kinds of mark (patterns/colour) hold digits 2-5 for
+  // the other marks; they get the first HI colours that differ from the
+  // chosen scheme's pattern and background colours.
+  const MARK_COLOURS = ["#d61f69", "#2DD2C0", "#FAC55B", "#10099F", "#F4B8CE"];
+  function markColours(fg, bg) {
+    const rest = MARK_COLOURS.filter((c) => c.toLowerCase() !== fg.toLowerCase() && c.toLowerCase() !== bg.toLowerCase());
+    return { 1: fg, 2: rest[0], 3: rest[1], 4: rest[2], 5: rest[3] };
+  }
   const SYM = [
     ["mirror_lr", "Left–right mirror", "The left half mirrors the right half"],
     ["mirror_tb", "Top–bottom mirror", "The top half mirrors the bottom half"],
@@ -52,7 +61,7 @@
   ];
 
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), range: {}, q: "", sort: "name" };
+  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), coll: new Set(), range: {}, q: "", sort: "name" };
   let data = [];
   let byId = {};
   let current = null;
@@ -113,6 +122,7 @@
     if (state.q && !p.id.toLowerCase().includes(state.q) && !p.source_label.toLowerCase().includes(state.q)) return false;
     if (skip !== "kind" && state.kind.size && !state.kind.has(p.kind)) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
+    if (skip !== "coll" && state.coll.size && !state.coll.has(p.collection || "iceland")) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
     if (skip !== "sym") {
       for (const s of state.sym) if (s === "none" ? !isAsym(p) : !p[s]) return false;
@@ -156,9 +166,10 @@
     $("count").textContent = `Showing ${shown.length} of ${data.length} patterns`;
     counts($("f-kind"), "kind", (p) => p.kind);
     counts($("f-source"), "source", (p) => p.source);
+    counts($("f-coll"), "coll", (p) => p.collection || "iceland");
     counts($("f-group"), "group", group);
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
-    const active = ["kind", "sym", "group", "source"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    const active = ["kind", "sym", "group", "source", "coll"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
     $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
@@ -170,7 +181,7 @@
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
-      <span class="cap"><b>${p.source_label}</b> p. ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
+      <span class="cap"><b>${p.source_label}</b> ${p.printed ? "pl." : "p."} ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
       <small>${KIND_LABELS[p.kind]} · ${p.trim_width}×${p.trim_height}</small></span>`;
     return a;
   }
@@ -178,7 +189,7 @@
   // ── URL state (shareable filters) ──────────────────────────────────────
   function saveUrl() {
     const u = new URLSearchParams();
-    for (const k of ["kind", "sym", "group", "source"]) if (state[k].size) u.set(k, [...state[k]].join(","));
+    for (const k of ["kind", "sym", "group", "source", "coll"]) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
     const qs = u.toString();
@@ -187,7 +198,7 @@
 
   function loadUrl() {
     const u = new URLSearchParams(location.search);
-    for (const k of ["kind", "sym", "group", "source"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
+    for (const k of ["kind", "sym", "group", "source", "coll"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
     $("q").value = state.q;
@@ -201,7 +212,7 @@
   function inkBounds(m) {
     let x0 = Infinity, x1 = -1, y0 = Infinity, y1 = -1;
     m.forEach((row, y) => {
-      const f = row.indexOf("1"), l = row.lastIndexOf("1");
+      const f = row.search(/[1-9]/), l = row.length - 1 - [...row].reverse().join("").search(/[1-9]/);
       if (f >= 0) { x0 = Math.min(x0, f); x1 = Math.max(x1, l); y0 = Math.min(y0, y); y1 = y; }
     });
     return x1 < 0 ? { x0: 0, x1: m[0].length - 1, y0: 0, y1: m.length - 1 } : { x0, x1, y0, y1 };
@@ -260,10 +271,12 @@
     const ctx = cv.getContext("2d");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.fillStyle = fg;
+    const mc = markColours(fg, bg);
     for (let y = 0; y < L.H; y++)
-      for (let x = 0; x < L.W; x++)
-        if (L.at(x, y) === "1") ctx.fillRect(x * z, y * z, z, z);
+      for (let x = 0; x < L.W; x++) {
+        const c = L.at(x, y);
+        if (c && c !== "0") { ctx.fillStyle = mc[c] || fg; ctx.fillRect(x * z, y * z, z, z); }
+      }
     if (view.grid && z >= 4) {
       ctx.strokeStyle = "rgba(38,38,38,0.18)";
       ctx.lineWidth = 1;
@@ -304,10 +317,25 @@
     const syms = SYM.filter(([k]) => k !== "none" && p[k]).map((s) => s[1]).join(", ") || "None found";
     const grp = p.frieze ? `${p.frieze} (${p.frieze_name})` : p.point ? `${p.point} (${p.point_name})` : "—";
     $("d-facts").innerHTML =
-      fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
-      fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
+      (p.printed
+        ? fact("Plate", `${p.number} in <i>${p.book_title}</i> (${p.book_place} ${p.book_year})`) +
+          fact("Designer", p.book_author) +
+          fact("Band", p.part ? `${p.part} of ${p.on_page} on this plate` : null) +
+          fact("Original", `<a href="${p.book_url}" target="_blank" rel="noopener">${p.book_holder}, ${p.book_accession}</a> · ${p.book_rights}`) +
+          fact("Chart", "read from the museum's scan by grid detection; CC BY 4.0, Helga Ingimundardóttir (HiDef Textiles)")
+        : fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
+          fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null)) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
+      (p.kind === "alphabet"
+        ? fact("As a font", p.font_page
+            ? `<a href="${p.font_page}" target="_blank" rel="noopener">this alphabet as a TrueType font</a>, from <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`
+            : `${p.font_note}. Fonts from the other sheets: <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`)
+        : "") +
+      (p.colours && p.colours.length > 1
+        ? fact("Marks", `${p.colours.length} kinds of mark in the book, shown as ${p.colours.length} colours (digits ${p.colours.join(", ")} in the .txt)`) +
+          fact("Colours in a row", `up to ${p.row_colours}, background included`)
+        : "") +
       (p.unit
         ? fact("Repeat unit", `${p.width} × ${p.height} cells (the file holds one repeat)`)
         : fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells`) +
@@ -408,12 +436,16 @@
     chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
     chips($("f-source"), "source", sources);
+    // tabs by country from gallery/regions.csv (via patterns.json)
+    const colls = (json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }])
+      .map((r) => [r.region, r.short || r.label, r.note]).filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
+    chips($("f-coll"), "coll", colls);
     ranges($("f-range"));
     loadUrl();
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
-      for (const k of ["kind", "sym", "group", "source"]) state[k].clear();
+      for (const k of ["kind", "sym", "group", "source", "coll"]) state[k].clear();
       state.q = ""; $("q").value = "";
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();

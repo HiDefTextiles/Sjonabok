@@ -1,0 +1,9 @@
+xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxx
+.x.xOOOOOx.........OxxxxxO.O...x.xOOOOOx.........OxxxxxO.O...x.xOOOOOx.........OxxxxxO.O...x.xOOOOOx.........Oxxxxx
+xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxxOOOO.xxxxOOOOOxxxxx.OOOOOxxxxx
+.xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.Oxxxxxxxxx
+.xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.OxxxxxxxxxOOO...xxxOOOOOOOOOx.Oxxxxxxxxx
+.xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOO
+.xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOOOOO...xxxxxxxxxxxxx.OOOOOOOOOO
+..O..O...O..O...x..x...x..x.....O..O...O..O...x..x...x..x.....O..O...O..O...x..x...x..x.....O..O...O..O...x..x...x.
+.OO.OO..OO.OO...xx.xx..xx.xx...OO.OO..OO.OO...xx.xx..xx.xx...OO.OO..OO.OO...xx.xx..xx.xx...OO.OO..OO.OO...xx.xx..xx

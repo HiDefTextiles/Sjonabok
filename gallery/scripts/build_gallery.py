@@ -1,6 +1,6 @@
 """Build the data behind the Sjonabok gallery.
 
-Reads every 0/1 matrix in patterns/min, measures it (size, density,
+Reads every chart in patterns/min, measures it (size, density,
 symmetry, repeat, type, pieces, longest float), renders PNG images in the
 HI colour palette and writes one JSON index for the gallery page.
 
@@ -18,6 +18,14 @@ Output (all generated, not committed):
     <out>/overview-bands.png   every repeating band on one sheet, coloured by source
     <out>/overview-motifs.png  motifs, rosettes and bands that do not repeat
     <out>/overview-*-items.csv sizes on each sheet (input for pack_overview.py)
+    <out>/overview-alphabets-<region>.png  whole alphabet sheets of one region
+                               (gallery/regions.csv), coloured by source
+
+A chart holds one digit per cell: 0 empty, 1 filled, and in charts with
+several kinds of mark (patterns/colour) 2-4 for the other marks, indices
+into the HI palette. Measures use filled = any mark. Alphabet sheets
+(patterns/alphabets, --alphabets) are one motif each: the whole sheet as
+drawn, never split into letters; the fonts are made in Sjonabok-stafrof.
 
 The measures are computed automatically; they describe the digitised chart,
 not a curator's judgement.
@@ -57,7 +65,84 @@ SOURCE_LABELS = {
     "thjms5898": "Þjms. 5898",
     "thjms6950": "Þjms. 6950",
     "thjmsth_116": "Þjms. Th 116",
+    # printed European pattern books (books/books.csv)
+    "sib1597": "Sibmacher 1597",
+    "sib1604": "Sibmacher 1604",
+    "quentel1529": "Quentel 1529",
+    "jobin1600": "Jobin 1600",
+    "schoensperger1529": "Schönsperger 1529",
+    "tagliente1530": "Tagliente 1530", "fuerst1660": "Fürst 1660",
 }
+
+# Which collection a source belongs to: the Icelandic manuscripts of
+# Íslensk sjónabók, or printed pattern books from elsewhere in Europe.
+BOOKS_CSV = Path(__file__).resolve().parents[2] / "books" / "books.csv"
+
+
+def read_books(path=BOOKS_CSV):
+    if not path.exists():
+        return {}
+    with open(path, newline="", encoding="utf-8") as f:
+        return {r["code"]: r for r in csv.DictReader(f)}
+
+
+BOOKS = read_books()
+
+# Tabs and collections by country, from gallery/regions.csv: one row per tab,
+# in order; "countries" is a ;-separated list matched against the start of a
+# book's country in books/books.csv (Icelandic manuscripts are "Iceland"),
+# and "*" takes every country no other row names. Adding or splitting a tab
+# is a change to that file only.
+REGIONS_CSV = Path(__file__).resolve().parents[1] / "regions.csv"
+
+
+def read_regions(path=REGIONS_CSV):
+    if not path.exists():
+        return [{"region": "iceland", "label": "Iceland", "short": "Icelandic manuscripts",
+                 "countries": "Iceland", "note": ""},
+                {"region": "europe", "label": "Mainland Europe", "short": "European printed books",
+                 "countries": "*", "note": ""}]
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+REGIONS = read_regions()
+
+
+def country_of(source):
+    b = BOOKS.get(source)
+    return b["country"] if b else "Iceland"
+
+
+def region_of(source):
+    country = country_of(source)
+    rest = None
+    for r in REGIONS:
+        names = [c.strip() for c in r["countries"].split(";") if c.strip()]
+        if "*" in names:
+            rest = rest or r["region"]
+        elif any(country.startswith(c) for c in names):
+            return r["region"]
+    return rest or REGIONS[-1]["region"]
+
+
+# Fonts made from the alphabet sheets live in their own repository.
+FONT_REPO = "https://github.com/HiDefTextiles/Sjonabok-stafrof"
+FONT_SITE = "https://hideftextiles.github.io/Sjonabok-stafrof/"
+ALPHABETS_CSV = Path(__file__).resolve().parents[2] / "patterns" / "alphabets" / "alphabets.csv"
+
+
+def read_fonts(path=ALPHABETS_CSV):
+    """Alphabet sheets with a font in Sjonabok-stafrof, and a note for the rest."""
+    if not path.exists():
+        return set(), {}
+    with open(path, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return ({r["name"] for r in rows if r["font"] == "yes"},
+            {r["name"]: r["note"] for r in rows if r["font"] != "yes"})
+
+
+FONTS, FONTS_MISSING = read_fonts()
 
 # One colour per source on the overview sheets: a rainbow in SOURCE_LABELS
 # order, darkened where needed to read on white. The page legend names every
@@ -65,6 +150,7 @@ SOURCE_LABELS = {
 SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
     "#d6336c", "#e8590c", "#d99a00", "#82a31a", "#2f9e44",
     "#0c9a9a", "#1c7ed6", "#3b4cc0", "#7048e8", "#ae3ec9",
+    "#5c5f66", "#868e96", "#343a40", "#495057", "#adb5bd", "#212529", "#6c757d",  # printed books: greys
 ]))
 
 # Plain-language names, written for a band running left to right
@@ -100,10 +186,12 @@ def agreement(a, b):
 class Pattern:
     """One digitised chart and everything the gallery shows about it."""
 
-    def __init__(self, path, unit_row=None):
+    def __init__(self, path, unit_row=None, alphabet=False):
         self.path = Path(path)
         self.id = self.path.stem
-        self.matrix = self.read(self.path)
+        self.alphabet = alphabet
+        self.colours = self.read(self.path)            # digit per cell, as in the file
+        self.matrix = (self.colours > 0).astype(np.uint8)   # filled = any mark
         self.unit_row = unit_row       # manifest row when the file is one repeat unit
         # a unit keeps its empty edge columns: they belong to the repeat
         self.trim = self.matrix if unit_row else self.trimmed(self.matrix)
@@ -138,6 +226,13 @@ class Pattern:
             return self.measure_unit()
         t = self.trim
         h, w = t.shape
+        if self.alphabet:     # a whole alphabet sheet is one motif, whatever its shape
+            self.measure_motif(t)
+            self.kind = "alphabet"
+            self.pieces = self.count_pieces(t)
+            self.float_fg = self.longest_run(t, 1)
+            self.float_bg = self.longest_run(t, 0)
+            return self
         self.kind = self.classify_shape(h, w)
         if self.kind in ("border", "edging"):
             self.measure_band(t)
@@ -315,8 +410,9 @@ class Pattern:
 
     # ── images ───────────────────────────────────────────────────────────
     def rgba(self, zoom):
-        palette = np.array(COLOR_PALETTE[:2], dtype=np.uint8)
-        img = palette[self.display]
+        palette = np.array(COLOR_PALETTE, dtype=np.uint8)
+        shown = self.colours if self.display is self.matrix else self.display
+        img = palette[shown]
         return np.kron(img, np.ones((zoom, zoom, 1), dtype=np.uint8))
 
     def save_images(self, out):
@@ -355,6 +451,16 @@ class Pattern:
         return RepeatUnit.tile(self.band_unit(), 0, length)
 
     # ── record ───────────────────────────────────────────────────────────
+    def book_fields(self):
+        b = BOOKS.get(self.source)
+        region = {"collection": region_of(self.source), "printed": bool(b), "country": country_of(self.source)}
+        if not b:
+            return region
+        return {**region, "book_title": b["title"], "book_author": b["author"],
+                "book_place": b["place"], "book_country": b["country"], "book_year": int(b["year"]),
+                "book_holder": b["holder"], "book_accession": b["accession"],
+                "book_url": b["record_url"], "book_rights": b["rights"]}
+
     def record(self):
         h, w = self.matrix.shape
         th, tw = self.trim.shape
@@ -392,17 +498,40 @@ class Pattern:
             "float_fg": self.float_fg,
             "float_bg": self.float_bg,
             "color": SOURCE_COLORS.get(self.source),
+            **self.book_fields(),
             "thumb_zoom": max(2, THUMB_PX // max(self.display.shape)),
+            "colours": sorted(int(c) for c in np.unique(self.colours) if c),
+            "row_colours": self.row_colours(),
+            **self.font_fields(),
         }
+
+    def row_colours(self):
+        """Most colours in one row, empty cells (the background) included:
+        what a knitting machine has to handle in a row (2 is easy)."""
+        return int(max(len(np.unique(r)) for r in self.colours))
+
+    def font_fields(self):
+        """Where to get an alphabet sheet as a font file."""
+        if not self.alphabet:
+            return {}
+        has_font = self.id in FONTS
+        return {"font_repo": FONT_REPO,
+                "font_page": f"{FONT_SITE}font-pages/{self.id}.html" if has_font else None,
+                "font_note": None if has_font else FONTS_MISSING.get(self.id, "no font made from this sheet yet")}
 
 
 class Gallery:
     """All patterns, their similarity links and the generated files."""
 
-    def __init__(self, txt_dir, out_dir, manifest=None):
+    def __init__(self, txt_dir, out_dir, manifest=None, extra=(), alphabets=None):
         self.out = Path(out_dir)
         units = self.read_units(Path(manifest) if manifest else Path(txt_dir).parent / "repeats.csv")
-        self.patterns = [Pattern(p, units.get(p.stem)) for p in sorted(Path(txt_dir).glob("*.txt"))]
+        paths = sorted(Path(txt_dir).glob("*.txt"))
+        for d in extra:                       # e.g. patterns/books, patterns/colour
+            paths += sorted(p for p in Path(d).glob("*.txt") if "." not in p.stem)   # not <chart>.marks.txt
+        self.patterns = [Pattern(p, units.get(p.stem)) for p in paths]
+        if alphabets:
+            self.patterns += [Pattern(p, alphabet=True) for p in sorted(Path(alphabets).glob("*.txt"))]
 
     @staticmethod
     def read_units(path):
@@ -425,6 +554,10 @@ class Gallery:
             "tolerance": TOLERANCE,
             "sources": self.summary(records, "source_label"),
             "kinds": self.summary(records, "kind"),
+            "regions": [{**r, "count": sum(x["collection"] == r["region"] for x in records),
+                         "alphabets": sum(x["collection"] == r["region"] and x["kind"] == "alphabet"
+                                          for x in records)} for r in REGIONS],
+            "font_repo": FONT_REPO, "font_site": FONT_SITE,
             "patterns": records,
         }
         (self.out / "patterns.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")))
@@ -462,18 +595,37 @@ class Gallery:
         columns, and
         everything else (motifs, rosettes, bands that do not repeat). Each
         source in order, manuscript 1 at the top. Layouts made
-        by pack_overview.py (Gurobi) are used when they match the charts."""
-        bands = BandColumns(BAND_COLUMNS, BAND_LENGTH).add_all([p for p in self.patterns if p.is_band()])
+        by pack_overview.py (Gurobi) are used when they match the charts.
+        Only the Icelandic manuscripts: the sheets map Íslensk sjónabók."""
+        own = [p for p in self.patterns if p.source not in BOOKS and not p.alphabet]
+        bands = BandColumns(BAND_COLUMNS, BAND_LENGTH).add_all([p for p in own if p.is_band()])
         bands.save_items(self.out / "overview-band-items.csv")
         bands.save(self.out / "overview-bands.png", LAYOUT_DIR / "bands.csv")
-        motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in self.patterns if not p.is_band()])
+        motifs = MotifSheet(MOTIF_SHEET_WIDTH).add_all([p for p in own if not p.is_band()])
         motifs.save_items(self.out / "overview-motif-items.csv")
         motifs.save(self.out / "overview-motifs.png", LAYOUT_DIR / "motifs.csv")
+        self.save_alphabet_overviews()
+
+    def save_alphabet_overviews(self):
+        """One sheet per region tab: every alphabet sheet of that region,
+        packed like the motif sheet and coloured by source (the same rainbow).
+        A region without alphabets gets no sheet."""
+        for old in self.out.glob("overview-alphabets-*.png"):
+            old.unlink()
+        for r in REGIONS:
+            group = [p for p in self.patterns if p.alphabet and region_of(p.source) == r["region"]]
+            if not group:
+                continue
+            sheet = MotifSheet(ALPHABET_SHEET_WIDTH).add_all(group)
+            sheet.BY_SOURCE = True
+            sheet.save(self.out / f"overview-alphabets-{r['region']}.png",
+                       LAYOUT_DIR / f"alphabets-{r['region']}.csv")
 
 
 BAND_COLUMNS = 8          # columns on the band sheet
 BAND_LENGTH = 116         # cells of each band shown (the widest chart)
 MOTIF_SHEET_WIDTH = BAND_COLUMNS * (BAND_LENGTH + 3) - 3   # same width as the band sheet
+ALPHABET_SHEET_WIDTH = 480   # cells; about four alphabet sheets side by side
 # Layouts optimised by pack_overview.py (Gurobi) from <out>/overview-*-items.csv.
 # Used when they list exactly the charts on the sheet; otherwise a simple
 # packing is used, so the build never needs Gurobi.
@@ -527,7 +679,7 @@ class Sheet:
         canvas = np.zeros((height, self.width), dtype=np.uint8)
         for y, x, m, p in items:
             region = canvas[y:y + m.shape[0], x:x + m.shape[1]]
-            region[m == 1] = source_rank(p.source) + 1
+            region[m > 0] = source_rank(p.source) + 1
         write_png(canvas, path)
 
 
@@ -601,6 +753,7 @@ class MotifSheet(Sheet):
     Simple packing: a column skyline, tallest first."""
 
     RING = 1
+    BY_SOURCE = False   # True: place source by source, so the colours run in rainbow order
 
     def mask(self, p):
         return clear_ring(p.trim, self.RING)
@@ -616,7 +769,9 @@ class MotifSheet(Sheet):
     def skyline(self):
         sky = np.zeros(self.width, dtype=int)
         out = {}
-        for p in sorted(self.patterns, key=lambda p: (-p.trim.shape[0], -p.trim.shape[1])):
+        order = ((lambda p: (source_rank(p.source), -p.trim.shape[0], -p.trim.shape[1])) if self.BY_SOURCE
+                 else (lambda p: (-p.trim.shape[0], -p.trim.shape[1])))
+        for p in sorted(self.patterns, key=order):
             m = self.mask(p)
             top, bottom = self.profiles(m)
             w = m.shape[1]
@@ -676,8 +831,11 @@ def main():
     ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns")
     ap.add_argument("out_dir", help="folder for patterns.json and images")
     ap.add_argument("--manifest", help="repeats.csv (default: next to txt_dir)")
+    ap.add_argument("--extra", action="append", default=[],
+                    help="another folder of charts, e.g. patterns/books (repeatable)")
+    ap.add_argument("--alphabets", help="folder of whole alphabet sheets, one motif each (patterns/alphabets)")
     args = ap.parse_args()
-    Gallery(args.txt_dir, args.out_dir, args.manifest).build()
+    Gallery(args.txt_dir, args.out_dir, args.manifest, args.extra, args.alphabets).build()
 
 
 if __name__ == "__main__":
