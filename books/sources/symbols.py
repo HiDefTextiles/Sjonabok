@@ -55,6 +55,49 @@ def cluster_page_features(feature_groups, kinds):
     return groups, centres[order], counts[order]
 
 
+def reconcile_repeated_symbols(symbols, features, locations, centres,
+                               min_agreement=0.95, min_coverage=0.6):
+    """Use a strong banner repeat to resolve inconsistent mark classes.
+
+    Repetition is accepted only when a horizontal offset agrees across at
+    least 95% of marked positions and covers at least 60% of comparisons.
+    For paired filled cells assigned different IDs, choose the shared ID
+    whose cluster centre best fits both scanned glyphs. Empty cells and
+    charts without a strong repeat are left alone.
+    """
+    h, w = symbols.shape
+    best = None
+    for shift in range(3, w // 2 + 1):
+        left, right = symbols[:, :-shift], symbols[:, shift:]
+        active = (left > 0) | (right > 0)
+        coverage = float(active.mean())
+        if not active.any():
+            continue
+        agreement = float(((left == right) & active).sum() / active.sum())
+        candidate = (agreement, coverage, -shift)
+        if best is None or candidate > best:
+            best = candidate
+    if best is None or best[0] < min_agreement or best[1] < min_coverage:
+        return 0
+
+    shift = -best[2]
+    feature_at = {pos: feature for pos, feature in zip(locations, features)}
+    changes = 0
+    for row in range(h):
+        for offset in range(shift):
+            columns = list(range(offset, w, shift))
+            marked = [col for col in columns if symbols[row, col] > 0]
+            if len(marked) < 2 or len({int(symbols[row, col]) for col in marked}) == 1:
+                continue
+            repeated_features = np.stack([feature_at[(row, col)] for col in marked])
+            distances = ((repeated_features[:, None, :] - centres[None, :, :]) ** 2).sum(axis=2)
+            shared = int(np.argmin(distances.sum(axis=0))) + 1
+            for col in marked:
+                changes += int(symbols[row, col] != shared)
+                symbols[row, col] = shared
+    return changes
+
+
 def mark_profile(ink, axis, q=10):
     """How much mark ink lies on each line across `axis`.
 
@@ -335,10 +378,30 @@ class MultiSymbolPlateSource(RuledGridSource):
             feature_groups.append(current)
             locations.append(where)
         labels, centres, counts = cluster_page_features(feature_groups, self.k)
-        self._symbol_counts = np.zeros(self.k + 1, dtype=int)
-        self._symbol_counts[1:len(counts) + 1] = counts
-        for g, where, codes in zip(self._regions, locations, labels):
+        self._repeat_corrections = {}
+        for g, where, features, codes in zip(self._regions, locations,
+                                             feature_groups, labels):
             g.set_symbols(where, codes, centres)
+            self._repeat_corrections[g.name] = reconcile_repeated_symbols(
+                g.symbols, features, where, centres)
+        actual_counts = np.bincount(
+            np.concatenate([g.symbols.ravel() for g in self._regions]),
+            minlength=self.k + 1,
+        )
+        self._symbol_counts = actual_counts
+        # Corrections can change class frequency. Keep public IDs frequency
+        # ranked after reconciling repeated marks too.
+        order = sorted(range(1, len(actual_counts)), key=lambda code: (-actual_counts[code], code))
+        rank = np.zeros(len(actual_counts), dtype=np.int32)
+        for new_code, old_code in enumerate(order, 1):
+            rank[old_code] = new_code
+        for g in self._regions:
+            g.symbols = rank[g.symbols]
+            g.symbol_centres = centres[np.array(order) - 1]
+        self._symbol_counts = np.bincount(
+            np.concatenate([g.symbols.ravel() for g in self._regions]),
+            minlength=self.k + 1,
+        )
         return [g.chart() for g in self._regions]
 
     def share_columns(self, regs):

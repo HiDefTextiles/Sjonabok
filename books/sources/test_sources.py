@@ -15,7 +15,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sources import LAYOUTS, Chart, Provenance, open_source   # noqa: E402
-from sources.symbols import cell_features, cluster_page_features  # noqa: E402
+from sources.symbols import (cell_features, cluster_page_features,
+                             reconcile_repeated_symbols)  # noqa: E402
 
 RNG = np.random.default_rng(7)
 P = 14                                   # pitch in pixels (woodcut)
@@ -114,6 +115,17 @@ def main():
                       [np.rot90(sample, k) for k in range(4)] +
                       [np.fliplr(np.rot90(sample, k)) for k in range(4)]))
 
+    repeated = np.tile(np.array([[1, 2, 3]], np.uint8), (1, 10))
+    repeated[0, 5] = 4  # one label error in a strongly repeated sequence
+    true_codes = np.tile(np.array([[1, 2, 3]], np.int32), (1, 10))[0]
+    repeated_features = np.eye(4, 36, dtype=np.float32)[true_codes - 1]
+    repeated_locations = [(0, col) for col in range(repeated.shape[1])]
+    repeat_centres = np.eye(4, 36, dtype=np.float32)
+    corrected = reconcile_repeated_symbols(
+        repeated, repeated_features, repeated_locations, repeat_centres)
+    good &= check("symbols: repeat consensus repairs a noisy repeated mark",
+                  corrected == 1 and repeated[0, 2] == repeated[0, 5] == 3)
+
     issue9 = Path(__file__).resolve().parents[2] / "patterns/multicolor/issue9-example-1.png"
     scan = open_source(issue9, layout="symbols", symbols=4)
     scan_charts = scan.charts()
@@ -124,7 +136,7 @@ def main():
                   len(scan_charts) == 6 and scan_rows == [19, 11, 6, 8, 7, 17]
                   and pitch_error <= 1.25)
     good &= check("symbols: issue #9 IDs rank motifs across the full page",
-                  scan._symbol_counts[1:5].tolist() == [3153, 2045, 938, 618])
+                  scan._symbol_counts[1:5].tolist() == [3156, 2035, 948, 615])
     widths = {chart.cells.shape[1] for chart in scan_charts}
     edges = all(chart.cells[:, 0].any() and chart.cells[:, -1].any() for chart in scan_charts)
     good &= check("symbols: issue #9 bands share one column grid, no padded columns",
@@ -139,8 +151,17 @@ def main():
             best = max(best, float(((left == right) & active).sum() / max(1, active.sum())))
         return best
     agreement = [repeat_agreement(chart.layers["symbols"]) for chart in scan_charts]
-    good &= check("symbols: issue #9 banners repeat (>= 97% of marked cells agree)",
-                  min(agreement) >= 0.97)
+    good &= check("symbols: issue #9 banners repeat (>= 99.5% of marked cells agree)",
+                  min(agreement) >= 0.995)
+    def at_shift(symbols, shift):
+        left, right = symbols[:, :-shift], symbols[:, shift:]
+        active = (left > 0) | (right > 0)
+        return float(((left == right) & active).sum() / max(1, active.sum()))
+    good &= check("symbols: issue #9 bands 4 and 6 resolve repeated mark IDs",
+                  at_shift(scan_charts[3].layers["symbols"], 45) == 1.0
+                  and at_shift(scan_charts[5].layers["symbols"], 54) == 1.0
+                  and scan._repeat_corrections["issue9-example-1_r6"] > 0
+                  and scan._repeat_corrections["issue9-example-1_r5"] == 0)
 
     # Same glyphs across bands share IDs; page totals set the rank.
     motifs = []
