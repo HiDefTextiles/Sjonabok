@@ -1,0 +1,34 @@
+manuscript_code,oid,step,when,who,role,relation_to_previous,place,evidence,read_or_inferred,confidence
+thjms1105,341264,1,1600s (part older),Þorlákur Skúlason (bishop) era,earliest leaves,,Hólar í Hjaltadal,"Old exhibit text: part of the book from bishop Þorlákur Skúlason's time",read (old exhibit text quoted in record),medium
+thjms1105,341264,2,1600s,Ragnheiður Jónsdóttir (wife of bishop Gísli Þorláksson),owner,daughter-in-law of Þorlákur,Hólar,"Inscription and monograms 'point to' her ownership (old exhibit text)",read (museum's inference),medium
+thjms1105,341264,3,1784,T.T.S.,binding owner?,unknown,,"'T.T.S. - ANNO - 1784' stamped on the white leather binding; binding younger than leaves",read,high
+thjms1105,341264,4,1876,Laufey Bjarnadóttir (†1881),donor,unknown,Laufás,Accession 1876-58; donor field,read,high
+thjms6950,323045,1,1776,Gunnar Filippusson (1736-1805),maker,,Sandhólaferja,"Title 'Sauma Siöna Book, skrifuð af Gunnare Philippussyne Anno 1776'",read,high
+thjms6950,323045,2,before 1857,sr. Stefán Thorarensen,owner,unknown,,Flyleaf: Steinunn got it from him in 1857,read,high
+thjms6950,323045,3,1857,Steinunn Thorarensen (1836-1905),owner/user,"Stefán's sister-in-law, later his wife",Kálfatjörn,Flyleaf inscription,read,high
+thjms6950,323045,4,1915,Vigfúsína Vigfúsdóttir (1894-1972),donor,not stated,Búland í Skaftártungu,Accession 1915-223,read,high
+thjms2007-45,326745,1,1700s (leaves dated 1747-1824),unknown maker,maker,,,Leaves on backs of dated letters,read,high
+thjms2007-45,326745,2,before c.1890,Guðbjörg Sigurðardóttir á Reiðará og Stafafelli í Lóni,giver to Guðrún,'aldraða konan',Lón,Donor's letter: 'Mér þykir líklegt' (I think it likely),read (donor's guess),low
+thjms2007-45,326745,3,c.1888-1967,Guðrún Eiríksdóttir (1878-1967),owner,received from an old woman in her home district,Öðrumgarður then Borgir í Nesjum; later Keflavík and Reykjavík,Donor's letter,read,high
+thjms2007-45,326745,4,1967-?,Birna Jónsdóttir,owner,Guðrún's foster family (granddaughter of Dr Þorgrímur Þórðarson),,Donor's letter: her mother gave her the book,read,high
+thjms2007-45,326745,5,2007,Ragnheiður Ásta Pétursdóttir (1941-2020),donor,Birna's daughter,Reykjavík,Letter 30 Nov 2007,read,high
+thjms1997-123,330863,1,1700s,Ingibjörg Eiríksdóttir,owner ('sem bokina á'),,"Steinsstaðir, Tungusveit (via genealogy)",18th-c genealogy written in the book traces her from bishop Jón Arason,read; place inferred from genealogy,medium
+thjms1997-123,330863,2,before 1906,sr. Daníel Halldórsson (1820-1908),owner,not stated,,Flyleaf inscription,read,high
+thjms1997-123,330863,3,28 Mar 1906,Margrét Jóhannsdóttir (1904-1971),owner,granddaughter of Daníel,Reykjavík,Flyleaf inscription (gift on her 2nd birthday),read,high
+thjms1997-123,330863,4,1997,Jóhanna Guðrún Kristjánsdóttir (b. 1941),donor,not stated,Flateyri,Accession 1997-123,read,high
+thjmsth_116,491584,1,c.1787,Jón Einarsson á Skaftafelli (c.1731-1789/98),maker,,Skaftafell í Öræfum,'Þessi blöð hefur uppdregið Jón Einarsson á Skaftafelli'; letter dated 19 Oct 1787,read,high
+thjmsth_116,491584,2,?-1922,Þorvaldur and Þóra Thoroddsen,owners,unknown: Elsa E. Guðjónsson searched their papers and found nothing,Reykjavík,Record quotes Handíðir horfinnar aldar,read,high
+thjmsth_116,491584,3,1922,Þorvaldur and Þóra Thoroddsen,bequest,,,Testamentary gift 1922,read,high
+thjms2008-14,339052,1,1780-1800,Katrín Þorvaldsdóttir (1765-1820),maker,,Fjarðarhorn,Envelope note and record,read,high
+thjms2008-14,339052,2,after 1820,Matthías á Kjörseyri,owner,Katrín's son,Kjörseyri,Envelope note,read (owner inferred from family line),medium
+thjms2008-14,339052,3,?,Finnur á Kjörseyri,owner,Matthías's son,Kjörseyri,Record (family line),inferred,medium
+thjms2008-14,339052,4,1960s,Ragnhildur Finnsdóttir (Bær),handed to museum 'til athugunar',Finnur's daughter,Bær í Hrútafirði,Record; donor field says 'Úr fórum safnsins',read,high
+thjms5898,322753,1,?,Helga Brynjólfsdóttir (Mad. H. Br.D. Steingrímssen),owner,wife of sr. Jón Steingrímsson í Hruna,Hruni,Title page inscription,read,high
+thjms5898,322753,2,1909,unknown,donor,,,Accession 1909-314; donor not on Sarpur,gap,
+thjms1960-60,331642,0,?,Björg Benediktsdóttir frá Reynistað / Undirfell,possible earlier source,,Undirfell í Vatnsdal,Magna Sæmundsdóttir's own guess in folk answer 541155,read (donor's guess),low
+thjms1960-60,331642,1,1800s,Katrín Jónsdóttir (1828-1889),owner,,Undirfell then Barð í Fljótum,Record,read,high
+thjms1960-60,331642,2,1960,Magna Sæmundsdóttir (1911-2000),donor,great-granddaughter,Akureyri,Record; handed to Kristján Eldjárn (folk answer 541155),read,high
+thjms1985-235,318133,1,1800s (letter 1866),Guðrún Jónsdóttir á Hóli (d. c.1912-13),owner,,"Hóll á Hvilftarströnd, Önundarfjörður",Monogram 'G IÐAB'; donor's folk answer 539821 names Hóll á Hvilftarströnd,read,high
+thjms1985-235,318133,2,c.1913-?,Júlíana,owner,Guðrún's daughter (donor's maternal aunt),,Record,read,high
+thjms1985-235,318133,3,1985,Jóhanna Guðríður Kristjánsdóttir (1908-2008),donor,Guðrún's granddaughter,Kirkjuból í Valþjófsdal,Record; letter to Elsa E. Guðjónsson 13.11.1985,read,high
+natmus453,,1,?,unknown,held,,Nationalmuseet Copenhagen,No Sarpur record (Sarpur covers Icelandic museums only),gap,

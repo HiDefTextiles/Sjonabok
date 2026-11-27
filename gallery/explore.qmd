@@ -13,11 +13,64 @@ hi = ({domain: [...kinds.values()], range: ["#10099F", "#2DD2C0", "#d61f69", "#F
 rows = P.map(p => ({...p, type: kinds.get(p.kind), group: p.frieze ?? p.point ?? "none"}))
 ```
 
-## Every pattern on one sheet
+## Every pattern on two sheets
+
+Bands and motifs are shown apart, each packed tightly. Each colour is one source, in order from the top, so the colour changes run across the sheet. Click a source to open its patterns in the gallery, or a sheet to see it full size.
+
+```{ojs}
+//| echo: false
+sourceColors = {
+  const m = new Map();
+  for (const p of P) if (!m.has(p.source)) m.set(p.source, {label: p.source_label, color: p.color, n: 0});
+  for (const p of P) m.get(p.source).n++;
+  return m;
+}
+html`<ul class="source-legend">${[...sourceColors].map(([s, d]) =>
+  html`<li><a href="index.html?source=${s}"><span class="swatch" style="background:${d.color}"></span>${d.label}</a></li>`)}</ul>`
+```
+
+### Bands
 
 ::: {.overview-sheet}
-![All patterns in file order, from Natmus 453 to Þjms. Th 116. Each cell is one chart, shrunk to fit.](patterns/overview.png){fig-alt="A sheet of about 600 small blue embroidery patterns"}
+[![Every band that repeats (borders, edgings and vertical bands laid flat), repeated to one length and stacked in columns.](patterns/overview-bands.png){fig-alt="Rows of small embroidery bands, coloured by source manuscript"}](patterns/overview-bands.png)
 :::
+
+### Motifs, rosettes and one-off bands
+
+::: {.overview-sheet}
+[![Every motif and rosette, and the bands that do not repeat, at their own size and packed as tightly as possible.](patterns/overview-motifs.png){fig-alt="Small embroidery motifs and rosettes packed together, coloured by source manuscript"}](patterns/overview-motifs.png)
+:::
+
+## Where the manuscripts come from
+
+The ten manuscripts behind the collection, on a timeline and a map of Iceland. Each book is marked by its own **signature motif**: a small figure that keeps coming back in that book and not much in the others. Tap an icon for who made or owned the book, when, how sure we are, and an example page in the gallery. The frame colour says how the place is tied to the book.
+
+```{=html}
+<iframe class="manuscript-map" src="map/web/index.html" title="Map and timeline of the Sjónabók manuscripts" loading="lazy"
+  onload="const f=this, fit=()=>{try{f.style.height=(f.contentDocument.getElementById('htmlwidget_container').offsetHeight+16)+'px'}catch(e){}}; fit(); new ResizeObserver(fit).observe(f.contentDocument.body);"></iframe>
+```
+
+::: {.callout-note collapse="true" appearance="simple"}
+## How the signature motifs are picked
+
+Everything is done by an open script, so anyone can rerun it and get the same icons ([`gallery/map/signature_motifs.R`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/signature_motifs.R), `make motifs`).
+
+1. **Find small figures.** In every chart, find each small figure, 5 to 11 cells on a side, with empty space around it (at most two stray cells touching it, so a flower on a short stem still counts).
+2. **Count how often it recurs.** For each figure, count the pages in the same manuscript where it, or a near copy, appears. A near copy may be turned or mirrored and may differ in up to 12% of its cells.
+3. **Keep what belongs to that book.** Drop figures that turn up more often in other manuscripts than in this one. Score = pages × share of pages in this book × log(1 + copies).
+4. **Keep them distinct.** The manuscript with the clearest favourite chooses first; each next one takes its best figure that differs from those already chosen in at least 45% of its cells.
+
+A person checks the result: the script also draws a sheet of the six best candidates per manuscript, and a pick can be swapped by hand in `gallery/map/picks.csv`. Places and dates come from museum records ([`manuscripts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/manuscripts.csv), [`places.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/gallery/map/places.csv)); the map is drawn with R and leaflet (`make map`). Open questions about places are tracked in [issue #15](https://github.com/HiDefTextiles/Sjonabok/issues/15).
+:::
+
+## Do patterns travel?
+
+The Icelandic manuscripts next to the printed pattern books of Germany, Italy and France. Pink lines join a book and a manuscript that hold the same figure; grey dashes are copying between books that the museums record. Read more on the [About page](about.html#books).
+
+```{=html}
+<iframe class="manuscript-map" src="map/web/europe.html" title="Map and timeline of printed pattern books and the Icelandic manuscripts" loading="lazy"
+  onload="const f=this, fit=()=>{try{f.style.height=(f.contentDocument.getElementById('htmlwidget_container').offsetHeight+16)+'px'}catch(e){}}; fit(); new ResizeObserver(fit).observe(f.contentDocument.body);"></iframe>
+```
 
 ## Sources and types
 
@@ -65,13 +118,14 @@ Plot.plot({
 
 ## Symmetry
 
-Symmetry is measured automatically: a mirror or turn counts when at least `{ojs} Math.round(db.tolerance * 100)`% of the cells match. Bands are classified into the seven **frieze groups**, using one repeat of the band. Motifs and rosettes get a **point group**: D4 is the eightfold symmetry of a square star, D1 a single mirror, C1 none.
+Symmetry is measured automatically: a mirror or turn counts when at least `{ojs} Math.round(db.tolerance * 100)`% of the cells match. Bands are classified into the seven **frieze groups**, using one repeat of the band. Motifs and rosettes get a **point group**: D4 is the eightfold symmetry of a square star, D1 a single mirror, C1 none. [What the codes mean, with pictures](about.qmd#symmetry).
 
 ```{ojs}
 //| echo: false
 bands = rows.filter(d => d.frieze)
 motifs = rows.filter(d => d.point)
-friezeNames = ({p1: "translation only", p11g: "glide reflection", p1m1: "vertical mirrors", p2: "half-turns", p2mg: "vertical mirrors + glide", p11m: "horizontal mirror", p2mm: "both mirrors"})
+friezeNames = ({p1: "repeats only", p11g: "glide", p1m1: "mirrors across", p2: "half-turns", p2mg: "mirrors across + glide", p11m: "mirror along", p2mm: "mirrors across + along"})
+pointNames = ({C1: "none", D1: "one mirror", C2: "half-turn", D2: "two mirrors", C4: "pinwheel", D4: "square star"})
 html`<div class="pair" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem">
 <div><h4>Bands: frieze groups (${bands.length})</h4>${
 Plot.plot({
@@ -87,12 +141,12 @@ Plot.plot({
 })}</div>
 <div><h4>Motifs and rosettes: point groups (${motifs.length})</h4>${
 Plot.plot({
-  marginLeft: 60, height: 260, width: Math.min(width, 560),
+  marginLeft: 120, height: 260, width: Math.min(width, 560),
   x: {label: "Patterns", grid: true}, y: {label: null},
   color: {...hi, legend: true},
   marks: [
     Plot.barX(motifs, Plot.groupY({x: "count"}, {
-      y: "point", fill: "type", sort: {y: "-x"},
+      y: d => `${d.point} · ${pointNames[d.point]}`, fill: "type", sort: {y: "-x"},
       href: d => `index.html?group=${d.point}`, tip: true
     })),
     Plot.ruleX([0])

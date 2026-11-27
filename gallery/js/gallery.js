@@ -18,16 +18,42 @@
     rosette: "Rosette / star",
     motif: "Motif",
     "vertical band": "Vertical band",
+    alphabet: "Alphabet",
   };
+  // Charts with several kinds of mark (patterns/colour) hold digits 2-5 for
+  // the other marks; they get the first HI colours that differ from the
+  // chosen scheme's pattern and background colours.
+  const MARK_COLOURS = ["#d61f69", "#2DD2C0", "#FAC55B", "#10099F", "#F4B8CE"];
+  function markColours(fg, bg) {
+    const rest = MARK_COLOURS.filter((c) => c.toLowerCase() !== fg.toLowerCase() && c.toLowerCase() !== bg.toLowerCase());
+    return { 1: fg, 2: rest[0], 3: rest[1], 4: rest[2], 5: rest[3] };
+  }
   const SYM = [
-    ["mirror_lr", "Left–right mirror"],
-    ["mirror_tb", "Top–bottom mirror"],
-    ["turn180", "Half-turn"],
-    ["turn90", "Quarter-turn"],
-    ["diagonal", "Diagonal mirror"],
-    ["glide", "Glide (bands)"],
-    ["none", "No symmetry"],
+    ["mirror_lr", "Left–right mirror", "The left half mirrors the right half"],
+    ["mirror_tb", "Top–bottom mirror", "The top half mirrors the bottom half"],
+    ["turn180", "Half-turn", "Looks the same turned upside down (180°)"],
+    ["turn90", "Quarter-turn", "Looks the same turned on its side (90°)"],
+    ["diagonal", "Diagonal mirror", "A square pattern mirrors across a diagonal"],
+    ["glide", "Glide (bands)", "Flipped top to bottom and moved half a repeat along, like footprints"],
+    ["none", "No symmetry", "No mirror, turn or glide found"],
   ];
+  // Symmetry group codes in plain words; pictures on about.html#symmetry
+  const GROUP_INFO = {
+    p1: "Band: repeats only, every copy faces the same way",
+    p11g: "Band: glide, copies flip top to bottom as they repeat, like footprints",
+    p1m1: "Band: mirror lines across the band",
+    p2: "Band: half-turns, same upside down, no mirror",
+    p2mg: "Band: mirror lines across the band, and a glide",
+    p11m: "Band: one mirror line along the middle, top mirrors bottom",
+    p2mm: "Band: mirror lines across and along the band",
+    C1: "Motif: no symmetry",
+    D1: "Motif: one mirror line",
+    C2: "Motif: half-turn only, same upside down, no mirror",
+    D2: "Motif: two mirror lines at right angles",
+    C4: "Motif: quarter-turns, no mirror (pinwheel)",
+    D4: "Motif: quarter-turns and four mirror lines (square star)",
+    "—": "No group: a band without a clear repeat",
+  };
   const RANGES = [
     ["trim_width", "Width (cells)"],
     ["trim_height", "Height (cells)"],
@@ -37,7 +63,7 @@
   // Facets measured from the chart itself (scripts/facets.py) and look-alike families
   // (analysis/subjects/families.R): no labels, see the Methods page.
   const FACETS = [["family", "Look-alike family"], ["fit", "Fit on 85 needles"], ["outline", "Outline"], ["stroke", "Stroke"], ["open", "Openness"]];
-  const FILTER_KEYS = ["kind", "theme", "subject", "sym", "group", "source", ...FACETS.map((f) => f[0])];
+  const FILTER_KEYS = ["kind", "theme", "subject", "sym", "group", "source", "coll", ...FACETS.map((f) => f[0])];
 
   const $ = (id) => document.getElementById(id);
   const state = { range: {}, q: "", sort: "name" };
@@ -112,6 +138,7 @@
     if (skip !== "theme" && state.theme.size && !themes(p).some((s) => state.theme.has(s))) return false;
     if (skip !== "subject" && state.subject.size && !subjects(p).some((s) => state.subject.has(s))) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
+    if (skip !== "coll" && state.coll.size && !state.coll.has(p.collection || "iceland")) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
     for (const [k] of FACETS) if (skip !== k && state[k].size && !state[k].has(facet(k)(p))) return false;
     if (skip !== "sym") {
@@ -163,6 +190,7 @@
     counts($("f-source"), "source", (p) => p.source);
     counts($("f-theme"), "theme", themes);
     counts($("f-subject"), "subject", subjects);
+    counts($("f-coll"), "coll", (p) => p.collection || "iceland");
     counts($("f-group"), "group", group);
     for (const [k] of FACETS) if ($("f-" + k)) counts($("f-" + k), k, facet(k));
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
@@ -173,11 +201,12 @@
 
   function card(p) {
     const a = document.createElement("a");
-    a.className = p.trim_width >= 2.5 * p.trim_height ? "tile wide" : "tile";
+    const [sw, sh] = p.show || [p.trim_width, p.trim_height];
+    a.className = sw >= 2.5 * sh ? "tile wide" : "tile";
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
-      <span class="cap"><b>${p.source_label}</b> p. ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
+      <span class="cap"><b>${p.source_label}</b> ${p.printed ? "pl." : "p."} ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
       <small>${KIND_LABELS[p.kind]} · ${p.trim_width}×${p.trim_height}</small></span>`;
     return a;
   }
@@ -208,21 +237,38 @@
   function inkBounds(m) {
     let x0 = Infinity, x1 = -1, y0 = Infinity, y1 = -1;
     m.forEach((row, y) => {
-      const f = row.indexOf("1"), l = row.lastIndexOf("1");
+      const f = row.search(/[1-9]/), l = row.length - 1 - [...row].reverse().join("").search(/[1-9]/);
       if (f >= 0) { x0 = Math.min(x0, f); x1 = Math.max(x1, l); y0 = Math.min(y0, y); y1 = y; }
     });
     return x1 < 0 ? { x0: 0, x1: m[0].length - 1, y0: 0, y1: m.length - 1 } : { x0, x1, y0, y1 };
   }
 
-  // Repeat view. A band with a known repeat keeps the chart's own start
-  // (its edge piece) and then continues from the last full repeat, so the
-  // seam always falls in phase. Other patterns are tiled whole.
+  // Repeat view. A band stored as one repeat unit is simply repeated. A
+  // full band chart keeps its own start (its edge piece) and then continues
+  // from the last full repeat, so the seam always falls in phase. Other
+  // patterns are tiled with a spacer of SPACER empty cells between copies.
+  const SPACER = 1;
+  const isMotif = (p) => p.kind === "motif" || p.kind === "rosette";
   function repeatLayout(m) {
     const h = m.length, w = m[0].length, p = current.period;
     const along = current.kind === "vertical band" ? "y" : "x";
     const layout = (W, H, src, extra = {}) =>
-      ({ W, H, src, at: (x, y) => { const [sx, sy] = src(x, y); return m[sy][sx]; }, ...extra });
+      ({ W, H, src, at: (x, y) => { const c = src(x, y); return c ? m[c[1]][c[0]] : "0"; }, ...extra });
+    if (isMotif(current)) {
+      // chart: the motif with a 1-cell margin all round; repeat: copies with a
+      // 1-cell spacer between them (one repeat = motif + 1 right and below)
+      const b = inkBounds(m), iw = b.x1 - b.x0 + 1, ih = b.y1 - b.y0 + 1;
+      const tw = iw + SPACER, th = ih + SPACER, n = view.tile ? 3 : 1;
+      return layout(n * tw + SPACER, n * th + SPACER, (x, y) => {
+        const cx = (x - SPACER) % tw, cy = (y - SPACER) % th;
+        return x >= SPACER && y >= SPACER && cx < iw && cy < ih ? [b.x0 + cx, b.y0 + cy] : null;
+      });
+    }
     if (!view.tile) return layout(w, h, (x, y) => [x, y]);
+    if (current.unit)
+      return along === "x"
+        ? layout(Math.max(3 * w, 72), h, (x, y) => [x % w, y])
+        : layout(w, Math.max(3 * h, 72), (x, y) => [x, y % h]);
     if (!p || !["border", "edging", "vertical band"].includes(current.kind))
       return current.kind === "border" || current.kind === "edging"
         ? layout(3 * w, h, (x, y) => [x % w, y])
@@ -250,10 +296,12 @@
     const ctx = cv.getContext("2d");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.fillStyle = fg;
+    const mc = markColours(fg, bg);
     for (let y = 0; y < L.H; y++)
-      for (let x = 0; x < L.W; x++)
-        if (L.at(x, y) === "1") ctx.fillRect(x * z, y * z, z, z);
+      for (let x = 0; x < L.W; x++) {
+        const c = L.at(x, y);
+        if (c && c !== "0") { ctx.fillStyle = mc[c] || fg; ctx.fillRect(x * z, y * z, z, z); }
+      }
     if (view.grid && z >= 4) {
       ctx.strokeStyle = "rgba(38,38,38,0.18)";
       ctx.lineWidth = 1;
@@ -294,21 +342,42 @@
     const syms = SYM.filter(([k]) => k !== "none" && p[k]).map((s) => s[1]).join(", ") || "None found";
     const grp = p.frieze ? `${p.frieze} (${p.frieze_name})` : p.point ? `${p.point} (${p.point_name})` : "—";
     $("d-facts").innerHTML =
-      fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
-      fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null) +
+      (p.printed
+        ? fact("Plate", `${p.number} in <i>${p.book_title}</i> (${p.book_place} ${p.book_year})`) +
+          fact("Designer", p.book_author) +
+          fact("Band", p.part ? `${p.part} of ${p.on_page} on this plate` : null) +
+          fact("Original", `<a href="${p.book_url}" target="_blank" rel="noopener">${p.book_holder}, ${p.book_accession}</a> · ${p.book_rights}`) +
+          fact("Chart", "read from the museum's scan by grid detection; CC BY 4.0, Helga Ingimundardóttir (HiDef Textiles)")
+        : fact("Page", `${p.number} in <i>Íslensk sjónabók</i> (2009)`) +
+          fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null)) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
       fact("Main group", p.themes && p.themes.length ? p.themes.map((k) => THEMES[k] || k).join(", ") : null) +
       fact("Subject", p.subjects && p.subjects.length ? p.subjects.map((k) => SUBJECTS[k] || k).join(", ") : null) +
       fact("Look-alike family", p.family ? `${p.family} (${(FAMILIES[p.family] || {}).n || "?"} charts; close family ${p.close})` : null) +
       fact("Look", p.facets ? ["outline", "stroke", "open", "fit"].map((k) => (FACET_LABELS[k] || {})[p.facets[k]] || p.facets[k]).join(", ") : null) +
-      fact("Chart size", `${p.width} × ${p.height} cells`) +
-      fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells (margins trimmed)`) +
-      fact("Repeat", p.period ? `every ${p.period} cells` + (p.repeat_status
+      (p.kind === "alphabet"
+        ? fact("As a font", p.font_page
+            ? `<a href="${p.font_page}" target="_blank" rel="noopener">this alphabet as a TrueType font</a>, from <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`
+            : `${p.font_note}. Fonts from the other sheets: <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`)
+        : "") +
+      (p.colours && p.colours.length > 1
+        ? fact("Marks", `${p.colours.length} kinds of mark in the book, shown as ${p.colours.length} colours (digits ${p.colours.join(", ")} in the .txt)`) +
+          fact("Colours in a row", `up to ${p.row_colours}, background included`)
+        : "") +
+      (p.unit
+        ? fact("Repeat unit", `${p.width} × ${p.height} cells (the file holds one repeat)`)
+        : fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells`) +
+          (isMotif(p)
+            ? fact("Chart size", `${p.trim_width + 2 * SPACER} × ${p.trim_height + 2 * SPACER} cells (${SPACER}-cell margin all round)`) +
+              fact("Repeat tile", `${p.trim_width + SPACER} × ${p.trim_height + SPACER} cells (${SPACER}-cell spacer right and below)`)
+            : p.width !== p.trim_width || p.height !== p.trim_height
+              ? fact("Chart size", `${p.width} × ${p.height} cells (with empty margin)`) : "")) +
+      fact("Repeat", p.period ? `every ${p.period} cells` + (p.unit ? "" : p.repeat_status
         ? ` (${p.repeat_status === "ok" ? "checked" : "check"}: ${(p.repeat_mismatch * 100).toFixed(1)}% of cells differ)` : "") : null) +
       fact("Filled cells", `${p.ones} (${pct(p.density)})`) +
       fact("Symmetry", syms) +
-      fact("Symmetry group", grp) +
+      fact("Symmetry group", `${grp} <a class="what" href="about.html#symmetry" title="What the symmetry codes mean">what is this?</a>`) +
       fact("Separate pieces", p.pieces) +
       fact("Longest float", `${p.float_fg} filled, ${p.float_bg} empty cells in a row`);
     $("d-txt").href = `${BASE}txt/${p.id}.txt`;
@@ -317,14 +386,16 @@
     $("d-similar").innerHTML = p.similar
       .map((s) => `<a href="#${s}" title="${s}"><img loading="lazy" src="${BASE}thumb/${s}.png" alt="${s}"></a>`)
       .join("");
+    const cw = isMotif(p) ? p.trim_width + 2 * SPACER : p.width;    // drawn chart size
+    const ch = isMotif(p) ? p.trim_height + 2 * SPACER : p.height;
     const room = Math.min(560, $("detail").clientWidth ? $("detail").clientWidth - 70 : innerWidth - 70);
-    view.zoom = Math.max(2, Math.min(24, Math.floor(Math.max(room, 200) / p.width), Math.floor(560 / p.height)));
+    view.zoom = Math.max(2, Math.min(24, Math.floor(Math.max(room, 200) / cw), Math.floor(560 / ch)));
     $("d-zoom").value = view.zoom;
     view.matrix = null;
     if (!$("detail").open) {
       $("detail").showModal();
       const fit = $("detail").clientWidth - 70;  // re-fit now the dialog has its real size
-      view.zoom = Math.max(2, Math.min(24, Math.floor(Math.min(fit, 560) / p.width), Math.floor(560 / p.height)));
+      view.zoom = Math.max(2, Math.min(24, Math.floor(Math.min(fit, 560) / cw), Math.floor(560 / ch)));
     }
     $("d-zoom").value = view.zoom;
     $("detail").scrollTop = 0;
@@ -332,6 +403,7 @@
     if (current !== p) return;
     view.matrix = txt.split(/\r?\n/).filter((r) => r.trim());
     draw();
+    window.SjonabokOriginal?.view?.show(p, view.matrix);   // "Original" view (original.js)
   }
 
   function setupDetail() {
@@ -362,7 +434,9 @@
       const vx = Math.floor(((e.clientX - r.left) * scale) / view.zoom);
       const vy = Math.floor(((e.clientY - r.top) * scale) / view.zoom);
       if (!view.layout || vx >= view.layout.W || vy >= view.layout.H) return;
-      const [x, y] = view.layout.src(vx, vy);
+      const c = view.layout.src(vx, vy);
+      if (!c) { $("d-cell").textContent = "Margin or spacer: empty"; return; }
+      const [x, y] = c;
       if (view.matrix[y]) $("d-cell").textContent = `Row ${y + 1} of ${h}, column ${x + 1} of ${w}: ${view.matrix[y][x] === "1" ? "filled" : "empty"}`;
     };
     $("d-canvas").addEventListener("pointermove", cellAt);
@@ -392,7 +466,7 @@
     for (const p of data) { byId[p.id] = p; p.card = card(p); }
     const kinds = Object.keys(KIND_LABELS).filter((k) => json.kinds[k]);
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
-    chips($("f-sym"), "sym", SYM);
+    chips($("f-sym"), "sym", SYM.map(([k, l, t]) => [k, l, null, t]));
     THEMES = json.themes || {};
     if (Object.keys(THEMES).length) {
       chips($("f-theme"), "theme", [...Object.entries(THEMES), ["unclear", "Not sure"], ["unsorted", "Not yet sorted"]]);
@@ -417,9 +491,13 @@
     }
     if (!Object.keys(FAMILIES).length) $("sort").querySelector('option[value="alike"]')?.remove();
     const groups = [...new Set(data.map(group))].sort();
-    chips($("f-group"), "group", groups.map((g) => [g, g]));
+    chips($("f-group"), "group", groups.map((g) => [g, g, null, GROUP_INFO[g]]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
     chips($("f-source"), "source", sources);
+    // tabs by country from gallery/regions.csv (via patterns.json)
+    const colls = (json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }])
+      .map((r) => [r.region, r.short || r.label, null, r.note]).filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
+    chips($("f-coll"), "coll", colls);
     ranges($("f-range"));
     loadUrl();
     // drop filter values from an old link that no chip offers any more

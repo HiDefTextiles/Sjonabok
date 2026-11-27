@@ -9,6 +9,9 @@ project:
     - img/hi/hi_logo.svg
     - patterns/**
     - js/**
+    - map/web/**
+    - original/**
+    - tools/**
 
 lang: en
 
@@ -31,6 +34,10 @@ website:
         href: explore.qmd
       - text: "Methods"
         href: methods.qmd
+      - text: "Alphabets"
+        href: alphabets.qmd
+      - text: "How we read old books"
+        href: reading.qmd
       - text: "About"
         href: about.qmd
     tools:
