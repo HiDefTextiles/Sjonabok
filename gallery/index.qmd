@@ -1,6 +1,6 @@
 ---
 title: "Sjónabók pattern gallery"
-subtitle: "About 600 Icelandic embroidery patterns and 50 alphabets, digitised as charts, next to charts from printed European pattern books in the public domain. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
+subtitle: "About 600 Icelandic embroidery patterns and 50 alphabets from Íslensk sjónabók, digitised as charts. Charts from printed European pattern books are work in progress; switch them on under Filters. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
 page-layout: full
 toc: false
 include-after-body:
@@ -16,6 +16,7 @@ include-after-body:
 <input id="q" type="search" placeholder="Search by file name, e.g. 5898_246" aria-label="Search patterns">
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
 </div>
+<label id="wip-row" class="wip-toggle" title="Charts from printed European pattern books. The digitising is still being checked, so they are off by default."><input id="wip" type="checkbox"> Work in progress: European books (<span id="wip-n"></span> charts)</label>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
 <details open><summary>Symmetry</summary><p class="hint">Mirror: two halves match. Turn: same when turned. Glide: flipped and shifted, like footprints. <a href="about.html#symmetry">More, with pictures</a></p><div id="f-sym" class="chips"></div></details>
 <details><summary>Symmetry group</summary><p class="hint">One code for all of a pattern's symmetry: <b>p…</b> for bands, <b>C</b> (turns) or <b>D</b> (turns and mirrors) for motifs. Hover a code for its meaning, or <a href="about.html#symmetry">see the pictures</a>.</p><div id="f-group" class="chips"></div></details>

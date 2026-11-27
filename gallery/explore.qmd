@@ -65,7 +65,7 @@ A person checks the result: the script also draws a sheet of the six best candid
 
 ## Do patterns travel?
 
-The Icelandic manuscripts next to the printed pattern books of Germany, Italy and France. Pink lines join a book and a manuscript that hold the same figure; grey dashes are copying between books that the museums record. Read more on the [About page](about.html#books).
+The Icelandic manuscripts next to the printed pattern books of Germany, Italy and France. Pink lines join a book and a manuscript that hold the same figure; grey dashes are copying between books that the museums record. The books are still being digitised, so their charts are work in progress and are hidden in the gallery unless you switch them on. Read more on the [About page](about.html#books).
 
 ```{=html}
 <iframe class="manuscript-map" src="map/web/europe.html" title="Map and timeline of printed pattern books and the Icelandic manuscripts" loading="lazy"
