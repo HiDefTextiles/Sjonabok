@@ -222,3 +222,13 @@ books/similarity/pairs.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)
 similarity: books/similarity/pairs.csv
 
 .PHONY: sources-test sources-check submotif submotif-test similarity
+
+# ── Sarpur records (sarpur.is) ──────────────────────────────────────────────
+# sarpur/*.csv are committed; make sarpur rebuilds sarpur/sarpur.sqlite, which
+# also holds europeana.csv and a shared `sources` table (sarpur/sources.py) with
+# the same metadata for every source: manuscripts, Sarpur, books, Europeana
+SOURCE_CSVS = books/books.csv books/survey.csv books/library_terms.csv $(MAP)/manuscripts.csv $(MAP)/places.csv
+sarpur: sarpur/sarpur.sqlite
+sarpur/sarpur.sqlite: sarpur/build_db.py sarpur/sources.py $(wildcard sarpur/*.csv) $(SOURCE_CSVS)
+	python3 sarpur/build_db.py $@
+.PHONY: sarpur
