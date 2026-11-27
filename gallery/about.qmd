@@ -45,8 +45,9 @@ the gallery can be downloaded as its `.txt` chart or as a PNG image.
 
 ## Printed European pattern books {#books}
 
-Next to the Icelandic manuscripts the gallery holds charts from **printed pattern books** of the
-16th and 17th centuries, filter *Collection: European printed books*. These books were sold all
+Next to the Icelandic manuscripts we are digitising charts from **printed pattern books** of the
+16th and 17th centuries. This is **work in progress**: the readings are first drafts and are still
+being checked, so the gallery leaves them out unless you switch on *Work in progress* under Filters. These books were sold all
 over Europe, and their designs were copied from book to book: the museum records note that
 Quentel's patterns (Cologne, 1527 onwards) closely copy Schönsperger's (Augsburg), that Jobin
 (Strasbourg, 1579 onwards) copies Vavassore, Pagano, Quentel and others, and that Sibmacher's

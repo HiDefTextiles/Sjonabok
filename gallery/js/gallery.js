@@ -61,8 +61,12 @@
   ];
 
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), coll: new Set(), range: {}, q: "", sort: "name" };
-  let data = [];
+  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), coll: new Set(), range: {}, q: "", sort: "name", wip: false };
+  // Charts from the European books are still being digitised (work in
+  // progress); they are left out unless the "Work in progress" switch is on.
+  const isWip = (p) => (p.collection || "iceland") !== "iceland";
+  let all = [];   // every chart in patterns.json
+  let data = [];  // the charts in play: Sjónabók only, or all with the switch on
   let byId = {};
   let current = null;
 
@@ -90,7 +94,7 @@
 
   function ranges(el) {
     for (const [key, label] of RANGES) {
-      const vals = data.map((p) => p[key]);
+      const vals = all.map((p) => p[key]);
       const step = key === "density" ? 0.01 : 1;
       const lo = Math.floor(Math.min(...vals) / step) * step;
       const hi = Math.ceil(Math.max(...vals) / step) * step;
@@ -192,6 +196,7 @@
     for (const k of ["kind", "sym", "group", "source", "coll"]) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
+    if (state.wip) u.set("wip", "1");
     const qs = u.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
   }
@@ -201,6 +206,8 @@
     for (const k of ["kind", "sym", "group", "source", "coll"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
+    state.wip = u.get("wip") === "1";
+    $("wip").checked = state.wip;
     $("q").value = state.q;
     $("sort").value = state.sort;
   }
@@ -354,7 +361,7 @@
     $("d-txt").href = `${BASE}txt/${p.id}.txt`;
     $("d-png").href = `${BASE}png/${p.id}.png`;
     $("d-link").href = `#${p.id}`;
-    $("d-similar").innerHTML = p.similar
+    $("d-similar").innerHTML = p.similar.filter((s) => byId[s] && (state.wip || !isWip(byId[s])))
       .map((s) => `<a href="#${s}" title="${s}"><img loading="lazy" src="${BASE}thumb/${s}.png" alt="${s}"></a>`)
       .join("");
     const cw = isMotif(p) ? p.trim_width + 2 * SPACER : p.width;    // drawn chart size
@@ -423,25 +430,43 @@
   // ── start ──────────────────────────────────────────────────────────────
   async function init() {
     const json = await fetch(`${BASE}patterns.json`).then((r) => r.json());
-    data = json.patterns;
+    all = json.patterns;
     // how many motifs share a page (same source and page number)
     const perPage = {};
-    for (const p of data) { const k = p.source + "_" + p.number; perPage[k] = (perPage[k] || 0) + 1; }
-    for (const p of data) p.on_page = perPage[p.source + "_" + p.number];
-    for (const p of data) { byId[p.id] = p; p.card = card(p); }
+    for (const p of all) { const k = p.source + "_" + p.number; perPage[k] = (perPage[k] || 0) + 1; }
+    for (const p of all) p.on_page = perPage[p.source + "_" + p.number];
+    for (const p of all) { byId[p.id] = p; p.card = card(p); }
+    $("wip-n").textContent = all.filter(isWip).length;
+    if (!all.some(isWip)) $("wip-row").hidden = true;
+    loadUrl();
+    data = state.wip ? all : all.filter((p) => !isWip(p));
     const kinds = Object.keys(KIND_LABELS).filter((k) => json.kinds[k]);
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
     chips($("f-sym"), "sym", SYM);
-    const groups = [...new Set(data.map(group))].sort();
+    const groups = [...new Set(all.map(group))].sort();
     chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
-    const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
-    chips($("f-source"), "source", sources);
-    // tabs by country from gallery/regions.csv (via patterns.json)
-    const colls = (json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }])
-      .map((r) => [r.region, r.short || r.label, r.note]).filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
-    chips($("f-coll"), "coll", colls);
+    // source and collection chips follow the charts in play
+    const regions = json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }];
+    const poolChips = () => {
+      const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
+      chips($("f-source"), "source", sources);
+      // tabs by country from gallery/regions.csv (via patterns.json)
+      const colls = regions.map((r) => [r.region, r.short || r.label, r.note])
+        .filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
+      chips($("f-coll"), "coll", colls);
+      $("f-coll").closest("details").hidden = colls.length < 2;
+      const inPool = new Set(data.map((p) => p.source));
+      for (const v of [...state.source]) if (!inPool.has(v)) state.source.delete(v);
+      for (const v of [...state.coll]) if (!colls.some(([c]) => c === v)) state.coll.delete(v);
+    };
+    poolChips();
     ranges($("f-range"));
-    loadUrl();
+    $("wip").addEventListener("change", (e) => {
+      state.wip = e.target.checked;
+      data = state.wip ? all : all.filter((p) => !isWip(p));
+      poolChips();
+      update();
+    });
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
