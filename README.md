@@ -69,7 +69,7 @@ committed. `gallery/scripts/sync-theme.sh` refreshes the shared styles from the 
 ### Charts in the repository
 
 <!-- counts -->
-The gallery shows **751** charts from *Íslensk sjónabók*: 600 one-mark charts (`patterns/min/`), 101 multi-mark charts from 43 pages (`patterns/colour/`) and 50 alphabet sheets (`patterns/alphabets/`, 49 of them are fonts). Another 1067 charts from 24 printed European books (`patterns/books/`) are work in progress, hidden unless the *Work in progress* switch is on.
+The gallery shows **751** charts from *Íslensk sjónabók*: 600 one-mark charts (`patterns/min/`), 101 multi-mark charts from 43 pages (`patterns/colour/`) and 50 alphabet sheets (`patterns/alphabets/`, 50 of them are fonts). Another 1067 charts from 24 printed European books (`patterns/books/`) are work in progress, hidden unless the *Work in progress* switch is on.
 <!-- /counts -->
 
 Only what cannot be rebuilt is committed: `patterns/min/` and `patterns/repeats.csv`, and the
@@ -128,10 +128,11 @@ colours fall in one row (the knitting machine takes two).
 The 50 alphabet sheets of the book are kept as **one motif each**: the whole sheet as drawn,
 letters, numbers, frames and small figures together, as 0/1 charts. They are not split into
 letters here. The gallery's *Alphabets* page has one tab per region and a rainbow overview
-sheet for each. `patterns/alphabets/alphabets.csv` says which sheets have a font: the letters of
-49 sheets are TrueType fonts in [Sjónabókarstafróf](https://github.com/HiDefTextiles/Sjonabok-stafrof)
-([font gallery](https://hideftextiles.github.io/Sjonabok-stafrof/)); `thjmsth_116_628` is runes
-(Futhark) and has no font.
+sheet for each. `patterns/alphabets/alphabets.csv` says which sheets have a font (the count is in
+the summary above); each is a TrueType font in [Sjónabókarstafróf](https://github.com/HiDefTextiles/Sjonabok-stafrof)
+([font gallery](https://hideftextiles.github.io/Sjonabok-stafrof/)). `thjmsth_116_628` is runes
+(Futhark): its font maps the runes to the Unicode Runic block, and 4 of its 16 runes are not
+identified yet, so they are not in the font.
 
 The tabs, and the gallery's Collection filter, come from `gallery/regions.csv`: one row per tab,
 in order, with the countries it holds (`*` for every country no other row names). Iceland is one
