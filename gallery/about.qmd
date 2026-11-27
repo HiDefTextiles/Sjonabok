@@ -71,7 +71,7 @@ museum record. The charts in the gallery are read from the scans by us: they are
 interpretation, released under **CC BY 4.0**. Credit: *Helga Ingimundardóttir, Háskóli Íslands
 (HiDef Textiles)*, and name the book.
 
-**How the charts are read.** A script finds each ruled chart on a scanned page, straightens it,
+**How the charts are read.** (Step by step with pictures: [How we read old pattern books](reading.qmd).) A script finds each ruled chart on a scanned page, straightens it,
 finds the grid lines and calls a cell filled when its centre is inked
 ([`books/digitise.py`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/digitise.py)).
 Most of the earlier woodcuts (Quentel, Schönsperger, Tagliente, Jobin) are cut the other way round, a black block with the empty cells cut out as

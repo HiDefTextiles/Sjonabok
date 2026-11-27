@@ -32,6 +32,8 @@ website:
         href: explore.qmd
       - text: "Alphabets"
         href: alphabets.qmd
+      - text: "How we read old books"
+        href: reading.qmd
       - text: "About"
         href: about.qmd
     tools:

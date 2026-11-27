@@ -102,6 +102,14 @@ $(SYMMETRY_SVG): $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/scripts/buil
 
 symmetry-examples: $(SYMMETRY_SVG)
 
+# make reading-examples SCANS=dir : redraw the pictures on the "How we read
+#                  old pattern books" page from Met scans (SCANS/<book>/<image>.webp,
+#                  books/fetch.py gets them). Small WebP files in gallery/img/reading,
+#                  committed; the script stops if a reading differs from patterns/books.
+SCANS ?= books/scans
+reading-examples:
+	python3 $(GALLERY)/scripts/reading_examples.py $(SCANS) $(GALLERY)/img/reading
+
 gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto render
 
@@ -120,7 +128,7 @@ overview-layout: $(GALLERY_DATA)
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples overview-layout
+.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples reading-examples overview-layout
 
 # ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
 # make motifs : pick a signature motif per manuscript from patterns/min
@@ -151,10 +159,17 @@ books/travel/shared.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.
 $(MAP)/web/europe.html: books/travel/shared.csv books/books.csv $(MAP)/manuscripts.csv $(MAP)/places.csv $(MAP)/books_map.R
 	cd $(MAP) && LC_ALL=C.UTF-8 Rscript books_map.R
 
+# make slips : find squares that break a band's symmetry (reading slips) and
+#              edit them in patterns/books; each edit, with the value read, is
+#              kept in books/corrections.csv (python3 books/slips.py revert undoes them)
+slips:
+	python3 books/slips.py find
+	python3 books/slips.py apply
+
 travel: books/travel/shared.csv
 books-map: $(MAP)/web/europe.html
 
-.PHONY: motifs map travel books-map
+.PHONY: motifs map travel books-map slips
 
 # ── Seeds: smallest piece + symmetry recipe per chart ───────────────────────
 # make seeds       : patterns/seeds.csv (seed, recipe, frieze/point group,
