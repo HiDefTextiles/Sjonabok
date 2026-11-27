@@ -74,13 +74,13 @@ class GridRegion:
             x += pitch
         return np.array(lines)
 
-    def fit(self):
+    def fit(self, profile_quantile=30):
         sub = self.ink[self.y0:self.y1, self.x0:self.x1]
         # A ruling line is inked along (nearly) its whole length; the
         # marks inside filled cells are not. A low percentile across the
         # chart keeps the lines and drops the marks.
-        colp = np.percentile(sub, 30, axis=0)
-        rowp = np.percentile(sub, 30, axis=1)
+        colp = np.percentile(sub, profile_quantile, axis=0)
+        rowp = np.percentile(sub, profile_quantile, axis=1)
         n = min(len(colp), len(rowp), 60)
         a = self.autocorr(colp)[:n] + self.autocorr(rowp)[:n]
         lo = 7
