@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Align a pattern to its page</title>
+<style>
+  :root { --blue: #10099F; --pink: #d61f69; --teal: #2DD2C0; --paper: #f7f5f0; --ink: #262626; }
+  body { font-family: Jost, system-ui, sans-serif; margin: 0; color: var(--ink); background: var(--paper); }
+  header { background: var(--blue); color: #fff; padding: 0.8rem 1rem; }
+  header h1 { margin: 0; font-size: 1.2rem; }
+  header p { margin: 0.2rem 0 0; font-size: 0.85rem; opacity: 0.9; }
+  main { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; padding: 1rem; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  fieldset { border: 1px solid #ccc; margin: 0 0 0.8rem; padding: 0.6rem 0.8rem; background: #fff; }
+  legend { font-weight: 700; color: var(--blue); font-size: 0.9rem; }
+  label { display: block; font-size: 0.85rem; margin: 0.3rem 0; }
+  input[type=text], textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 0.85rem; }
+  button { font: inherit; font-size: 0.85rem; background: var(--blue); color: #fff; border: none; padding: 0.3rem 0.7rem; cursor: pointer; margin: 0.2rem 0.2rem 0 0; }
+  button.ghost { background: #fff; color: var(--blue); border: 1px solid var(--blue); }
+  .hint { font-size: 0.8rem; color: #555; }
+  #step { font-weight: 600; color: var(--pink); }
+  #wrap { position: relative; background: #2b2622; overflow: auto; max-height: 80vh; touch-action: none; }
+  #wrap canvas { display: block; }
+  textarea { height: 5.5rem; font-family: ui-monospace, monospace; font-size: 0.75rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Align a pattern to its manuscript page</h1>
+  <p>Click the four outer corners of the chart on the photo. The row it writes goes into <code>gallery/original/overlays.csv</code>. Photos stay on your computer; nothing is uploaded.</p>
+</header>
+<main>
+<div>
+  <fieldset>
+    <legend>1. Pattern</legend>
+    <label>File name <input id="pid" type="text" list="pids" placeholder="thjms1105_36"></label>
+    <datalist id="pids"></datalist>
+    <button id="load-p">Load chart</button> <span id="psize" class="hint"></span>
+  </fieldset>
+  <fieldset>
+    <legend>2. Page photo</legend>
+    <label>Photo on your computer <input id="file" type="file" accept="image/*"></label>
+    <label>or photo address (Sarpur or Nationalmuseet) <input id="url" type="text" placeholder="https://sarpur.is/multimedia/8/multimedia-2329898.large.jpg"></label>
+    <button id="load-url" class="ghost">Load address</button>
+    <button id="mock" class="ghost">Use a mockup page</button>
+    <label>Record id (Sarpur item or Nationalmuseet object) <input id="oid" type="text" placeholder="341264"></label>
+    <label>Credit (Nationalmuseet photographer) <input id="credit" type="text" placeholder="Henrik Rønnow"></label>
+    <p class="hint">For a Sarpur photo, use the <code>.large.jpg</code> address. For Nationalmuseet, use the asset address, e.g. <code>https://samlinger.natmus.dk/dnt/asset/130255.jpg?maxsize=2000</code>. The corner points are in the pixels of that exact image.</p>
+  </fieldset>
+  <fieldset>
+    <legend>3. Corners</legend>
+    <p id="step">Load a chart and a photo.</p>
+    <p class="hint">Order: top-left, top-right, bottom-right, bottom-left of the chart as stored (row 1 at the top). Then drag the handles to fine-tune; the chart's grid follows. Zoom with the slider.</p>
+    <label>Zoom <input id="zoom" type="range" min="25" max="300" value="100"></label>
+    <label><input id="fill" type="checkbox"> Show filled cells</label>
+    <button id="reset" class="ghost">Start corners again</button>
+  </fieldset>
+  <fieldset>
+    <legend>4. Row for overlays.csv</legend>
+    <label>Aligned by <input id="who" type="text" placeholder="initials"></label>
+    <textarea id="row" readonly></textarea>
+    <button id="copy">Copy row</button>
+  </fieldset>
+</div>
+<div id="wrap"><canvas id="cv" width="800" height="600"></canvas></div>
+</main>
+<script src="../js/original.js"></script>
+<script>
+(() => {
+  "use strict";
+  const { Homography, MockPage } = window.SjonabokOriginal;
+  const $ = (id) => document.getElementById(id);
+  const NAMES = ["top-left", "top-right", "bottom-right", "bottom-left"];
+  const st = { m: null, img: null, W: 0, H: 0, pts: [], drag: -1, source: "", imageId: "" };
+
+  fetch("../patterns/patterns.json").then((r) => r.json()).then((j) => {
+    $("pids").innerHTML = j.patterns.map((p) => `<option value="${p.id}">`).join("");
+  }).catch(() => {});
+
+  async function loadPattern() {
+    const id = $("pid").value.trim();
+    const t = await fetch(`../patterns/txt/${id}.txt`).then((r) => (r.ok ? r.text() : null));
+    if (!t) { $("psize").textContent = "not found"; return; }
+    st.m = t.split(/\r?\n/).filter((r) => r.trim());
+    $("psize").textContent = `${st.m[0].length} × ${st.m.length} cells`;
+    draw();
+  }
+
+  function setImage(el, W, H, source, imageId) {
+    Object.assign(st, { img: el, W, H, source, imageId, pts: [] });
+    draw();
+  }
+  $("load-p").addEventListener("click", loadPattern);
+  $("file").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const im = new Image();
+    im.onload = () => setImage(im, im.naturalWidth, im.naturalHeight, "sarpur", (f.name.match(/multimedia-(\d+)/) || [])[1] || "");
+    im.src = URL.createObjectURL(f);
+  });
+  $("load-url").addEventListener("click", () => {
+    const u = $("url").value.trim();
+    const im = new Image();
+    const nm = u.match(/samlinger\.natmus\.dk\/(\w+\/asset\/\d+)/);
+    im.onload = () => nm
+      ? setImage(im, im.naturalWidth, im.naturalHeight, "natmus", nm[1])
+      : setImage(im, im.naturalWidth, im.naturalHeight, "sarpur", (u.match(/multimedia-(\d+)/) || [])[1] || "");
+    im.onerror = () => { $("step").textContent = "Could not load that address."; };
+    im.crossOrigin = "anonymous";
+    im.src = u;
+  });
+  $("mock").addEventListener("click", () => {
+    if (!st.m) { $("step").textContent = "Load a chart first."; return; }
+    const mk = MockPage.draw(st.m, $("pid").value.trim());
+    setImage(mk.canvas, mk.W, mk.H, "mock", "");
+  });
+  $("reset").addEventListener("click", () => { st.pts = []; draw(); });
+  $("zoom").addEventListener("input", draw);
+  $("fill").addEventListener("change", draw);
+  $("who").addEventListener("input", writeRow);
+  $("oid").addEventListener("input", writeRow);
+  $("credit").addEventListener("input", writeRow);
+  $("copy").addEventListener("click", () => navigator.clipboard.writeText($("row").value));
+
+  const scale = () => $("zoom").value / 100;
+  function toImg(e) {
+    const r = $("cv").getBoundingClientRect();
+    return [(e.clientX - r.left) / scale(), (e.clientY - r.top) / scale()];
+  }
+  $("cv").addEventListener("pointerdown", (e) => {
+    if (!st.img) return;
+    const [x, y] = toImg(e);
+    const near = st.pts.findIndex(([px, py]) => Math.hypot(px - x, py - y) < 12 / scale());
+    if (near >= 0) { st.drag = near; $("cv").setPointerCapture(e.pointerId); return; }
+    if (st.pts.length < 4) { st.pts.push([x, y]); draw(); }
+  });
+  $("cv").addEventListener("pointermove", (e) => {
+    if (st.drag < 0) return;
+    st.pts[st.drag] = toImg(e);
+    draw();
+  });
+  $("cv").addEventListener("pointerup", () => { st.drag = -1; });
+
+  function draw() {
+    const cv = $("cv"), s = scale();
+    if (!st.img) { $("step").textContent = st.m ? "Now load a photo." : "Load a chart and a photo."; return; }
+    cv.width = Math.round(st.W * s);
+    cv.height = Math.round(st.H * s);
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    ctx.drawImage(st.img, 0, 0, st.W, st.H);
+    if (st.pts.length === 4 && st.m) {
+      const H = new Homography(st.pts), w = st.m[0].length, h = st.m.length;
+      const at = (x, y) => H.map(x / w, y / h);
+      if ($("fill").checked) {
+        ctx.fillStyle = "rgba(16,9,159,0.45)";
+        st.m.forEach((row, y) => { for (let x = 0; x < w; x++) if (row[x] === "1") {
+          const q = [at(x, y), at(x + 1, y), at(x + 1, y + 1), at(x, y + 1)];
+          ctx.beginPath(); q.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.fill();
+        } });
+      }
+      ctx.strokeStyle = "rgba(214,31,105,0.8)";
+      ctx.lineWidth = 1 / s;
+      ctx.beginPath();
+      for (let x = 0; x <= w; x++) { ctx.moveTo(...at(x, 0)); ctx.lineTo(...at(x, h)); }
+      for (let y = 0; y <= h; y++) { ctx.moveTo(...at(0, y)); ctx.lineTo(...at(w, y)); }
+      ctx.stroke();
+    }
+    st.pts.forEach(([x, y], i) => {
+      ctx.fillStyle = "#2DD2C0";
+      ctx.beginPath(); ctx.arc(x, y, 6 / s, 0, 2 * Math.PI); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = `${12 / s}px sans-serif`;
+      ctx.fillText(NAMES[i], x + 8 / s, y - 8 / s);
+    });
+    $("step").textContent = st.pts.length < 4 ? `Click the ${NAMES[st.pts.length]} corner.` : "Done. Drag the handles to fine-tune.";
+    writeRow();
+  }
+
+  function writeRow() {
+    if (st.pts.length < 4) { $("row").value = ""; return; }
+    const r = (v) => Math.round(v * 10) / 10;
+    const today = new Date().toISOString().slice(0, 10);
+    const cols = [$("pid").value.trim(), st.source, $("oid").value.trim(), st.imageId, st.W, st.H,
+      ...st.pts.flat().map(r), $("who").value.trim(), today, "draft", "", $("credit").value.trim()];
+    $("row").value = cols.map((v) => (/[",]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(",");
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,3 +1,6 @@
 argparse
 Pillow
 numpy
+opencv-python-headless
+scipy
+pybind11

@@ -1,0 +1,34 @@
+holder,terms,limits_extraction,terms_url,verified,notes
+The Metropolitan Museum of Art,"Open Access: public-domain images CC0, any use",no,https://www.metmuseum.org/policies/image-resources,yes,Source of all books digitised so far.
+Bibliothèque nationale de France,"Gallica: free non-commercial reuse with credit 'Source gallica.bnf.fr / BnF'; commercial reuse of reproductions needs a BnF licence (Europeana label NoC-OKLR)",no (we publish extracted grids under CC BY 4.0; reproductions are not republished),https://www.bnf.fr/fr/faire-une-utilisation-commerciale-dune-reproduction,yes,Most Lyon and Venice books are only here. Credit BnF as scan source.
+Bayerische Staatsbibliothek,Most pattern-book scans CC BY-NC-SA 4.0 (Europeana); some Public Domain Mark,flag (non-commercial share-alike on the scans),https://www.digitale-sammlungen.de/,yes,Already ruled out for Egenolff c.1555. Prefer another copy where one exists.
+Württembergische Landesbibliothek,Public Domain Mark 1.0 (Europeana),no,https://digital.wlb-stuttgart.de/,yes,"Martin/König 1599, Bassée 1599, Foillet 1598."
+Universitätsbibliothek Basel,Public Domain Mark 1.0 (Internet Archive record),no,https://www.e-rara.ch/,yes,König 1599 and 1601.
+e-rara (Swiss libraries),Public-domain works marked Public Domain Mark; check each record,no,https://www.e-rara.ch/doc/about#terms,check,Froschauer 1561 (Zürich) and Straub 1593.
+TIB Hannover,Public Domain Mark 1.0 (Europeana),no,https://www.tib.eu/,yes,Sibmacher 1604 copy.
+National Library of the Czech Republic,No Copyright - Non-Commercial use only (NoC-NC),flag,https://www.europeana.eu/item/92004/object_NKCR__17_H_000005_3FL0OM3,yes,Fürst 1666 copy.
+Getty Research Institute,Public domain scans on Internet Archive (no known restrictions),no,https://archive.org/details/gettyresearchinstitute,check,
+Clark Art Institute,Scans on Internet Archive; rights statement not given in the record,check,https://archive.org/details/clarkartinstitutelibrary,check,
+Library of Congress,No known restrictions on public-domain scans,no,https://www.loc.gov/legal/,check,
+Cleveland Museum of Art,Open Access CC0 for public-domain works,no,https://www.clevelandart.org/open-access,check,
+Herzog August Bibliothek,Digitised prints usually CC BY-SA,check,https://www.hab.de/,check,Fürst copy.
+Herzogin Anna Amalia Bibliothek,Check record,check,https://haab-digital.klassik-stiftung.de/,check,Vinciolo German edition 1592.
+Universitätsbibliothek Heidelberg,Digitised items usually CC BY-SA 4.0,check,https://digi.ub.uni-heidelberg.de/,check,Steyner 1534 facsimile.
+SLUB Dresden,Public-domain scans usually Public Domain Mark,check,https://digital.slub-dresden.de/,check,Mostly 19th-century facsimiles here.
+Österreichische Nationalbibliothek,Check record,check,https://data.onb.ac.at/,check,Bindoni and Sessa copies.
+HathiTrust,Full view for US public-domain items; non-US access may be limited,check,https://www.hathitrust.org/the-collection/terms-conditions/,check,Facsimiles only.
+Institut national d'histoire de l'art,Licence Ouverte (Etalab) for public-domain scans,no,https://bibliotheque-numerique.inha.fr/,check,
+Westsächsische Hochschule Zwickau,19th-century facsimiles on Internet Archive,check,https://archive.org/,check,
+Harvard University (Houghton),Copies known only through Helen Hough's photos (CC BY-NC),flag,https://archive.org/details/early-modern-embroidery-and-lace-pattern-books,yes,
+Internet Archive (EMEL collection),"Helen Hough's collection of 308 mirrors and photos. Mirrors repeat the source library's scans (their terms apply); Hough's own photos and indexes are CC BY-NC or BY-NC-ND",flag for Hough's own photos,https://archive.org/details/early-modern-embroidery-and-lace-pattern-books,yes,Reachable from the built-in browser; easiest download route for the digitiser.
+Bildarchiv Foto Marburg,Rights reserved; images viewable only,yes (ask),https://www.bildindex.de/,check,Schönsperger 1523 and later editions.
+Istituto centrale per la grafica,Reproduction needs authorisation from the Ministry of Culture,yes (ask),https://calcografica.ing.beniculturali.it/,check,Zoppino 1532 and Danieli 1630.
+ProQuest EEBO (subscription),Licensed database; reuse governed by subscription terms,yes (ask),https://www.proquest.com/eebo,check,All four early English books.
+Folger Shakespeare Library,Digital images CC BY-SA 4.0,no,https://www.folger.edu/about/policies/,check,Trevelyon Miscellany 1608.
+Victoria and Albert Museum,Images free for non-commercial use under V&A terms,flag,https://www.vam.ac.uk/info/va-websites-terms-conditions,check,Helm c.1725 plates.
+Google Books,Public-domain books downloadable; Google asks for non-commercial use of the files,flag,https://books.google.com/,check,
+Antique Pattern Library,CC BY-NC-SA,flag,https://www.antiquepatternlibrary.org/,yes,
+Ornamentstichsammlung (GBV),Check record,check,https://ornamentstichsammlung.gbv.de/,check,
+Nationalmuseet,Photos CC BY-SA,no,https://samlinger.natmus.dk/,yes,Full-size downloads fail; see issue #45.
+Designmuseum Danmark,Not digitised; ask the library,yes (ask),https://designmuseum.dk/,check,98 pattern books (Paludan and Egeberg 1991).
+KB,Check record (library not identified from the Internet Archive identifier),check,https://archive.org/details/latomus-1607-schon-newes-modelbuch-kb,check,Latomus 1607.

@@ -165,6 +165,18 @@ cython_debug/
 *.eps
 # Derivative files from the txt
 *.png
+# Full charts from the book: local only, restore with `make originals`.
+# The committed charts are patterns/min (repeat units) and patterns/repeats.csv.
+/patterns/txt/
+# Manuscript map: leaflet files are committed with the built page (make map)
+!/gallery/map/web/lib/
+
+# C++ build products
+cpp/submotif/bin/
+
+# Sarpur database (rebuilt from sarpur/*.csv by make sarpur)
+sarpur/sarpur.sqlite
+
 # figures for the Methods page, made by analysis scripts that need R (not built by the Action)
 !gallery/images/*.png
 !analysis/subjects/assets/*.png

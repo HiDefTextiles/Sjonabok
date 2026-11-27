@@ -234,6 +234,41 @@ dialog.detail {
     padding: 0.6rem;
     canvas { display: block; image-rendering: pixelated; cursor: crosshair; }
   }
+  // "Original" view (js/original.js)
+  .d-chart-only[hidden], .d-original[hidden] { display: none !important; }
+  .d-mode {
+    display: inline-flex;
+    border: 1px solid $hi-blue;
+    button {
+      border: none; background: $hi-white; color: $hi-blue;
+      padding: 0.15rem 0.7rem; font-weight: 600; cursor: pointer;
+      &[aria-pressed=true] { background: $hi-blue; color: $hi-white; }
+    }
+  }
+  .o-tools select { font-size: 0.85rem; max-width: 14rem; }
+  .o-stage {
+    position: relative;
+    overflow: hidden;
+    max-width: 100%;
+    background: #2b2622;
+    border: 1px solid $hi-panel;
+  }
+  .o-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .o-photo { display: block; max-width: none; }
+  .o-chart {
+    position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: visible;
+    path { fill: none; stroke: $hi-pink; stroke-width: 0.12; }
+    &.filled path { fill: $hi-blue; stroke: none; }
+    .o-frame { fill: none; stroke: #2DD2C0; stroke-width: 0.2; }
+  }
+  .o-badge {
+    position: absolute; left: 0.4rem; top: 0.4rem; background: $hi-pink; color: $hi-white;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.1rem 0.4rem;
+  }
+  .o-locked {
+    background: $hi-paper; padding: 1rem; font-size: 0.9rem;
+    p:last-child { margin-bottom: 0; }
+  }
   .d-cell { font-size: 0.8rem; color: rgba($hi-ink, 0.7); margin: 0.4rem 0 0; min-height: 1.2em; }
 
   .eyebrow {
@@ -281,6 +316,27 @@ dialog.detail {
   width: 100%;
   image-rendering: pixelated;
   border: 1px solid $hi-panel;
+  padding: 0.5rem;
+  background: #fff;
+}
+.source-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.9rem;
+  li a { color: $hi-ink; text-decoration: none; white-space: nowrap; }
+  li a:hover { text-decoration: underline; }
+  .swatch {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+    vertical-align: -0.05rem;
+  }
 }
 .legend-note { font-size: 0.85rem; color: rgba($hi-ink, 0.7); }
 
@@ -355,4 +411,72 @@ html.embedded {
   body { padding-top: 0 !important; }
   #quarto-content { margin-top: 0.5rem !important; }
   .filters { top: 0.5rem; }
+}
+
+// ── Symmetry help (filter hints, detail link, About page pictures) ──────────
+.filters .hint {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: rgba($hi-ink, 0.72);
+  margin: 0.4rem 0 0;
+}
+.facts-list .what { font-size: 0.76rem; margin-left: 0.3rem; white-space: nowrap; }
+
+.sym-key {
+  font-size: 0.85rem;
+  margin: 0.2rem 0 1rem;
+  p { margin: 0; }
+  span[class^="k-"] {
+    display: inline-block;
+    width: 2rem;
+    vertical-align: middle;
+    margin-right: 0.35rem;
+    border-top: 2px $hi-pink;
+  }
+  .k-mirror { border-top-style: dashed !important; }
+  .k-glide { border-top-style: dotted !important; }
+  .k-turn {
+    width: 0.65rem !important;
+    height: 0.65rem;
+    border: none !important;
+    border-radius: 50%;
+    background: $hi-pink;
+    margin-left: 0.7rem;
+  }
+}
+
+.sym-cards {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0.6rem 0 1.2rem;
+  &.sym-bands { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+  &.sym-motifs { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+}
+.sym-card {
+  background: $hi-paper;
+  border-top: 4px solid $hi-blue;
+  padding: 0.7rem 0.8rem 0.6rem;
+  font-size: 0.9rem;
+  img { display: block; max-width: 100%; height: auto; margin: 0 0 0.5rem; }
+  .sym-motifs & img { width: 110px; }
+  p { margin: 0 0 0.3rem; }
+  strong { color: $hi-blue; }
+}
+
+// ── Manuscript map (Explore page; map/web is built by `make map`) ────────────
+iframe.manuscript-map {
+  display: block;
+  width: 100%;
+  height: 900px;          // until the page inside has loaded and been measured
+  border: 0;
+  margin: 0.5rem 0 1rem;
+}
+
+// ── Alphabets page ───────────────────────────────────────────────────────────
+.alphabets {
+  .nav-tabs { margin: 1rem 0 0.75rem; }
+  .nav-link .n { font-size: 0.8em; color: rgba($hi-ink, 0.6); margin-left: 0.25rem; }
+  .overview-sheet { margin-bottom: 1.25rem; }
+  .tile .cap a { color: $hi-blue; }
+  .hint { font-size: 0.9rem; color: rgba($hi-ink, 0.7); }
 }
