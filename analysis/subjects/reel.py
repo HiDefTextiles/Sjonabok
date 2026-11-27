@@ -44,6 +44,20 @@ INK = (38, 38, 38)
 FRAME_BAND = "thjms2008-14_522_p3"   # border band for the frame (patterns/repeat)
 OWN_CENTRE = 0   # >0: each book keeps only its centre square of 2*k+1 cells, arms shared (Helga preferred whole figures)
 SITE = "hideftextiles.github.io/Sjonabok"
+COUNTS = S.HERE / "../../gallery/_counts.yml"   # written by gallery/scripts/counts.py (make counts)
+
+
+def chart_count():
+    """Charts in the gallery's default view, rounded down to a 50 (751 -> 750) for the closing
+    card: the gallery's own count when it is built, else the default of the time of writing."""
+    try:
+        for line in open(COUNTS):
+            if line.strip().startswith("total:"):
+                n = int(line.split(":")[1])
+                return n // 50 * 50 if n >= 100 else n
+    except (OSError, ValueError):
+        pass
+    return 750
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
@@ -232,6 +246,7 @@ class MitreFrame:
 class Reel:
     def __init__(self, books, title, subtitle, own_centre=OWN_CENTRE):
         self.books, self.title, self.subtitle = books, title, subtitle
+        self.count = chart_count()
         # hold and morph shrink together when many books would run past LIMIT
         k = len(books.figures)
         fit = (LIMIT - END - CLOSE) / (k * HOLD + (k - 1) * MORPH)
@@ -365,7 +380,7 @@ class Reel:
         z = 360 // self.n
         I = Image.fromarray(self.colours(g).astype(np.uint8)).resize((self.n * z, self.n * z), Image.NEAREST)
         img.paste(I, ((W - I.width) // 2, 420))
-        dr.text((W // 2, 1000), "See all 600 patterns", font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
+        dr.text((W // 2, 1000), f"See all {self.count} patterns", font=self.f_title, fill=tuple(BLUE.astype(int)), anchor="mm")
         dr.text((W // 2, 1090), "from ten Icelandic manuscripts", font=self.f_sub, fill=INK, anchor="mm")
         dr.rounded_rectangle((W // 2 - 400, 1200, W // 2 + 400, 1300), radius=50, fill=tuple(PINK.astype(int)))
         dr.text((W // 2, 1250), SITE, font=self.f_when, fill=(255, 255, 255), anchor="mm")
