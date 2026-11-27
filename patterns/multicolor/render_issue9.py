@@ -37,6 +37,7 @@ def main():
                  for chart in charts) + MARGIN
     preview = np.full((height, width, 3), 255, np.uint8)
     y = MARGIN
+    band_previews = []
 
     for chart, region in zip(charts, source._regions):
         symbols = chart.layers["symbols"]
@@ -97,6 +98,13 @@ def main():
             xx = grid_left + col * CELL
             cv2.line(preview, (xx, grid_top), (xx, grid_top + grid_h), (220, 220, 220), 1)
 
+        band = preview[y:grid_top + grid_h, :grid_left + grid_w + MARGIN]
+        scale = min(1.0, 1400 / band.shape[1])
+        if scale < 1:
+            band = cv2.resize(band, None, fx=scale, fy=scale,
+                              interpolation=cv2.INTER_AREA)
+        band_previews.append((HERE / f"{chart.name}-preview.png", band.copy()))
+
         (HERE / f"{chart.name}.txt").write_text(
             "\n".join("".join(map(str, row)) for row in chart.cells) + "\n",
             encoding="ascii",
@@ -108,6 +116,8 @@ def main():
         y += grid_h + LABEL_HEIGHT + GAP
 
     cv2.imwrite(str(PREVIEW), preview)
+    for path, band in band_previews:
+        cv2.imwrite(str(path), band, [cv2.IMWRITE_PNG_COMPRESSION, 9])
     print(f"wrote {len(charts)} bands and {PREVIEW}")
 
 
