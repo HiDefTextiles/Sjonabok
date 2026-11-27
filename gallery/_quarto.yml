@@ -30,6 +30,8 @@ website:
         href: index.qmd
       - text: "Explore"
         href: explore.qmd
+      - text: "Alphabets"
+        href: alphabets.qmd
       - text: "About"
         href: about.qmd
     tools:
