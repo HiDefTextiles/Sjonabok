@@ -1,0 +1,10 @@
+.x.x....x.........x.........x....x.x.x.x....x.........x.........x....x.x.x.x....x.........x.........x....x.x.x.x...
+x.x.x..x.xx......xxx......xx.x..x.x.x.x.x..x.xx......xxx......xx.x..x.x.x.x.x..x.xx......xxx......xx.x..x.x.x.x.x..
+.x.x.x.xx......xx.x.xx......xx.x.x.x.x.x.x.xx......xx.x.xx......xx.x.x.x.x.x.x.xx......xx.x.xx......xx.x.x.x.x.x.x.
+x.x.x.xxxx.....xxx.xxx.....xxxx.x.x.x.x.x.xxxx.....xxx.xxx.....xxxx.x.x.x.x.x.xxxx.....xxx.xxx.....xxxx.x.x.x.x.x.x
+.x.x.xxxxxx...x.xx.xx.x...xxxxxx.x.x.x.x.xxxxxx...x.xx.xx.x...xxxxxx.x.x.x.x.xxxxxx...x.xx.xx.x...xxxxxx.x.x.x.x.xx
+....xx.xxxxx.xxx..x..xxx.xxxxx.xx.......xx.xxxxx.xxx..x..xxx.xxxxx.xx.......xx.xxxxx.xxx..x..xxx.xxxxx.xx.......xx.
+...xxx..xxx...x.xx.xx.x...xxx..xxx.....xxx..xxx...x.xx.xx.x...xxx..xxx.....xxx..xxx...x.xx.xx.x...xxx..xxx.....xxx.
+..xxxxxxx......xxx.xxx......xxxxxxx...xxxxxxx......xxx.xxx......xxxxxxx...xxxxxxx......xxx.xxx......xxxxxxx...xxxxx
+.xx.x.x........xx.x.xx........x.x.xx.xx.x.x........xx.x.xx........x.x.xx.xx.x.x........xx.x.xx........x.x.xx.xx.x.x
+xx.x.x.x.........xxx.........x.x.x.xxx.x.x.x.........xxx.........x.x.x.xxx.x.x.x.........xxx.........x.x.x.xxx.x.x.

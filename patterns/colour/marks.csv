@@ -1,0 +1,14 @@
+mark,digit,name
+.,0,empty
+D,1,filled diamond
+#,1,solid square
+x,2,diagonal cross
+O,3,circled cross
+o,4,round dot
+F,5,"half cell, top-left triangle inked"
+7,5,"half cell, top-right triangle inked"
+L,5,"half cell, bottom-left triangle inked"
+J,5,"half cell, bottom-right triangle inked"
+-,0,"a ruled line across the cell, not a stitch"
+|,0,"a ruled line down the cell, not a stitch"
+?,1,a mark none of the above fits

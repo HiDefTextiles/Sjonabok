@@ -1,0 +1,5 @@
+x......xx.....x.....xx......x.....xx......x.....xx......x.....xx......x.....xx......x.....xx......x.....xx......x..
+.xx...xx.xxxxx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xx
+..xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...xx.xx.xx.xx...x
+.xxxxx.xx...xx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx...xx.xxxxx.xx
+x.....xx......x......xx.....x......xx.....x......xx.....x......xx.....x......xx.....x......xx.....x......xx.....x..

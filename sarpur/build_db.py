@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build sarpur.sqlite from the sarpur/*.csv files (one table per csv).
+"""Build sarpur.sqlite from the sarpur/*.csv files (one table per csv), plus a
+shared `sources` table built by sources.py.
 
 The CSVs are the source of truth and are committed; the database is
 rebuilt with `make sarpur` and is git-ignored.
@@ -8,6 +9,8 @@ import csv
 import pathlib
 import sqlite3
 import sys
+
+from sources import COLUMNS, all_rows
 
 
 class SarpurDB:
@@ -34,8 +37,20 @@ class SarpurDB:
             for p in self.tables():
                 name, n = self.load(con, p)
                 print(f"{name}: {n} rows")
+            self.load_sources(con)
             con.execute("CREATE INDEX idx_records_conf ON records(confidence)")
             con.execute("CREATE INDEX idx_images_oid ON images(oid)")
+            con.execute("CREATE INDEX idx_sources_coll ON sources(collection)")
+            con.execute("CREATE INDEX idx_europeana_prio ON europeana(priority)")
+
+    def load_sources(self, con):
+        """Shared metadata table over manuscripts, Sarpur, books and Europeana (sources.py)."""
+        rows = list(all_rows())
+        cols = ", ".join(f'"{c}" TEXT' for c in COLUMNS)
+        con.execute(f"CREATE TABLE sources ({cols})")
+        con.executemany(f"INSERT INTO sources VALUES ({','.join('?' * len(COLUMNS))})",
+                        [[r[c] for c in COLUMNS] for r in rows])
+        print(f"sources: {len(rows)} rows")
 
 
 if __name__ == "__main__":
