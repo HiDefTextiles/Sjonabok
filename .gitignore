@@ -171,5 +171,8 @@ cython_debug/
 # Manuscript map: leaflet files are committed with the built page (make map)
 !/gallery/map/web/lib/
 
+# C++ build products
+cpp/submotif/bin/
+
 # Sarpur database (rebuilt from sarpur/*.csv by make sarpur)
 sarpur/sarpur.sqlite

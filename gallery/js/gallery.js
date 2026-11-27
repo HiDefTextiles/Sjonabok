@@ -374,6 +374,7 @@
     if (current !== p) return;
     view.matrix = txt.split(/\r?\n/).filter((r) => r.trim());
     draw();
+    window.SjonabokOriginal?.view?.show(p, view.matrix);   // "Original" view (original.js)
   }
 
   function setupDetail() {

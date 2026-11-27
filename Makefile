@@ -193,6 +193,36 @@ seeds-sheet: $(SEEDS)
 
 .PHONY: seeds seeds-check seeds-sheet
 
+# ── Scan readers (books/sources/) and the C++ sub-motif matcher (cpp/) ──────
+# make sources-test    : read drawn test pages in every layout (no scans needed)
+# make sources-check   : re-read every scan in books/scans with the PR #46
+#                        readers and the current ones; outputs must be identical
+# make submotif        : build cpp/submotif (command line + Python module)
+# make submotif-test   : C++ against books/travel.py (pieces, iou, pairs)
+# make similarity      : every pair of similar whole figures across all charts
+#                        -> books/similarity/pairs.csv, pieces.csv
+SUBMOTIF = cpp/submotif
+
+sources-test:
+	python3 -W ignore books/sources/test_sources.py
+
+sources-check:
+	books/sources/regress.sh
+
+submotif:
+	$(MAKE) -C $(SUBMOTIF)
+
+submotif-test:
+	$(MAKE) -C $(SUBMOTIF) test
+
+books/similarity/pairs.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(PARENT_DIR)/repeats.csv | submotif
+	@mkdir -p books/similarity
+	$(SUBMOTIF)/bin/submotif --units $(PARENT_DIR)/repeats.csv --pieces books/similarity/pieces.csv $(MIN_DIR) $(BOOKS_DIR) > $@
+
+similarity: books/similarity/pairs.csv
+
+.PHONY: sources-test sources-check submotif submotif-test similarity
+
 # ── Sarpur records (sarpur.is) ──────────────────────────────────────────────
 # sarpur/*.csv are committed; make sarpur rebuilds sarpur/sarpur.sqlite, which
 # also holds europeana.csv and a shared `sources` table (sarpur/sources.py) with
