@@ -31,6 +31,14 @@ The file name starts with the source: the manuscript or museum number the patter
 for example `thjms5898` for Þjms. 5898 at the National Museum of Iceland. The number after it
 is the page in *Íslensk sjónabók* (2009), so `natmus453_706_p4` is the 4th motif on page 706. A page often holds several motifs; the `_p` numbering is ours, from splitting the page, not from the book.
 
+Some 43 pages draw their charts with several kinds of mark (a filled diamond, a cross, a circled
+cross, a round dot, a half-filled cell), which in the manuscripts are different colours or
+stitches. Their files hold one digit per mark instead of `1`: `1` diamond, `2` cross, `3` circled
+cross, `4` dot, `5` half cell; the gallery shows each digit in its own HI colour. The 50 alphabet
+sheets are kept whole, one chart each, on the [Alphabets](alphabets.html) page; to type with them,
+use the fonts made from the same charts in
+[Sjónabókarstafróf](https://github.com/HiDefTextiles/Sjonabok-stafrof).
+
 The charts, the converters and this gallery live in the
 [HiDefTextiles/Sjonabok](https://github.com/HiDefTextiles/Sjonabok) repository. Every pattern in
 the gallery can be downloaded as its `.txt` chart or as a PNG image.

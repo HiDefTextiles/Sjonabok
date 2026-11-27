@@ -68,6 +68,18 @@ $(PARENT_DIR)/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py patte
 
 .PHONY: originals repeats
 
+# ── Charts with several kinds of mark (committed) ───────────────────────────
+# make marks : read the EPS pages whose charts mix marks (diamond, cross,
+#              circled cross, dot, half cell) into colour-digit charts in
+#              patterns/colour, and draw a review sheet of every kind of mark
+MARKS_EPS_DIR = images-multi/eps
+COLOUR_DIR = $(PARENT_DIR)/colour
+
+marks:
+	python3 convert_marks.py $(MARKS_EPS_DIR) $(COLOUR_DIR) --review marks-review.png
+
+.PHONY: marks
+
 # ── Gallery website (gallery/, Quarto) ───────────────────────────────────────
 # make gallery-data : measure every pattern and draw PNGs in the HI palette
 # make gallery      : build the static site into gallery/_site
@@ -79,8 +91,9 @@ GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 SYMMETRY_SVG = $(GALLERY)/img/symmetry/p1.svg
 
 BOOKS_DIR = $(PARENT_DIR)/books
-$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
+ALPHABET_DIR = $(PARENT_DIR)/alphabets
+$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(wildcard $(COLOUR_DIR)/*.txt) $(wildcard $(ALPHABET_DIR)/*.txt) $(ALPHABET_DIR)/alphabets.csv $(GALLERY)/regions.csv books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-data: $(GALLERY_DATA)
 
@@ -110,7 +123,7 @@ PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)
 	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME) --rainbow 1
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
