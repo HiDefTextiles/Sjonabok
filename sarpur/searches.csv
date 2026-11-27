@@ -1,0 +1,11 @@
+query,tier,num_found,note,retrieved
+sjónab*,1,30,,2026-11-25
+sjónarb*,1,1,,2026-11-25
+munsturb*,1,425,"broad: matches munsturbók, munsturbekkur etc.",2026-11-25
+munsturbl*,1,57,,2026-11-25
+fyrirmyndab*,1,2,,2026-11-25
+saumab*,1,65,"broad: saumaborð (sewing table) etc.",2026-11-25
+flosverk*,1,9,,2026-11-25
+"""Íslensk sjónabók""",1,3,,2026-11-25
+"""Handíðir horfinnar aldar""",1,10,,2026-11-25
+"<name or place> AND (munstur* OR sjónab* OR uppdr* OR fyrirmynd* OR saumab* OR sessuborð* OR refil* OR krosssaum* OR augnsaum* OR glitsaum*)",2,,"run for 18 owner/donor names and places (Ragnheiður Jónsdóttir 3, Gunnar Filippusson 1, Katrín Þorvaldsdóttir 2, Helga Brynjólfsdóttir 1, Jón Einarsson 6, Guðrún Eiríksdóttir 1, Ingibjörg Eiríksdóttir 1, Katrín Jónsdóttir 7, Guðrún Jónsdóttir 33, Laufey Bjarnadóttir 1, Fjarðarhorn* 5, Steinunn Thorarensen 1, Margrét Jóhannsdóttir 2, Daníel Halldórsson 2, Kjörseyri 5, Skaftafell* 47, Jón Steingrímsson 0, Gísli Þorláksson 0)",2026-11-25

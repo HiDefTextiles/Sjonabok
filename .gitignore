@@ -173,3 +173,6 @@ cython_debug/
 
 # C++ build products
 cpp/submotif/bin/
+
+# Sarpur database (rebuilt from sarpur/*.csv by make sarpur)
+sarpur/sarpur.sqlite
