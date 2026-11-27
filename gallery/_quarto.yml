@@ -15,9 +15,13 @@ project:
 
 lang: en
 
+# chart counts, written by scripts/counts.py (make counts) from the chart files
+metadata-files:
+  - _counts.yml
+
 website:
   title: "Sjónabók gallery"
-  description: "Browse and inspect about 600 Icelandic embroidery patterns from Íslensk sjónabók, digitised as 0/1 charts by HiDef Textiles."
+  description: "Browse and inspect the Icelandic embroidery patterns and alphabets of Íslensk sjónabók, digitised as charts by HiDef Textiles."
   site-url: https://hideftextiles.github.io/Sjonabok/
   repo-url: https://github.com/HiDefTextiles/Sjonabok
   repo-actions: [issue]

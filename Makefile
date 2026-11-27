@@ -97,6 +97,13 @@ $(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(w
 
 gallery-data: $(GALLERY_DATA)
 
+# Chart counts for the pages (gallery/_counts.yml) and the README, from the chart files
+COUNTS = $(GALLERY)/_counts.yml
+$(COUNTS): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(wildcard $(COLOUR_DIR)/*.txt) $(wildcard $(ALPHABET_DIR)/*.txt) $(ALPHABET_DIR)/alphabets.csv $(GALLERY)/scripts/counts.py
+	python3 $(GALLERY)/scripts/counts.py --yaml $@ --readme README.md
+
+counts: $(COUNTS)
+
 $(SYMMETRY_SVG): $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/scripts/build_gallery.py
 	python3 $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/img/symmetry
 
@@ -110,10 +117,10 @@ SCANS ?= books/scans
 reading-examples:
 	python3 $(GALLERY)/scripts/reading_examples.py $(SCANS) $(GALLERY)/img/reading
 
-gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
+gallery: $(GALLERY_DATA) $(SYMMETRY_SVG) $(COUNTS)
 	cd $(GALLERY) && quarto render
 
-gallery-preview: $(GALLERY_DATA) $(SYMMETRY_SVG)
+gallery-preview: $(GALLERY_DATA) $(SYMMETRY_SVG) $(COUNTS)
 	cd $(GALLERY) && quarto preview
 
 # make overview-layout : optimise the two overview sheets (bands: Gurobi, needs
@@ -126,9 +133,9 @@ overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-clean:
-	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
+	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns $(COUNTS)
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples reading-examples overview-layout
+.PHONY: counts gallery gallery-data gallery-preview gallery-clean symmetry-examples reading-examples overview-layout
 
 # ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
 # make motifs : pick a signature motif per manuscript from patterns/min
