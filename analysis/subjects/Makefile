@@ -118,11 +118,18 @@ work/submotifs/kinds.csv: variants.py work/all/submotif_dist.csv
 work/submotifs/colour: recolour.py work/submotifs/kinds.csv
 	$(PY) recolour.py --txt $(TXT) --sheet work/submotifs/recoloured.png
 
-# vertical video: the eight-pointed rosette (size kind 40) morphing from book to book
-work/submotifs/reel.mp4: reel.py manuscript_dates.csv work/submotifs/kinds.csv
-	$(PY) reel.py --txt $(TXT) --kind 40 --out $@
+# vertical videos (reels): one figure morphing from book to book, one per row of reels.csv.
+# make reel-candidates lists (and draws) the figures drawn in enough books; add a row to
+# reels.csv, then make work/reels/<name>.mp4. Videos stay in work/, never in git.
+REELS := $(patsubst %,work/reels/%.mp4,$(shell tail -n +2 reels.csv | cut -d, -f1))
+reels: $(REELS)
+reel-candidates: work/submotifs/kinds.csv
+	$(PY) reel.py --txt $(TXT) --list
+work/reels/%.mp4: reel.py music.py reels.csv manuscript_dates.csv work/submotifs/kinds.csv
+	$(PY) reel.py --txt $(TXT) --recipe $* --out $@
+.PHONY: reels reel-candidates
 
-work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
+EMBEDS := work/embed_all_dist.csv work/embed_tiled_dist.csv work/embed_upright_dist.csv work/clip_all_dist.csv
 
 weights.csv: $(EMBEDS) work/all/texture_dist.csv subjects.csv fairtest.csv feature_labels.csv
 	$(PY) subjects.py learn

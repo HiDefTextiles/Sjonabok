@@ -1,7 +1,13 @@
 """A short vertical video: one recurring figure as each manuscript draws it, morphing
 from book to book in time order, the manuscript named at the bottom.
 
-    python reel.py [--kind 40] [--out work/submotifs/reel.mp4] [--txt ../../patterns/txt]
+    python reel.py --list                       # figures drawn in enough books for a reel
+    python reel.py --recipe rosette             # a reel from a row of reels.csv
+    python reel.py --kind 40 --title "..."      # any size kind, without a recipe
+    make reels                                  # every recipe -> work/reels/<name>.mp4
+
+A new reel in the same style: pick a kind from --list, add a row to reels.csv (name, kind,
+title), and make work/reels/<name>.mp4. Videos stay in work/ and are never committed.
 
 The figure of each manuscript is one drawing from its own charts, exactly as drawn: the
 whole joined figure, the same cells that are marked in the chart shown below it. A drawing
@@ -14,6 +20,7 @@ import argparse
 import csv
 import subprocess
 from collections import Counter, defaultdict
+from pathlib import Path
 
 import numpy as np
 from scipy import ndimage
@@ -25,7 +32,10 @@ from submotifs import SHIFT
 from variants import Aligner, trim
 
 W, H, FPS = 1080, 1920, 30
-HOLD, MORPH, END, CLOSE = 1.7, 1.1, 2.5, 2.5   # under 30 s: Instagram autoplay and stories
+HOLD, MORPH, END, CLOSE = 1.7, 1.1, 2.5, 2.5   # seconds; shortened to fit LIMIT for many books
+LIMIT = 29.5    # under 30 s: Instagram autoplay and stories
+RECIPES = S.HERE / "reels.csv"
+MIN_BOOKS = 4   # a reel needs at least this many manuscripts drawing the figure
 BLUE = np.array((16, 9, 159), float)
 PINK = np.array((214, 31, 105), float)
 PAPER = np.array((255, 255, 255), float)
@@ -222,6 +232,10 @@ class MitreFrame:
 class Reel:
     def __init__(self, books, title, subtitle, own_centre=OWN_CENTRE):
         self.books, self.title, self.subtitle = books, title, subtitle
+        # hold and morph shrink together when many books would run past LIMIT
+        k = len(books.figures)
+        fit = (LIMIT - END - CLOSE) / (k * HOLD + (k - 1) * MORPH)
+        self.hold, self.morph_s = HOLD * min(1, fit), MORPH * min(1, fit)
         self.n = max(max(f.shape) for _, f, _ in books.figures) + 2
         self.cell = 640 // self.n
         self.grids = [self.centre(f) for _, f, _ in books.figures]
@@ -366,10 +380,10 @@ class Reel:
         g = self.grids
         for k in range(len(g)):
             hold = self.frame(self.colours(g[k]), k)
-            for _ in range(int(HOLD * FPS)):
+            for _ in range(int(self.hold * FPS)):
                 put(hold)
             if k + 1 < len(g):
-                steps = int(MORPH * FPS)
+                steps = max(1, int(self.morph_s * FPS))
                 for s in range(steps):
                     t = (s + 1) / steps
                     # the name fades out and the next one in, halfway through
@@ -398,17 +412,88 @@ def add_music(video, out):
                     "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", out], check=True)
 
 
+def recipes():
+    with open(RECIPES, newline="") as f:
+        return {r["name"]: r for r in csv.DictReader(f)}
+
+
+def candidates(txt, out):
+    """Size kinds drawn in at least MIN_BOOKS manuscripts, most books first: what a reel can show."""
+    src = {u.id: u.pattern.source for u in S.Corpus(txt, S.PILOT_KINDS + S.BAND_KINDS).units}
+    cons = {r["submotif"]: r for r in S.read_csv(OUT / "consensus.csv")}
+    books, charts = defaultdict(set), defaultdict(set)
+    for p in S.read_csv(OUT / "places.csv"):
+        k = cons[p["submotif"]]["kind"]
+        if p["kept"] == "1" and k:
+            books[k].add(src[p["chart"]])
+            charts[k].add(p["chart"])
+    used = {r["kind"]: n for n, r in recipes().items()}
+    kinds = {r["kind"]: r for r in S.read_csv(OUT / "kinds.csv")}
+    rows = [dict(kind=k, books=len(b), charts=len(charts[k]), cells=kinds.get(k, {}).get("largest", ""),
+                 recipe=used.get(k, "")) for k, b in books.items() if len(b) >= MIN_BOOKS]
+    rows.sort(key=lambda r: (-r["books"], -r["charts"]))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    print(f"{'kind':>5} {'books':>5} {'charts':>6} {'cells':>5}  recipe")
+    for r in rows:
+        print(f"{r['kind']:>5} {r['books']:>5} {r['charts']:>6} {r['cells']:>5}  {r['recipe']}")
+    sheet = out.with_suffix(".png")
+    candidate_sheet(rows, {k: r["submotifs"].split("|") for k, r in kinds.items()}, sheet)
+    print(f"-> {out} and {sheet}")
+
+
+def candidate_sheet(rows, members, path, cols=6, tile=180):
+    """One tile per candidate: its largest consensus figure, the kind and how many books."""
+    font = ImageFont.truetype(FONT, 18)
+    bold = ImageFont.truetype(BOLD, 20)
+    n = (len(rows) + cols - 1) // cols
+    img = Image.new("RGB", (cols * tile, n * (tile + 40)), (255, 255, 255))
+    dr = ImageDraw.Draw(img)
+    for i, r in enumerate(rows):
+        figs = [np.array([[int(c) for c in l.strip()] for l in open(OUT / "consensus" / f"{m}.txt") if l.strip()], bool)
+                for m in members.get(r["kind"], [])]
+        x0, y0 = (i % cols) * tile, (i // cols) * (tile + 40)
+        if figs:
+            f = max(figs, key=lambda f: f.sum())
+            z = max(1, (tile - 30) // max(f.shape))
+            col = PINK if r["recipe"] else BLUE
+            I = Image.fromarray(np.where(f[..., None], col, PAPER).astype(np.uint8))
+            I = I.resize((f.shape[1] * z, f.shape[0] * z), Image.NEAREST)
+            img.paste(I, (x0 + (tile - I.width) // 2, y0 + 10 + (tile - 20 - I.height) // 2))
+        dr.text((x0 + tile // 2, y0 + tile + 2), f"kind {r['kind']}", font=bold, fill=INK, anchor="mt")
+        dr.text((x0 + tile // 2, y0 + tile + 22), f"{r['books']} books, {r['charts']} charts", font=font, fill=INK, anchor="mt")
+    img.save(path)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--txt", default="../../patterns/txt")
+    ap.add_argument("--list", action="store_true", help="list the figures a reel can show")
+    ap.add_argument("--recipe", help="a name in reels.csv (sets kind, title and out)")
     ap.add_argument("--kind", type=int, default=40)
     ap.add_argument("--title", default="The eight-pointed rosette")
-    ap.add_argument("--out", default=str(OUT / "reel.mp4"))
+    ap.add_argument("--subtitle", help="default: as N manuscripts draw it, 1600s–1800s")
+    ap.add_argument("--out")
     ap.add_argument("--own-centre", type=int, default=OWN_CENTRE,
                     help="half-width of the centre each book keeps; the arms are the books' majority (0: off)")
     a = ap.parse_args()
+    if a.list:
+        candidates(a.txt, OUT.parent / "reels" / "candidates.csv")
+        return
+    if a.recipe:
+        r = recipes()[a.recipe]
+        a.kind, a.title = int(r["kind"]), r["title"]
+        a.subtitle = r.get("subtitle") or a.subtitle
+        a.out = a.out or str(OUT.parent / "reels" / f"{a.recipe}.mp4")
+    a.out = a.out or str(OUT / "reel.mp4")
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     books = BookFigures(a.txt, a.kind)
-    sub = f"as {len(books.figures)} manuscripts draw it, 1600s–1800s"
+    if len(books.figures) < 2:
+        raise SystemExit(f"kind {a.kind} is drawn in {len(books.figures)} manuscript(s); see --list")
+    sub = a.subtitle or f"as {len(books.figures)} manuscripts draw it, 1600s–1800s"
     reel = Reel(books, a.title, sub, a.own_centre)
     silent = a.out.replace(".mp4", "_silent.mp4")
     reel.write(silent)
