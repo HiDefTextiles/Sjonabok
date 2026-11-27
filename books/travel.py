@@ -82,7 +82,7 @@ class Chart:
         m = NAME_RE.match(self.name)
         self.source = m["source"] if m else self.name
         rows = [r.strip() for r in self.path.read_text().splitlines() if r.strip()]
-        self.m = np.array([[c in "12" for c in r] for r in rows], bool)   # 2 = red ink
+        self.m = np.array([[c not in "0." for c in r] for r in rows], bool)   # any ink digit is filled
         self.tile = tile
 
     def pieces(self):
