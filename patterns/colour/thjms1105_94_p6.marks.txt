@@ -1,0 +1,7 @@
+.....x...xxxxxxx...x..xxxxx..x.....xxx.....x.....xxxxx..xx..xxxxx.....x.....xxx.....x..xxxxx..x.....xxx.....x.....x
+....x.xx.x.x.x.x.xx.x.x.x.x.x.xx...x.....xx.x...xx.x.xx.xx.xx.x.xx...x.xx.....x...xx.x.x.x.x.x.xx...x.....xx.x...xx
+....xx...xxxxxxx...xx...x...xx...xxxxx.x...xx..xx.xxx.xxxxxx.xxx.xx..xx...x.xxxxx...xx...x...xx...xxxxx.x...xx..xx.
+...xxxx..x.x.x.x..xxxx..x..xxxx..x.x.x.x..xxxx....xxx..xxxx..xxx....xxxx..x.x.x.x..xxxx..x..xxxx..x.x.x.x..xxxx....
+..xxxxxx.xxxxxxx.xxxxxx.x.xxxxxx.x.xxxxx.xxxxxx....x.x..xx..x.x....xxxxxx.xxxxx.x.xxxxxx.x.xxxxxx.x.xxxxx.xxxxxx...
+.xx.x.x..x.x.x.x..x.x.xxxxx.x.x......x....x.x.xx....xxx.xx.xxx....xx.x.x....x......x.x.xxxxx.x.x......x....x.x.xx..
+xx.x.x.x.xxxxxxx.x.x.x.xxx.x.x.x...xxx...x.x.x.xx..xxxxxxxxxxxx..xx.x.x.x...xxx...x.x.x.xxx.x.x.x...xxx...x.x.x.xx.

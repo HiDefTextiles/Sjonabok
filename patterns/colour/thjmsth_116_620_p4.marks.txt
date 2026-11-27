@@ -1,0 +1,13 @@
+x...JJJ.JJJJ.O.xxxxxxxxx.O.JJJJ.JJJ...x...JJJ.JJJJ.O.xxxxxxxxx.O.JJJJ.JJJ...x...JJJ.JJJJ.O.xxxxxxxxx.O.JJJJ.JJJ...x
+xx.x.JJJJJJ.O.xx...x...xx.O.JJJJJJ.x.xxx.x.JJJJJJ.O.xx...x...xx.O.JJJJJJ.x.xxx.x.JJJJJJ.O.xx...x...xx.O.JJJJJJ.x.xx
+xxxx..JJJJ.O.xx..x.x.x..xx.O.JJJJ..xxxxxxx..JJJJ.O.xx..x.x.x..xx.O.JJJJ..xxxxxxx..JJJJ.O.xx..x.x.x..xx.O.JJJJ..xxxx
+xxx.OO.JJ.O.xx..xxxxxxx..xx.O.JJ.OO.xxxxx.OO.JJ.O.xx..xxxxxxx..xx.O.JJ.OO.xxxxx.OO.JJ.O.xx..xxxxxxx..xx.O.JJ.OO.xxx
+xx.OOOOOOO.xx..xxxxxxxxx..xx.OOOOOOO.xxx.OOOOOOO.xx..xxxxxxxxx..xx.OOOOOOO.xxx.OOOOOOO.xx..xxxxxxxxx..xx.OOOOOOO.xx
+x.OOOOOOO.xx..xxxxxxxxxxx..xx.OOOOOOO.x.OOOOOOO.xx..xxxxxxxxxxx..xx.OOOOOOO.x.OOOOOOO.xx..xxxxxxxxxxx..xx.OOOOOOO.x
+xOOOOOOO.xx..OOOOOOxOOOOOO..xx.OOOOOOOxOOOOOOO.xx..OOOOOOxOOOOOO..xx.OOOOOOOxOOOOOOO.xx..OOOOOOxOOOOOO..xx.OOOOOOOx
+xOOOOO..xx.OOOOOOOOxOOOOOOOO.xx..OOOOOxOOOOO..xx.OOOOOOOOxOOOOOOOO.xx..OOOOOxOOOOO..xx.OOOOOOOOxOOOOOOOO.xx..OOOOOx
+xxxxx..xx.OOOOOOO.xxx.OOOOOOO.xx..xxxxxxxxx..xx.OOOOOOO.xxx.OOOOOOO.xx..xxxxxxxxx..xx.OOOOOOO.xxx.OOOOOOO.xx..xxxxx
+xxxx..xx.O.JJ.OO.xxxxx.OO.JJ.O.xx..xxxxxxx..xx.O.JJ.OO.xxxxx.OO.JJ.O.xx..xxxxxxx..xx.O.JJ.OO.xxxxx.OO.JJ.O.xx..xxxx
+x.x..xx.O.JJJJ..xxxxxxx..JJJJ.O.xx..x.x.x..xx.O.JJJJ..xxxxxxx..JJJJ.O.xx..x.x.x..xx.O.JJJJ..xxxxxxx..JJJJ.O.xx..x.x
+x...xx.O.JJJJJJ.x.xxx.x.JJJJJJ.O.xx...x...xx.O.JJJJJJ.x.xxx.x.JJJJJJ.O.xx...x...xx.O.JJJJJJ.x.xxx.x.JJJJJJ.O.xx...x
+xxxxx.O.JJJJ.JJJ...x...JJJ.JJJJ.O.xxxxxxxxx.O.JJJJ.JJJ...x...JJJ.JJJJ.O.xxxxxxxxx.O.JJJJ.JJJ...x...JJJ.JJJJ.O.xxxxx

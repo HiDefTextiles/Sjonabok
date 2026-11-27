@@ -18,7 +18,16 @@
     rosette: "Rosette / star",
     motif: "Motif",
     "vertical band": "Vertical band",
+    alphabet: "Alphabet",
   };
+  // Charts with several kinds of mark (patterns/colour) hold digits 2-5 for
+  // the other marks; they get the first HI colours that differ from the
+  // chosen scheme's pattern and background colours.
+  const MARK_COLOURS = ["#d61f69", "#2DD2C0", "#FAC55B", "#10099F", "#F4B8CE"];
+  function markColours(fg, bg) {
+    const rest = MARK_COLOURS.filter((c) => c.toLowerCase() !== fg.toLowerCase() && c.toLowerCase() !== bg.toLowerCase());
+    return { 1: fg, 2: rest[0], 3: rest[1], 4: rest[2], 5: rest[3] };
+  }
   const SYM = [
     ["mirror_lr", "Left–right mirror", "The left half mirrors the right half"],
     ["mirror_tb", "Top–bottom mirror", "The top half mirrors the bottom half"],
@@ -172,7 +181,7 @@
     a.href = `#${p.id}`;
     a.title = `${p.id}: ${KIND_LABELS[p.kind]}, ${p.trim_width}×${p.trim_height}`;
     a.innerHTML = `<span class="thumb"><img loading="lazy" src="${BASE}thumb/${p.id}.png" alt="Pattern ${p.id}"></span>
-      <span class="cap"><b>${p.source_label}</b> ${p.collection === "europe" ? "pl." : "p."} ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
+      <span class="cap"><b>${p.source_label}</b> ${p.printed ? "pl." : "p."} ${p.number}${p.part ? ` · ${p.part}/${p.on_page}` : ""}<br>
       <small>${KIND_LABELS[p.kind]} · ${p.trim_width}×${p.trim_height}</small></span>`;
     return a;
   }
@@ -203,7 +212,7 @@
   function inkBounds(m) {
     let x0 = Infinity, x1 = -1, y0 = Infinity, y1 = -1;
     m.forEach((row, y) => {
-      const f = row.indexOf("1"), l = row.lastIndexOf("1");
+      const f = row.search(/[1-9]/), l = row.length - 1 - [...row].reverse().join("").search(/[1-9]/);
       if (f >= 0) { x0 = Math.min(x0, f); x1 = Math.max(x1, l); y0 = Math.min(y0, y); y1 = y; }
     });
     return x1 < 0 ? { x0: 0, x1: m[0].length - 1, y0: 0, y1: m.length - 1 } : { x0, x1, y0, y1 };
@@ -262,10 +271,12 @@
     const ctx = cv.getContext("2d");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.fillStyle = fg;
+    const mc = markColours(fg, bg);
     for (let y = 0; y < L.H; y++)
-      for (let x = 0; x < L.W; x++)
-        if (L.at(x, y) === "1") ctx.fillRect(x * z, y * z, z, z);
+      for (let x = 0; x < L.W; x++) {
+        const c = L.at(x, y);
+        if (c && c !== "0") { ctx.fillStyle = mc[c] || fg; ctx.fillRect(x * z, y * z, z, z); }
+      }
     if (view.grid && z >= 4) {
       ctx.strokeStyle = "rgba(38,38,38,0.18)";
       ctx.lineWidth = 1;
@@ -306,7 +317,7 @@
     const syms = SYM.filter(([k]) => k !== "none" && p[k]).map((s) => s[1]).join(", ") || "None found";
     const grp = p.frieze ? `${p.frieze} (${p.frieze_name})` : p.point ? `${p.point} (${p.point_name})` : "—";
     $("d-facts").innerHTML =
-      (p.collection === "europe"
+      (p.printed
         ? fact("Plate", `${p.number} in <i>${p.book_title}</i> (${p.book_place} ${p.book_year})`) +
           fact("Designer", p.book_author) +
           fact("Band", p.part ? `${p.part} of ${p.on_page} on this plate` : null) +
@@ -316,6 +327,15 @@
           fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null)) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
+      (p.kind === "alphabet"
+        ? fact("As a font", p.font_page
+            ? `<a href="${p.font_page}" target="_blank" rel="noopener">this alphabet as a TrueType font</a>, from <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`
+            : `${p.font_note}. Fonts from the other sheets: <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`)
+        : "") +
+      (p.colours && p.colours.length > 1
+        ? fact("Marks", `${p.colours.length} kinds of mark in the book, shown as ${p.colours.length} colours (digits ${p.colours.join(", ")} in the .txt)`) +
+          fact("Colours in a row", `up to ${p.row_colours}, background included`)
+        : "") +
       (p.unit
         ? fact("Repeat unit", `${p.width} × ${p.height} cells (the file holds one repeat)`)
         : fact("Pattern size", `${p.trim_width} × ${p.trim_height} cells`) +
@@ -354,6 +374,7 @@
     if (current !== p) return;
     view.matrix = txt.split(/\r?\n/).filter((r) => r.trim());
     draw();
+    window.SjonabokOriginal?.view?.show(p, view.matrix);   // "Original" view (original.js)
   }
 
   function setupDetail() {
@@ -415,7 +436,9 @@
     chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
     const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
     chips($("f-source"), "source", sources);
-    const colls = [["iceland", "Icelandic manuscripts"], ["europe", "European printed books"]].filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
+    // tabs by country from gallery/regions.csv (via patterns.json)
+    const colls = (json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }])
+      .map((r) => [r.region, r.short || r.label, r.note]).filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
     chips($("f-coll"), "coll", colls);
     ranges($("f-range"));
     loadUrl();

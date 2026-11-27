@@ -10,6 +10,8 @@ project:
     - patterns/**
     - js/**
     - map/web/**
+    - original/**
+    - tools/**
 
 lang: en
 
@@ -30,6 +32,10 @@ website:
         href: index.qmd
       - text: "Explore"
         href: explore.qmd
+      - text: "Alphabets"
+        href: alphabets.qmd
+      - text: "How we read old books"
+        href: reading.qmd
       - text: "About"
         href: about.qmd
     tools:

@@ -170,3 +170,6 @@ cython_debug/
 /patterns/txt/
 # Manuscript map: leaflet files are committed with the built page (make map)
 !/gallery/map/web/lib/
+
+# C++ build products
+cpp/submotif/bin/

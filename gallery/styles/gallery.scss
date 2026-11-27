@@ -217,6 +217,41 @@ dialog.detail {
     padding: 0.6rem;
     canvas { display: block; image-rendering: pixelated; cursor: crosshair; }
   }
+  // "Original" view (js/original.js)
+  .d-chart-only[hidden], .d-original[hidden] { display: none !important; }
+  .d-mode {
+    display: inline-flex;
+    border: 1px solid $hi-blue;
+    button {
+      border: none; background: $hi-white; color: $hi-blue;
+      padding: 0.15rem 0.7rem; font-weight: 600; cursor: pointer;
+      &[aria-pressed=true] { background: $hi-blue; color: $hi-white; }
+    }
+  }
+  .o-tools select { font-size: 0.85rem; max-width: 14rem; }
+  .o-stage {
+    position: relative;
+    overflow: hidden;
+    max-width: 100%;
+    background: #2b2622;
+    border: 1px solid $hi-panel;
+  }
+  .o-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .o-photo { display: block; max-width: none; }
+  .o-chart {
+    position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: visible;
+    path { fill: none; stroke: $hi-pink; stroke-width: 0.12; }
+    &.filled path { fill: $hi-blue; stroke: none; }
+    .o-frame { fill: none; stroke: #2DD2C0; stroke-width: 0.2; }
+  }
+  .o-badge {
+    position: absolute; left: 0.4rem; top: 0.4rem; background: $hi-pink; color: $hi-white;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.1rem 0.4rem;
+  }
+  .o-locked {
+    background: $hi-paper; padding: 1rem; font-size: 0.9rem;
+    p:last-child { margin-bottom: 0; }
+  }
   .d-cell { font-size: 0.8rem; color: rgba($hi-ink, 0.7); margin: 0.4rem 0 0; min-height: 1.2em; }
 
   .eyebrow {
@@ -418,4 +453,13 @@ iframe.manuscript-map {
   height: 900px;          // until the page inside has loaded and been measured
   border: 0;
   margin: 0.5rem 0 1rem;
+}
+
+// ── Alphabets page ───────────────────────────────────────────────────────────
+.alphabets {
+  .nav-tabs { margin: 1rem 0 0.75rem; }
+  .nav-link .n { font-size: 0.8em; color: rgba($hi-ink, 0.6); margin-left: 0.25rem; }
+  .overview-sheet { margin-bottom: 1.25rem; }
+  .tile .cap a { color: $hi-blue; }
+  .hint { font-size: 0.9rem; color: rgba($hi-ink, 0.7); }
 }

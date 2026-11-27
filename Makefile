@@ -68,6 +68,18 @@ $(PARENT_DIR)/repeats.csv: $(wildcard $(TXT_DIR)/*.txt) extract_repeats.py patte
 
 .PHONY: originals repeats
 
+# ── Charts with several kinds of mark (committed) ───────────────────────────
+# make marks : read the EPS pages whose charts mix marks (diamond, cross,
+#              circled cross, dot, half cell) into colour-digit charts in
+#              patterns/colour, and draw a review sheet of every kind of mark
+MARKS_EPS_DIR = images-multi/eps
+COLOUR_DIR = $(PARENT_DIR)/colour
+
+marks:
+	python3 convert_marks.py $(MARKS_EPS_DIR) $(COLOUR_DIR) --review marks-review.png
+
+.PHONY: marks
+
 # ── Gallery website (gallery/, Quarto) ───────────────────────────────────────
 # make gallery-data : measure every pattern and draw PNGs in the HI palette
 # make gallery      : build the static site into gallery/_site
@@ -79,8 +91,9 @@ GALLERY_DATA = $(GALLERY)/patterns/patterns.json
 SYMMETRY_SVG = $(GALLERY)/img/symmetry/p1.svg
 
 BOOKS_DIR = $(PARENT_DIR)/books
-$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
+ALPHABET_DIR = $(PARENT_DIR)/alphabets
+$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(wildcard $(COLOUR_DIR)/*.txt) $(wildcard $(ALPHABET_DIR)/*.txt) $(ALPHABET_DIR)/alphabets.csv $(GALLERY)/regions.csv books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-data: $(GALLERY_DATA)
 
@@ -88,6 +101,14 @@ $(SYMMETRY_SVG): $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/scripts/buil
 	python3 $(GALLERY)/scripts/symmetry_examples.py $(GALLERY)/img/symmetry
 
 symmetry-examples: $(SYMMETRY_SVG)
+
+# make reading-examples SCANS=dir : redraw the pictures on the "How we read
+#                  old pattern books" page from Met scans (SCANS/<book>/<image>.webp,
+#                  books/fetch.py gets them). Small WebP files in gallery/img/reading,
+#                  committed; the script stops if a reading differs from patterns/books.
+SCANS ?= books/scans
+reading-examples:
+	python3 $(GALLERY)/scripts/reading_examples.py $(SCANS) $(GALLERY)/img/reading
 
 gallery: $(GALLERY_DATA) $(SYMMETRY_SVG)
 	cd $(GALLERY) && quarto render
@@ -102,12 +123,12 @@ PACK_TIME = 600
 overview-layout: $(GALLERY_DATA)
 	python3 $(GALLERY)/scripts/pack_overview.py bands  $(GALLERY)/patterns/overview-band-items.csv  $(GALLERY)/layout/bands.csv  --time $(PACK_TIME)
 	python3 $(GALLERY)/scripts/pack_overview.py motifs $(GALLERY)/patterns/overview-motif-items.csv $(GALLERY)/layout/motifs.csv --time $(PACK_TIME) --rainbow 1
-	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR)
+	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-clean:
 	rm -rf $(GALLERY)/_site $(GALLERY)/.quarto $(GALLERY)/patterns
 
-.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples overview-layout
+.PHONY: gallery gallery-data gallery-preview gallery-clean symmetry-examples reading-examples overview-layout
 
 # ── Manuscript map (gallery/map/, R) ─────────────────────────────────────────
 # make motifs : pick a signature motif per manuscript from patterns/min
@@ -138,10 +159,17 @@ books/travel/shared.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.
 $(MAP)/web/europe.html: books/travel/shared.csv books/books.csv $(MAP)/manuscripts.csv $(MAP)/places.csv $(MAP)/books_map.R
 	cd $(MAP) && LC_ALL=C.UTF-8 Rscript books_map.R
 
+# make slips : find squares that break a band's symmetry (reading slips) and
+#              edit them in patterns/books; each edit, with the value read, is
+#              kept in books/corrections.csv (python3 books/slips.py revert undoes them)
+slips:
+	python3 books/slips.py find
+	python3 books/slips.py apply
+
 travel: books/travel/shared.csv
 books-map: $(MAP)/web/europe.html
 
-.PHONY: motifs map travel books-map
+.PHONY: motifs map travel books-map slips
 
 # ── Seeds: smallest piece + symmetry recipe per chart ───────────────────────
 # make seeds       : patterns/seeds.csv (seed, recipe, frieze/point group,
@@ -164,3 +192,33 @@ seeds-sheet: $(SEEDS)
 	python3 condense.py sheet $(PARENT_DIR) seeds-sheet.png
 
 .PHONY: seeds seeds-check seeds-sheet
+
+# ── Scan readers (books/sources/) and the C++ sub-motif matcher (cpp/) ──────
+# make sources-test    : read drawn test pages in every layout (no scans needed)
+# make sources-check   : re-read every scan in books/scans with the PR #46
+#                        readers and the current ones; outputs must be identical
+# make submotif        : build cpp/submotif (command line + Python module)
+# make submotif-test   : C++ against books/travel.py (pieces, iou, pairs)
+# make similarity      : every pair of similar whole figures across all charts
+#                        -> books/similarity/pairs.csv, pieces.csv
+SUBMOTIF = cpp/submotif
+
+sources-test:
+	python3 -W ignore books/sources/test_sources.py
+
+sources-check:
+	books/sources/regress.sh
+
+submotif:
+	$(MAKE) -C $(SUBMOTIF)
+
+submotif-test:
+	$(MAKE) -C $(SUBMOTIF) test
+
+books/similarity/pairs.csv: $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(PARENT_DIR)/repeats.csv | submotif
+	@mkdir -p books/similarity
+	$(SUBMOTIF)/bin/submotif --units $(PARENT_DIR)/repeats.csv --pieces books/similarity/pieces.csv $(MIN_DIR) $(BOOKS_DIR) > $@
+
+similarity: books/similarity/pairs.csv
+
+.PHONY: sources-test sources-check submotif submotif-test similarity
