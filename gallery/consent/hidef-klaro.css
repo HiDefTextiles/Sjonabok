@@ -1,0 +1,73 @@
+/* HÍ look for the Klaro! cookie notice and settings (Jost, HÍ blue, teal).
+   Kept identical in the main site, Sjonabok and Sjonabok-stafrof. */
+.klaro.hidef-klaro {
+  --font-family: "Jost", system-ui, sans-serif;
+  --title-font-family: "Jost", system-ui, sans-serif;
+  --font-size: 15px;
+  --green1: #10099F;  /* primary buttons, switches on */
+  --green2: #2DD2C0;  /* focus and hover accents */
+  --green3: #10099F;
+  --blue1: #ffffff;   /* secondary buttons */
+  --blue2: #0b0670;
+  --dark1: #ffffff;   /* panel background */
+  --dark2: #555555;
+  --dark3: #262626;
+  --light1: #262626;  /* text */
+  --light2: #EEEEEE;  /* rules */
+  --light3: #262626;
+  --white1: #ffffff;
+  --white2: #ffffff;
+  --white3: #ffffff;
+  --button-text-color: #ffffff;
+  --border-radius: 4px;
+  --notice-max-width: 34em;
+  --box-shadow-color: rgba(0, 0, 0, 0.25);
+}
+.hidef-klaro .cookie-notice:not(.cookie-modal-notice),
+.hidef-klaro .cookie-modal .cm-modal.cm-klaro {
+  border-top: 6px solid #10099F;
+  color: #262626;
+}
+.hidef-klaro .cookie-modal .cm-modal .cm-header h1,
+.hidef-klaro .cookie-notice .cn-body h2,
+.hidef-klaro .cm-header .title {
+  color: #10099F;
+  font-weight: 800;
+}
+.hidef-klaro a, .hidef-klaro .cm-link { color: #10099F !important; }
+.hidef-klaro .cm-btn {
+  border: 2px solid #10099F !important;
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 0.45em 1em;
+  background-color: #ffffff !important;
+  color: #10099F !important;
+}
+.hidef-klaro .cm-btn.cm-btn-accept-all,
+.hidef-klaro .cookie-notice .cm-btn.cm-btn-success {
+  background-color: #10099F !important;
+  color: #ffffff !important;
+}
+.hidef-klaro .cm-btn:hover { box-shadow: 0 0 0 2px #2DD2C0; }
+/* Switches: grey when off, HÍ blue when on, light blue when required. */
+.hidef-klaro .cm-list-label .slider { background-color: #c8c8c8 !important; }
+.hidef-klaro .cm-list-input:checked + .cm-list-label .slider { background-color: #10099F !important; }
+.hidef-klaro .cm-list-input.required:checked + .cm-list-label .slider,
+.hidef-klaro .cm-list-input.only-required + .cm-list-label .slider { background-color: #8a86d6 !important; }
+.hidef-klaro .cm-list-input.half-checked:checked + .cm-list-label .slider { background-color: #8a86d6 !important; }
+.klaro .context-notice {
+  background: #F5F5F5 !important;
+  border: 1px solid #EEEEEE !important;
+  color: #262626 !important;
+  font-family: "Jost", system-ui, sans-serif;
+}
+.klaro .context-notice p { color: #262626 !important; }
+.klaro .context-notice .cm-btn {
+  border: 2px solid #10099F !important;
+  background: #ffffff !important;
+  color: #10099F !important;
+}
+.klaro .context-notice .cm-btn.cm-btn-success { background: #10099F !important; color: #ffffff !important; }
+/* The footer cookie link only shows when consent is active. */
+.footer-items li:has(> a[href$="#analytics-settings"]) { display: none; }
+html.has-analytics .footer-items li:has(> a[href$="#analytics-settings"]) { display: list-item; }
