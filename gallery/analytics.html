@@ -1,15 +1,19 @@
 <!-- Inlined into every page by _quarto.yml (include-in-header). -->
 <script>
-// Google Analytics 4 with opt-in consent, shared by the Sjonabok sites.
+// Google Analytics with opt-in consent, shared by the HiDef Textiles sites
+// (main site, Sjonabok gallery, Sjonabok-stafrof). Keep the copies identical.
 //
-// The Measurement ID is read from <meta name="ga-measurement-id"> set once in
-// _quarto.yml (its data-privacy-href points to the privacy text). While the ID
-// is empty or still the G-XXXXXXXXXX placeholder this script does nothing:
-// no banner, no Google request.
+// The ID is read from <meta name="ga-measurement-id"> set once in _quarto.yml:
+// a Google Tag Manager container (GTM-...) or a GA4 Measurement ID (G-...).
+// While it is empty or a placeholder (G-XXXXXXXXXX, GTM-XXXXXXX) this script
+// does nothing: no banner, no Google request. Optional data-* attributes on
+// the same <meta>: data-privacy-href (link to the privacy text), data-text,
+// data-accept, data-decline, data-privacy-label (banner wording, e.g. Icelandic).
 //
 // With an ID, nothing is sent to Google until the visitor presses "Accept".
-// Only then is gtag.js loaded, with Consent Mode set to analytics granted and
-// ads denied. The choice is kept in localStorage ("hidef-analytics") and can
+// Only then is gtm.js (or gtag.js) loaded, with Consent Mode set to analytics
+// granted and ads denied. All three sites live on hideftextiles.github.io, so
+// one answer covers them all. The choice is kept in localStorage ("hidef-analytics") and can
 // be changed from any link to #analytics-settings (the footer link).
 // Pages shown inside an iframe (the gallery embedded in the main HiDef site)
 // never show the banner and never track.
@@ -34,11 +38,16 @@
       ad_user_data: "denied",
       ad_personalization: "denied"
     });
-    gtag("js", new Date());
-    gtag("config", id);
     var s = document.createElement("script");
     s.async = true;
-    s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(id);
+    if (id.indexOf("GTM-") === 0) {
+      window.dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+      s.src = "https://www.googletagmanager.com/gtm.js?id=" + encodeURIComponent(id);
+    } else {
+      gtag("js", new Date());
+      gtag("config", id);
+      s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(id);
+    }
     document.head.appendChild(s);
   }
 
@@ -72,14 +81,18 @@
     banner.setAttribute("role", "dialog");
     banner.setAttribute("aria-live", "polite");
     banner.setAttribute("aria-label", "Analytics consent");
-    var privacy = meta.getAttribute("data-privacy-href") || "";
+    function opt(name, fallback) { return meta.getAttribute("data-" + name) || fallback; }
+    var privacy = opt("privacy-href", "");
     banner.innerHTML =
-      '<p>May we count visits with Google Analytics? It sets cookies and tells us which ' +
-      'pages are used, nothing else. Nothing is sent until you accept.' +
-      (privacy ? ' <a href="' + privacy + '">Privacy</a>' : "") + "</p>" +
+      "<p>" + opt("text", "May we count visits with Google Analytics? It sets cookies and tells " +
+        "us which pages are used, nothing else. Nothing is sent until you accept.") +
+      (privacy ? ' <a href="' + privacy + '">' + opt("privacy-label", "Privacy") + "</a>" : "") +
+      "</p>" +
       '<div class="hidef-consent-buttons">' +
-      '<button type="button" class="btn btn-outline-primary" data-choice="denied">No thanks</button>' +
-      '<button type="button" class="btn btn-primary" data-choice="granted">Accept</button>' +
+      '<button type="button" class="btn btn-outline-primary" data-choice="denied">' +
+      opt("decline", "No thanks") + "</button>" +
+      '<button type="button" class="btn btn-primary" data-choice="granted">' +
+      opt("accept", "Accept") + "</button>" +
       "</div>";
     banner.addEventListener("click", function (ev) {
       var b = ev.target.closest("button[data-choice]");
@@ -92,7 +105,7 @@
   function init() {
     meta = document.querySelector('meta[name="ga-measurement-id"]');
     id = meta ? (meta.getAttribute("content") || "").trim() : "";
-    if (!/^G-[A-Z0-9]+$/.test(id) || id === "G-XXXXXXXXXX") return;
+    if (!/^(G|GTM)-[A-Z0-9]+$/.test(id) || /^(G|GTM)-X+$/.test(id)) return;
     var embedded;
     try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
     if (embedded) return;
