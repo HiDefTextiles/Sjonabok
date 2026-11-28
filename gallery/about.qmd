@@ -332,6 +332,9 @@ way to browse, not as a classification.
    cells differs, and a small bonus for the same family (bands with bands, motifs with motifs).
 4. **Result.** The eight highest scores are shown.
 
+Subjects (bird, flower, deer and so on) are not guessed from this list. They are set by a person,
+with the computer only sorting the charts into piles to review; see [Methods](methods.qmd).
+
 Known limits: the repeat length itself is not compared, so a small unit and a large unit with
 the same outline look alike; the 16 × 16 picture loses fine detail; and a filled/empty swap of the
 same pattern is not matched.

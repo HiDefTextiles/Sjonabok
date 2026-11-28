@@ -38,6 +38,8 @@ website:
         href: index.qmd
       - text: "Explore"
         href: explore.qmd
+      - text: "Methods"
+        href: methods.qmd
       - text: "Alphabets"
         href: alphabets.qmd
       - text: "How we read old books"

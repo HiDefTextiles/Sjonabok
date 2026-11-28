@@ -93,6 +93,22 @@ main.content:has(#gallery) {
   &.empty { opacity: 0.4; }
 }
 
+// look-alike family chips carry a small example chart
+.family-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  img { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; background: $hi-white; }
+}
+
+// look-alike order: a family's first tile carries its name
+.tile.family-start { position: relative; border-left: 3px solid $hi-pink; }
+.tile.family-start::before {
+  content: attr(data-family);
+  position: absolute; top: 2px; left: 4px;
+  font-size: 0.7rem; font-weight: 600; color: $hi-pink;
+}
+
 .ranges .range {
   display: grid;
   margin-top: 0.55rem;
@@ -212,6 +228,7 @@ dialog.detail {
 
   .d-canvas {
     overflow: auto;
+    canvas { cursor: pointer; }
     max-height: 68vh;
     background: $hi-paper;
     border: 1px solid $hi-panel;

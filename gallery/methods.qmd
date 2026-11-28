@@ -1,0 +1,470 @@
+---
+title: "Methods: sorting motifs by subject"
+description: "How the Sjónabók gallery groups patterns by what they depict (birds, flowers, deer and more): a practical guide to using AI to sort a collection, with a person making every decision."
+---
+
+Many Sjónabók patterns depict something: a bird, a flower in a vase, a reindeer, a heart. This page explains how we group them by subject, step by step, so that anyone can
+check the result or repeat the method on their own collection. Every script, setting and label is
+in the [Sjonabok repository](https://github.com/HiDefTextiles/Sjonabok/tree/main/analysis/subjects).
+
+::: {.heimild}
+**The rule we follow: the computer proposes, a person decides.** No subject shown in the gallery
+was set by a computer. AI is used to put similar charts next to each other so that a person can
+label them quickly and consistently. Every label carries the name of the person who set it and
+the date.
+:::
+
+## Why not let the AI decide?
+
+Image models are trained mostly on photographs. A Sjónabók chart is different: a bird may be
+10 × 10 cells of black and white, drawn in a style several centuries old. A model can tell that
+two charts *look alike*, and that is useful, but it cannot be trusted to say that a chart *is a
+bird*. A wrong label in a public gallery is worse than no label. So the AI does the tedious part,
+sorting 600 charts into small piles of look-alikes, and a person does the part that needs
+knowledge.
+
+## The workflow at a glance
+
+| Step | Done by | What happens | Output |
+|---|---|---|---|
+| 1. Units | Computer | Pick what to compare: a whole motif, or one repeat of a band | `units.csv` |
+| 2. Shape distance | Computer | Compare every pair of charts cell by cell, ignoring flips, turns and shifts | `shape_dist.csv` |
+| 3. Image model | Computer | Describe each chart with a pretrained image model and compare the descriptions | `embed_dist.csv` |
+| 4. Clusters | Computer | Put the charts into about 50 small piles of look-alikes | `clusters.csv` |
+| 5. Review | Person | Look at each pile, name its subject, pick out the odd ones | `review.csv` → `subjects.csv` |
+| 6. Suggestions | Computer | For charts not yet reviewed, suggest the subject of their nearest labelled neighbours | `suggestions.csv` |
+| 7. Gallery | Computer | Show reviewed subjects and main groups as filters | the *Main group* and *Subject* filters |
+| Check | Person | Label 40 random charts one at a time, settle the differences | `fairtest.csv` |
+
+Steps 1 to 4 and 6 can be rerun at any time and give the same result. Step 5 is the only one
+whose output is written by a person, and a rerun never changes it.
+
+## Step 1: what is compared {#units}
+
+A stand-alone motif or rosette is compared as the whole chart, with its empty margin trimmed.
+A border band repeats one figure many times, so it is compared on one repeat (the
+[repeat unit](about.qmd#repeats)), otherwise a band of six birds would look nothing like a single
+bird. The first round, the *pilot*, covers the 233 motifs and rosettes. Bands follow once the
+pilot has been reviewed.
+
+## Step 2: shape distance {#shape}
+
+Each chart is shrunk to a 16 × 16 grey picture and compared with every other chart in all eight
+turned and mirrored positions. The best match counts (a correlation between the pictures), and
+the distance is one minus that match. This is the same comparison as
+[similar patterns](about.qmd#similar). It is exact and easy to explain, and it is good at finding
+copies and close variants of the same figure. It is poor at meaning: a bird with raised wings and
+one with lowered wings can be far apart.
+
+## Step 3: a pretrained image model {#embedding}
+
+An *image model* is a neural network that has already learnt, from millions of pictures, to
+describe an image as a list of numbers (an *embedding*). Pictures that look alike to people get
+similar lists. We use [DINOv2](https://arxiv.org/abs/2304.07193), an openly published model, in
+its smallest size (ViT-S/14, loaded with the `timm` library from Hugging Face), which describes each picture with 384 numbers and runs on an
+ordinary laptop without a graphics card. We do not train or change the model.
+
+For each chart we:
+
+1. draw it black on white in a 224 × 224 square, enlarging whole cells so the edges stay sharp;
+2. do this in all eight turned and mirrored positions and average the eight descriptions, so a
+   bird facing left and one facing right are described the same way;
+3. compare two charts by the angle between their descriptions (one minus the cosine similarity).
+
+The model sees the overall form, a beak and legs, a stem with leaves, better than the cell-by-cell
+comparison does. It can also be fooled by texture or by how dense a chart is, which is why its
+result is only a proposal.
+
+## Step 4: clusters {#clusters}
+
+The charts are grouped by the image-model distance from step 3. We also tried averaging it with
+the shape distance from step 2 (each first turned into ranks between 0 and 1 so they share a
+scale). On the pilot that mixed deer, stars and flowers in the same piles, while the image model
+alone kept the animals together, so the shape distance now gets weight 0. It is kept in the
+code, because it is used when the image model cannot be run and it may help other collections.
+The charts are then grouped with
+[hierarchical clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html)
+in R (Ward's method). This builds a family tree of the charts, joining the most alike first,
+and the tree is cut into 50 piles.
+
+Fifty is deliberately more than the number of subjects. Small, pure piles are quick to review;
+large piles mix subjects and have to be sorted chart by chart. Two piles of birds are no problem,
+they get the same label. The piles are numbered along the tree, so neighbouring numbers look alike.
+
+We also built a third distance from what the gallery already measures about each chart:
+its symmetry scores and symmetry group, its form (share of filled cells, width to height, number of
+separate pieces) and its provenance (the same manuscript, and the same page, count as closer).
+After the first review we checked how well each distance predicts the subjects the reviewer gave,
+by asking which subject a chart's five nearest charts have. The image model came out ahead, but
+that check is unfair to the other distances, and we no longer quote its numbers (an outside
+review could not reproduce them from the labels as committed).
+
+It is unfair because the reviewer labelled piles that the image model had made. So we ran a fair test (`make sample`): 40 charts drawn at random with a fixed seed and
+labelled one at a time, outside any pile. Two charts were labelled *not sure*, which leaves 38.
+
+The first surprise was the reviewer. The same person had given 20 of the 40 charts a different set
+of subjects in the piles than on their own, almost always star, cross or geometric (a few only
+gained or lost a second subject). Those 20 were
+looked at again on a *settle* page that showed both earlier answers, and the new answer replaced
+both. Then each distance was scored again, guessing a chart's subject from its five nearest
+labelled charts:
+
+| Distance | 12 subjects | 3 main groups |
+|---|---|---|
+| Image model | 50% | 66–74% |
+| Cell-by-cell shape | 50–53% | 68–71% |
+| Gallery measures (symmetry, form, provenance) | 37–42% | 68% |
+| Image model and gallery measures, 2 : 1 | 39–55% | 68–79% |
+| Always guess the most common (star; ornament) | 24% | 53% |
+
+Each range runs over two pools of neighbours: all charts labelled in the piles, and only the other
+38 fair-test charts. With 38 charts the uncertainty is large (a 95% interval of about ±13
+percentage points), so a difference of three charts is within chance and no distance is clearly
+best. Settling can also have nudged a few labels towards the piles: of the 20, 13 kept the answer
+given on its own, 3 the pile answer, and 4 got a new one. The image model stays the default and the gallery measures keep weight 0
+(`W_META` in the Makefile). The clearer lesson is in the second column: at the level of the
+[main groups](#groups) the computer is right about three times in four, and before settling the
+reviewer's two answers shared a main group for 34 of the 38 charts (identical main groups for 29).
+
+We first tried *average linkage*. It joined most charts into one pile of 55 and left many piles
+of one, so we changed to Ward's method, which keeps piles of similar size (largest 18 in the pilot).
+
+## Step 5: the review {#review}
+
+The reviewer opens a review page that works on a phone: one card per pile, with every chart drawn
+from its 0/1 file. For each pile they tap:
+
+- **subject**: one word from the [subject list](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/vocabulary.csv)
+  (bird, flower, tree, deer, other animal, heart, star, cross, letters, geometric, not sure). A chart can have several subjects, for example a bird on a flowering branch.
+- **exceptions**: tap a chart that does not fit to see it large and give it its own subject.
+- **mixed**: if the pile is too varied, it is left for a finer cut in the next round.
+
+The answers are exported as `review.csv`, one row per pile. The page is in the repository
+(`analysis/subjects/review/`, started with `make review`), so the next round, or another collection,
+can be reviewed the same way. In our pilot one person reviewed 34 piles in about eight minutes.
+
+`make labels` then writes one row per chart into `subjects.csv`: the chart, its subjects, the
+reviewer's name, the date and any note. This file is the result of the whole method, and it is the
+only file a person writes.
+
+## Step 6: suggestions for the rest {#suggestions}
+
+Once some charts are labelled, each unlabelled chart gets a suggestion: the most common subject
+among its five nearest labelled charts, with how many of the five agree. Suggestions go into the
+next review round to speed it up. They are never shown in the gallery as a subject.
+
+## Step 7: the gallery {#gallery}
+
+When the gallery is built, `subjects.csv` is read and each pattern gets its reviewed subjects.
+They appear as the *Main group* and *Subject* filters and in the pattern view. Charts not yet reviewed are listed
+as *Not yet sorted*.
+
+## Main groups {#groups}
+
+Star, cross and geometric are where people disagree, the same person included. So each subject
+also belongs to one of four main groups ([`groups.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/groups.csv)):
+
+| Main group | Subjects |
+|---|---|
+| Animals | bird, deer or reindeer, other animal |
+| Plants | flower, tree |
+| Ornament | star or rose, cross, heart, geometric |
+| Letters | letters, monograms, words |
+
+The gallery offers *Main group* as its first subject filter, because it is the safer one. A chart
+with subjects in two groups, for example a rose with a flower at its centre, is in both, like the
+overlap of two circles in a Venn diagram. In the pilot 3 of 231 charts sit in such an overlap
+(Ornament and Plants); more will follow as charts are labelled with several subjects.
+
+## Features such as knots {#features}
+
+Some things are not a subject but a feature that any chart can have: knotwork, small flowers inside
+a larger motif, a frame. These are kept in a separate list
+([`features.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/features.csv)),
+so that a rosette can be *Ornament* and have *knotwork*, and a solo flower (subject *Flower*) is
+kept apart from a motif with small flowers in it (feature *Small flowers*).
+
+For knots the computer helps with a measure taken straight from the 0/1 chart (`make knots`):
+interlace leaves many small enclosed openings between its strands, and its strands run diagonally,
+so cells touch only at their corners. Every chart is ranked by these two measures, and the reviewer
+marks the most knot-like ones *Knot* or *No knot* on a phone page. As always, the ranking only
+decides the order; the reviewer decides what is a knot.
+
+## What the computer misses, in the reviewer's words {#clues}
+
+After the weights were learnt, the computer still put 44 labelled charts in the wrong main group.
+The reviewer went through 41 of them on a phone page and tapped what told her the group
+([`misses_clues.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/misses_clues.csv)):
+for animals *wings or tail* (11) and *head and legs* (4); for plants *petals* (7) and *stem or
+leaves* (4); for ornament *outline shape* (7) and *needs repeat* (4). Four labels were wrong and
+were corrected, and letters became a main group of their own.
+
+Each clue became a measure taken straight from the 0/1 chart (`clues` in `subjects.py`):
+*facing* (an animal faces one way, so it does not match itself mirrored left to right),
+*tips* (cells with one neighbour: ends of legs, tails and beaks), *thin* (the share of the
+silhouette that is stem or leg rather than solid), and *solidity* and *roughness* of the outline.
+On their own they tell animals from the rest about as well as one would hope (area under the curve
+0.84 for *facing*), but adding them to the image model did not find more animals: the learner gave
+them no weight, and the fair test holds only five animals, too few to show a difference. Animals
+that come in mirrored pairs, two birds facing each other, also defeat *facing*.
+
+The lesson is that the gap is labels, not features: 22 animals are too few for any measure to
+outvote the plants around them. So the next step uses the measures the other way round, to find
+candidates: 60 unlabelled charts nearest to the known animals (image model 0.7, clue measures 0.3;
+`subjects.py animals`), almost all of them border bands, for the reviewer to mark *Animal* or
+*No animal*.
+
+## Words as features: an image-and-words model {#clip}
+
+Looking for new features, we searched the research on pattern and shape classification
+(sources below). The idea that worked best is an image-and-words model, CLIP: trained on pictures
+with their captions, it can say how well a picture fits a phrase such as *"a cross-stitch
+embroidery chart of a bird"*. We use the open re-trained version, OpenCLIP ViT-B/32 (`clip_features.py`).
+
+The only human input is the list of phrases
+([`prompts.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/analysis/subjects/prompts.csv)):
+words for what the reviewer looks for (a bird, a deer, a peacock, a flower, a vine, an
+eight-pointed star, a rosette, letters of the alphabet and so on), chosen once. No chart's label is
+shown to the model. This matches the plan: people decide *which* features matter, the computer
+measures them on every chart.
+
+Asked to name the group outright, CLIP is poor (55% on the fair test; it calls most plants
+ornament). But its scores *relative to each other* are useful: they rank animals above the rest
+with an area under the curve of 0.90, better than any other measure we have. So each chart gets
+four scores (animals, plants, ornament, letters), each compared with its average over all charts,
+and the distance between charts' scores became one more distance for the learner. A larger CLIP
+(ViT-L/14) was no better, so the smaller, faster one is kept.
+
+The learner kept the CLIP distances in every round since (see [Ways to browse](#browse)). On the
+held-out fair test the right main group is found for 82% of charts (95% interval 68–92%) against
+74% for the image model alone, and knots 80% against 63%.
+
+Two animal pages (`subjects.py animals`, then `animal-answers`) showed the reviewer the unlabelled
+charts nearest to the known animals, mostly border bands: 12 of the first 60 and 16 of the next 60
+were animals, then 15 of a third 60 and 5 of a fourth, so there are now 70 and the search has
+mostly run dry. Leaving each labelled chart out in turn, its five nearest charts now find animals
+89% of the time (41% before the animal pages). One band family (B2) holds 40 of the 48 band animals.
+The fair test holds only 5 animals, too few to confirm this.
+
+Ideas we found and noted but have not used yet:
+
+- **Symmetry groups of repeats** (Liu and Collins): the 7 frieze groups for bands and 17 wallpaper
+  groups for all-over patterns. The gallery already measures the frieze group of each band; the
+  wallpaper groups would matter if all-over patterns are added.
+- **Skeleton shape** (Wilder, Feldman and Singh): the medial axis of a silhouette tells animals
+  (a trunk with a few long limbs) from leaves (one axis with many short branches). Our *tips* and
+  *thin* measures are a rough version; a proper skeleton is a candidate next feature.
+- **Global shape descriptors for animals versus plants** (arXiv 1901.11398): simple measures such as
+  convexity, elongation and moments separate the two classes surprisingly well in photographs.
+- **Ornament datasets** (OrnAsia) and **CLIP tuned on art** (CLIP-Art): a model tuned on
+  ornament could do better than general CLIP, but would need many labelled charts.
+
+## Sub-motifs that recur {#submotifs}
+
+Many charts are built from smaller figures that turn up again elsewhere: the same eight-pointed
+star, the same pair of birds, the same deer, sometimes in several manuscripts. So the computer cuts
+every chart into its pieces (filled cells that touch, at least 8 of them) and matches each piece
+against all others, allowing it to be turned, mirrored and shifted by up to two cells; two pieces
+match when they share at least 70% of their filled cells (`submotifs.py`). Matching pieces form one
+sub-motif. No labels are used.
+
+Cutting into pieces misses a figure that is joined to something else, a bird on a branch or a
+star on a border line. So each sub-motif of at least 20 cells is then searched for everywhere,
+in all its turns and mirrors (`FigureFinder`): a place counts when at least 85% of its filled
+cells are filled there, the chart adds little inside its outline, and the empty cells around it
+are mostly empty. Checked by eye, this finds the pair of birds in six charts across three
+manuscripts, the deer in four, and the eight-petal rose (áttablaðarós) in 54 charts across eight
+manuscripts, while solid blocks and dense lace no longer count.
+
+Figures that a chart repeats within itself are found too, even when they are joined to the rest
+(`InnerRepeats`): the chart is laid over itself turned, mirrored and shifted, and where the copies
+overlap only in part (not the chart's overall symmetry, which the [seeds](https://github.com/HiDefTextiles/Sjonabok/pull/43)
+describe), the cells that coincide form a figure that occurs at least twice. It is kept only if it
+is a whole figure (at least 85% of the filled cells inside its outline), not a strip or a solid
+block. This adds 1,030 figures, among them birds standing on a border line, a flower on its stem
+between two birds, and the trees of a band.
+
+All told, 2,187 pieces and repeated figures give 416 sub-motifs that recur in two or more charts,
+381 of them in two or more manuscripts. Four sub-motifs, found in more than 15% of all charts,
+are too common to tell charts apart and are left out of the likeness. Some matches are still
+wrong, mostly checkered or lattice fillings matching other dense areas.
+
+The first copy the computer finds of a figure is not always a good picture of it. So every
+place a sub-motif occurs is cut out, turned to line up with the others, and voted on: the
+**consensus** keeps the cells that at least half of the charts fill (a chart that repeats the
+figure counts once), and shows in a pale tint the cells that only some charts fill
+(`variants.py`). Each place then gets a fit, its overlap with the consensus; places that
+overlap less than 70% are a stretch and are dropped, and the vote is taken again without them.
+Of 7,089 places, 889 were dropped this way. Some poor matches still pass, mostly where a solid
+block or a plain bar happens to cover the figure.
+
+The same figure is also drawn at different sizes: a rosette with longer arms, a tree a row
+taller. To group these, each consensus figure is scaled onto the same small square and the
+scaled pictures are compared, turned and mirrored, with at most three times as many cells in one
+as in the other. Solid shapes (triangles, corners) are left out, because any two of them look
+alike once scaled. This gives 26 groups of size variants, among them the eight-pointed rosette at
+seven sizes from 77 to 169 cells, and a flower on its stem at four sizes.
+
+As a measure of likeness on its own, shared sub-motifs find the right main group less often than
+the image models (62% leaving each labelled chart out), and mixed in at 0.2 they help knots (85%
+against 80%) but not the fair test (79% against 82%). So they are not yet part of the learnt
+weights. Their main use is the question of how motifs travelled and changed:
+
+![Sub-motifs of at least 40 cells found in three or more manuscripts, the manuscripts in time order (`timeline.R`). Dot size is the number of charts.](images/submotif-timeline.png){width=100%}
+
+Some figures are in nearly every manuscript from the 17th-century Þjms. 1105 to the 1780s, such as
+the eight-petal rose and several eight-pointed stars; others, such as the deer and the pair of
+birds, are shared by only a few. Dates are uncertain for several manuscripts (two have none on
+record), so this is a starting point for the research, not a result.
+
+## Ways to browse, found by the computer {#browse}
+
+Subjects need a person. The ways of browsing below do not: the computer measures them from the
+charts alone, the same way every time, so they cover all 600 charts, bands included. They are
+filters in the gallery and also a way to put like with like, for example to choose a set of
+related charts for [pattern synthesis](https://github.com/HiDefTextiles/pattern-synthesis).
+
+| Filter | What it measures | Words |
+|---|---|---|
+| Look-alike family | The distances weighted as below; Ward clustering, motifs and bands separately; the number of families chosen by how stable they are | M1 to M4 for motifs, B1 to B3 for bands, with 24 close families in each part |
+| Fit on 85 needles | A motif's width; a band's height across. With a band on both edges the motif corridor is 85 minus twice the band height | Motif up to 20, 21–40, 41–60, over 60 wide; band up to 7, 8–12, 13–17, over 17 rows |
+| Outline | The figure with its holes filled: does it fill 82% or more of its box? | Fills its square, Stands free, Band |
+| Stroke | The middle length of the runs of filled cells along rows and columns | Thin (under 1.5 cells), Double, Bold (2.5 or more) |
+| Openness | Small enclosed openings per 100 filled cells. A tile or band is counted repeated, so openings across an edge count; a free-standing figure is counted once | Closed (under 1), Some openings, Lacy (5 or more) |
+
+The sort order *Look-alike order* walks along the family tree, so each chart sits next to the
+ones most like it, and each family starts with its name.
+
+**People chose the features, the computer sets the groups.** The families use no labels. The
+labels decided which measures count, and they come from the review: the reviewer saw that knots
+and stars can show only when a motif is repeated, so the image model also looks at the chart
+repeated (2 × 2, or a band twice along its length); and an outside review pointed out that
+turning charts every way hides which way is up, which is what tells a plant (stem at the bottom)
+or an animal (legs below) from an ornament, so the image model also looks at the chart only
+upright and mirrored left to right, and three measures of uprightness were added (left-right and
+top-bottom mirror kept apart, how top-heavy, how narrow the base).
+
+For each weighting of the thirteen distances on a grid (including the [clue measures](#clues) and the [CLIP](#clip) image and word distances), the computer scored three things on the
+labelled charts, leaving out the fair test: how often a chart's five nearest charts share its main
+group, the same for the *knot* answers, and how well a cut of the motif tree into three follows
+the main groups (the adjusted Rand index: 0 is chance, 1 is perfect). Several weightings tie at
+the top (within 0.01, about the change one chart makes), so their mean is kept (`make weights.csv`
+in `analysis/subjects`). With 54 knot answers and 70 animals the result is an even mix of six: the image model, the upright
+image model, symmetry, form, the CLIP image model and the CLIP word scores, 0.17 each. The mix moves
+from one round of labels to the next (after 65 animals it was the image model 0.4, CLIP word scores
+0.4 and form 0.2), because many weightings score almost the same; the scores below barely move.
+
+How good is it? On the 38 held-out fair-test charts, with the [CLIP word scores](#clip) and the
+70 animals now labelled:
+
+| Weighting | Right main group (95% interval) | Balanced over the four groups | Motifs cut in 3 vs main groups (ARI) |
+|---|---|---|---|
+| Learnt weights | 82% (68–92%) | 67% | 0.55 |
+| Image model alone | 74% (58–87%) | 55% | 0.11 |
+| All thirteen distances equally | 71% (55–84%) | 50% | 0.52 |
+| Always guess ornament | 47% | 25% | 0 |
+
+The learnt weights now beat the image model alone, though the intervals still overlap: 38 charts
+are few. The balanced column shows where the work is: the fair test holds only 5 animals (2 found)
+and 2 letter charts (1 found). More fair-test charts, chosen at random, would make these
+numbers firmer.
+
+The families themselves are kept only as fine as they are stable. The charts were resampled 50
+times (`fpc::clusterboot` in R) and a family counts as stable when it is found again with a mean
+Jaccard similarity of 0.7 or more. For the motifs that allows 4 families (0.73): ornament (M1),
+small figures with animals and letters (M2) and two kinds of plant motif (M3, M4); bands give 3
+(0.81). With the weights of the round before, one motif family was almost all animals; the number
+and the cut move as the weights move. The number moves as the labels and weights change; the stable core (ornament, figures,
+plants) has stayed.
+The 24 close families in each part are finer and less stable: good for browsing, not a claim.
+Ward's method assumes ordinary (Euclidean) distances, which rank-averaged distances are not; we
+use it as a practical rule, checked by the resampling.
+
+Words we tried and dropped after checking random examples by eye: *line* (by filled neighbours;
+double strokes counted as lines), outline *round* and *diamond* (tulips and vases landed there)
+and *detail* (it did not separate simple from intricate charts).
+
+## Open and repeatable {#reproducible}
+
+- **Code and settings are public.** All steps are in
+  [`analysis/subjects/`](https://github.com/HiDefTextiles/Sjonabok/tree/main/analysis/subjects):
+  `subjects.py` (steps 1, 2, 5, 6), `embed.py` (step 3) and `cluster.R` (step 4), run in order
+  by a `Makefile`.
+- **The same input gives the same output.** Clustering has no random element; the image model
+  runs on the processor in PyTorch's deterministic mode; the model name and a fingerprint (SHA-256)
+  of its weights are recorded with each run.
+- **Only human work is stored.** Distances, piles and contact sheets are rebuilt from the charts
+  in minutes, so they are not kept in git. `review.csv` and `subjects.csv` are kept, with names
+  and dates, and every change to them is visible in the repository history.
+- **Labels belong to charts, not piles.** Pile numbers change between runs; labels are stored by
+  the chart's file name, so a new run cannot move or lose them.
+
+## Try it on your own collection {#guide}
+
+The method works for any set of small images: other pattern books, stamps, logos, fossils. What
+you need: Python 3 with NumPy and Pillow, R with the tidyverse, and for step 3 PyTorch and timm
+(`pip install torch timm`; the model, about 85 MB, downloads itself the first time).
+
+```bash
+git clone https://github.com/HiDefTextiles/Sjonabok
+cd Sjonabok/analysis/subjects
+make embed                # steps 1 and 3: units and the image model
+make                      # steps 2 and 4 and the contact sheets
+make review               # step 5: review on a phone or laptop, export review.csv
+make labels REVIEWER="Your Name"
+make suggest              # suggestions for the next round
+make sample               # the fair test: random charts, labelled one at a time
+```
+
+Lessons from our pilot that carry over:
+
+1. **Start small.** Run the whole loop on a few hundred items before scaling up. Our pilot is the
+   233 motifs and rosettes.
+2. **Over-split on purpose.** Many small piles are faster to label than a few large mixed ones.
+3. **Label piles, fix exceptions.** Naming a pile of 12 birds is one decision, not twelve.
+4. **Keep a fixed vocabulary.** Decide the subject words before reviewing, and add a word only on
+   purpose, so labels stay consistent between people and rounds.
+5. **Keep people's decisions as data.** Store who decided what and when, separately from anything
+   a computer can rebuild.
+6. **Look at the failures.** Piles that mix subjects tell you what the method cannot see; write
+   that down, as we do below.
+7. **Record the model.** Name the model and its version so the result can be checked later.
+8. **Test people too.** Label a random sample a second time, one item at a time. Where a person
+   disagrees with themselves, the categories are too fine; group them (as we did with
+   [main groups](#groups)) or sharpen the definitions.
+
+## Known limits {#limits}
+
+- Both distances compare *form*. Two subjects with the same outline (a tulip and a stylised tree)
+  can share a pile; the reviewer separates them.
+- Very small or very dense charts lose detail at 16 × 16 cells and in the image model.
+- Some charts hold more than one figure; for now they are compared as one picture.
+- The knot measure also ranks other lacy, open patterns highly, so many of its top charts are not
+  knots.
+- Bands are compared by one repeat. For about 60 bands no repeat was found (some alternate two
+  motifs, some have a long repeat), so they are compared whole, and some band families gather
+  them for that reason rather than for how they look.
+- The knot answers so far come from charts the computer chose as likely knots, so they say
+  little about how the other measures do on knots.
+- The subject words are ours. They describe what the motif looks like today, not what it meant to
+  the people who drew it centuries ago.
+
+## Who did what {#credits}
+
+The method and the subject list were set by Helga Ingimundardóttir, Háskóli Íslands
+(HiDef Textiles), who also reviews every label. The code and this page were written with the help
+of an AI coding assistant (Claude, by Anthropic) and checked by HiDef Textiles. The image model is
+DINOv2 by Meta AI, used as published.
+
+## Sources {#sources}
+
+- Oquab, M. et al. (2023). [DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193). arXiv:2304.07193.
+- R Core Team. [`hclust`: Hierarchical Clustering](https://search.r-project.org/R/refmans/stats/html/hclust.html), R documentation.
+- McInnes, L., Healy, J. and Astels, S. (2017). [hdbscan: Hierarchical density based clustering](https://joss.theoj.org/papers/10.21105/joss.00205). *Journal of Open Source Software* 2(11). An alternative we considered.
+- Radford, A. et al. (2021). [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) (CLIP). Its outright guesses on pattern charts are unreliable, but its relative scores for phrases are used as features ([Words as features](#clip)).
+- Cherti, M. et al. (2023). [Reproducible scaling laws for contrastive language-image learning](https://arxiv.org/abs/2212.07143) and [OpenCLIP](https://github.com/mlfoundations/open_clip): the open CLIP weights used (ViT-B/32, LAION-2B).
+- Liu, Y., Collins, R. T. and Tsin, Y. (2004). [A computational model for periodic pattern perception based on frieze and wallpaper groups](https://www.ri.cmu.edu/pub_files/pub2/liu_yanxi_2000_2/liu_yanxi_2000_2.pdf). Symmetry groups of repeats.
+- Wilder, J., Feldman, J. and Singh, M. (2011). [Superordinate shape classification using natural shape statistics](https://ruccs.sas.rutgers.edu/images/archive/personal-manish-singh/papers/Wilder_etal_2011.pdf). *Cognition* 119. Animals versus leaves by skeleton shape.
+- [A study on general visual categorization of objects into animal and plant groups using global shape descriptors](https://arxiv.org/abs/1901.11398) (2019). arXiv:1901.11398.
+- [OrnAsia: a dataset of Asian ornaments for image classification and cultural identification](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12621315/). An ornament dataset.
+- Conde, M. V. and Turgutlu, K. (2021). [CLIP-Art: Contrastive Pre-training for Fine-Grained Art Classification](https://openaccess.thecvf.com/content/CVPR2021W/CVFAD/papers/Conde_CLIP-Art_Contrastive_Pre-Training_for_Fine-Grained_Art_Classification_CVPRW_2021_paper.pdf). CVPR workshops.

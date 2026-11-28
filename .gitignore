@@ -176,3 +176,11 @@ cpp/submotif/bin/
 
 # Sarpur database (rebuilt from sarpur/*.csv by make sarpur)
 sarpur/sarpur.sqlite
+
+# figures for the Methods page, made by analysis scripts that need R (not built by the Action)
+!gallery/images/*.png
+!analysis/subjects/assets/*.png
+
+# videos are made from the scripts (analysis/subjects/reel.py), never committed
+*.mp4
+*.wav

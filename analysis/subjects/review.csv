@@ -1,0 +1,51 @@
+cluster,n,ids,subject,exceptions,note
+1,2,natmus453_724 natmus453_738,flower,,
+2,3,thjms1960-60_356 thjms1960-60_388 thjms1997-123_438,bird|flower|star,thjms1960-60_356=flower thjms1960-60_388=star thjms1997-123_438=bird,Celtic cross and Rosetta in center ? Right had 4 birds and a Rosetta in center. Left is ornamental flower
+3,1,thjms1105_134,star,,
+4,1,thjms1997-123_468,cross,,
+5,1,thjms5898_270,flower,,
+6,3,thjms1960-60_384 thjms6950_316 thjmsth_116_608,star,,
+7,6,thjms1105_96 thjms1960-60_360 thjms2007-45_510 thjms5898_272 thjms6950_322 thjmsth_116_606,flower,,
+8,12,natmus453_720 natmus453_748_p1 natmus453_770_p1 thjms1997-123_428 thjms1997-123_444 thjms1997-123_450 thjms5898_194 thjms5898_210 thjms5898_288 thjms6950_338 thjms6950_340 thjms6950_342,flower,natmus453_770_p1=bird thjms1997-123_428=flower|letters,"Mostly flowers, one peacock"
+9,4,natmus453_744 thjms1105_164 thjms1997-123_488 thjms5898_246_p1,geometric,thjms1105_164=flower thjms5898_246_p1=bird,One peacock
+10,5,natmus453_746 thjms1105_138 thjms1105_166 thjms1997-123_476 thjms5898_274,mixed,natmus453_746=flower thjms1105_138=geometric thjms1105_166=bird thjms1997-123_476=letters|flower thjms5898_274=flower,
+11,6,natmus453_722 thjms1105_142 thjms1997-123_422 thjms1997-123_424 thjms1997-123_474 thjms5898_304,flower,thjms1105_142=bird thjms1997-123_474=bird,Some birds mostly flowers
+12,1,natmus453_774,flower,,
+13,2,natmus453_750 thjms5898_184,flower,thjms5898_184=star,
+14,12,natmus453_726 natmus453_768_p2 thjms1105_114 thjms1105_156 thjms1105_158 thjms1105_160 thjms1105_40 thjms1105_56 thjms1105_98 thjms5898_204 thjmsth_116_592 thjmsth_116_604,star,,
+15,13,natmus453_706_p3 natmus453_706_p4 thjms1105_132_p3 thjms1997-123_442_p1 thjms1997-123_442_p3 thjms2008-14_524_p3 thjms2008-14_524_p4 thjms2008-14_526 thjms5898_206_p1 thjms5898_214_p2 thjms5898_286_p5 thjms5898_290_p2 thjmsth_116_656,flower,thjms1105_132_p3=letters thjms5898_286_p5=flower,
+16,7,natmus453_706_p1 thjms1105_144_p4 thjms1997-123_446_p3 thjms2008-14_546_p4 thjms5898_214_p1 thjms5898_246_p2 thjms5898_246_p3,deer,natmus453_706_p1=letters thjms1105_144_p4=geometric thjms1997-123_446_p3=star thjms5898_214_p1=flower,
+17,2,thjms2007-45_514 thjmsth_116_652,geometric,,Duplicate?
+18,4,thjms1105_136_p2 thjms1105_144_p2 thjms1105_144_p3 thjms1105_144_p5,geometric,,
+19,2,thjms1997-123_442_p2 thjms2008-14_524_p2,mixed,,Symbols
+20,4,thjms2008-14_546_p3 thjms5898_180_p2 thjms5898_180_p3 thjms5898_180_p6,deer,thjms2008-14_546_p3=animal thjms5898_180_p3=animal thjms5898_180_p6=animal,
+21,9,natmus453_706_p2 thjms2008-14_524_p1 thjms5898_180_p5 thjms5898_246_p4 thjms5898_286_p1 thjms5898_286_p2 thjms5898_286_p3 thjms5898_286_p4 thjms5898_302,flower,natmus453_706_p2=deer thjms5898_180_p5=deer thjms5898_246_p4=animal,
+22,4,thjms1105_132_p2 thjms1997-123_432_p1 thjms5898_224 thjmsth_116_690_p2,flower,thjms1105_132_p2=letters thjms1997-123_432_p1=bird,
+23,5,thjms1105_132_p1 thjms5898_226 thjms5898_228 thjms5898_290_p1 thjms5898_292,flower,thjms1105_132_p1=letters,
+24,7,thjms1105_162 thjms1997-123_432_p2 thjms2008-14_546_p1 thjms5898_206_p2 thjms5898_216 thjms5898_222 thjms5898_294,flower,thjms1105_162=star thjms5898_206_p2=geometric,
+25,1,thjms1960-60_362,star,,
+26,2,thjms1105_144_p1 thjms1997-123_446_p4,geometric,,
+27,6,natmus453_752 natmus453_776 thjms1105_84 thjms1960-60_394_p2 thjms5898_202 thjms5898_264,star,,
+28,3,thjms1105_50 thjms1997-123_432_p3 thjms5898_206_p3,star,,
+29,4,thjms1997-123_446_p1 thjms1997-123_446_p2 thjms1997-123_458_p1 thjmsth_116_690_p1,star,,
+30,8,natmus453_762 thjms1105_154 thjms1960-60_370 thjms5898_280 thjms6950_314 thjms6950_332 thjms6950_334 thjmsth_116_616,cross,,
+31,1,natmus453_764,star,,
+32,1,thjms1105_110,geometric,,
+33,3,thjms1105_58 thjms6950_324 thjmsth_116_598,geometric,,Duplicates?
+34,8,natmus453_780 thjms1105_100 thjms1105_32 thjms1105_52 thjms1105_60 thjms5898_276 thjms6950_326 thjmsth_116_624,star,,
+35,5,natmus453_698 natmus453_742 thjms1105_108 thjms1105_118 thjms5898_278,star,thjms1105_108=flower,
+36,2,natmus453_714 thjms2007-45_500,star,,
+37,3,thjms1997-123_452 thjms1997-123_458_p2 thjms5898_282,star,thjms1997-123_458_p2=geometric,
+38,4,thjms1105_106 thjms1105_140 thjms1960-60_392 thjms2008-14_542,geometric,,
+39,3,thjms1105_44 thjms1960-60_372 thjmsth_116_586,geometric,,
+40,4,natmus453_728 thjms1105_122 thjms1105_126 thjms2008-14_528,geometric,,
+41,18,natmus453_778 thjms1105_46 thjms1105_66 thjms1105_82 thjms1960-60_358 thjms1960-60_366 thjms1960-60_378 thjms1960-60_390 thjms1997-123_454 thjms1997-123_464 thjms2007-45_506 thjms5898_200 thjms5898_256 thjms5898_258 thjms5898_266 thjms5898_284 thjmsth_116_590 thjmsth_116_594,star,,
+42,4,thjms1997-123_460 thjms1997-123_470 thjms5898_198 thjms5898_268,star,,
+43,1,thjms1105_136_p1,star,,
+44,9,thjms1105_36 thjms1960-60_364 thjms1960-60_368 thjms1960-60_376 thjms1960-60_386 thjms2008-14_568 thjms6950_312 thjms6950_318 thjmsth_116_610,star,,Duplicate?
+45,4,thjms1960-60_394_p1 thjms1997-123_482 thjms5898_218 thjms5898_262,mixed,thjms1960-60_394_p1=geometric thjms1997-123_482=flower thjms5898_218=flower thjms5898_262=star,
+46,8,natmus453_700 thjms2008-14_532 thjms2008-14_566 thjms5898_180_p1 thjms5898_212 thjms5898_220 thjms5898_230 thjms5898_296,flower,natmus453_700=star thjms5898_180_p1=deer thjms5898_230=bird,
+47,5,natmus453_768_p1 thjms1105_90 thjms1960-60_352 thjms1997-123_436 thjms1997-123_484,star,natmus453_768_p1=letters thjms1997-123_436=letters,
+48,5,thjms1105_170 thjms1105_48 thjms1997-123_486 thjms5898_192 thjms5898_252,star,,
+49,2,thjms1105_76 thjms6950_320,cross,,
+50,3,natmus453_718 thjms1105_112 thjms1960-60_382,star,thjms1960-60_382=bird,

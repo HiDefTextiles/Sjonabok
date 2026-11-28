@@ -92,7 +92,7 @@ SYMMETRY_SVG = $(GALLERY)/img/symmetry/p1.svg
 
 BOOKS_DIR = $(PARENT_DIR)/books
 ALPHABET_DIR = $(PARENT_DIR)/alphabets
-$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(wildcard $(COLOUR_DIR)/*.txt) $(wildcard $(ALPHABET_DIR)/*.txt) $(ALPHABET_DIR)/alphabets.csv $(GALLERY)/regions.csv books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
+$(GALLERY_DATA): $(wildcard $(MIN_DIR)/*.txt) $(wildcard $(BOOKS_DIR)/*.txt) $(wildcard $(COLOUR_DIR)/*.txt) $(wildcard $(ALPHABET_DIR)/*.txt) $(ALPHABET_DIR)/alphabets.csv $(GALLERY)/regions.csv books/books.csv $(PARENT_DIR)/repeats.csv $(GALLERY)/scripts/build_gallery.py $(GALLERY)/scripts/facets.py $(wildcard analysis/subjects/*.csv) pattern_processing/pattern_to_png.py pattern_processing/repeat_unit.py
 	python3 $(GALLERY)/scripts/build_gallery.py $(MIN_DIR) $(GALLERY)/patterns --extra $(BOOKS_DIR) --extra $(COLOUR_DIR) --alphabets $(ALPHABET_DIR)
 
 gallery-data: $(GALLERY_DATA)
@@ -239,3 +239,9 @@ sarpur: sarpur/sarpur.sqlite
 sarpur/sarpur.sqlite: sarpur/build_db.py sarpur/sources.py $(wildcard sarpur/*.csv) $(SOURCE_CSVS)
 	python3 sarpur/build_db.py $@
 .PHONY: sarpur
+
+# ── Subjects (analysis/subjects, see gallery Methods page) ──────────────────
+subjects:
+	$(MAKE) -C analysis/subjects
+
+.PHONY: subjects

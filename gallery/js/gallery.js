@@ -60,8 +60,18 @@
     ["density", "Density (share of filled cells)"],
   ];
 
+  // Facets measured from the chart itself (scripts/facets.py) and look-alike families
+  // (analysis/subjects/families.R): no labels, see the Methods page.
+  const FACETS = [["family", "Look-alike family"], ["fit", "Fit on 85 needles"], ["outline", "Outline"], ["stroke", "Stroke"], ["open", "Openness"]];
+  const FILTER_KEYS = ["kind", "theme", "subject", "sym", "group", "source", "coll", ...FACETS.map((f) => f[0])];
+
   const $ = (id) => document.getElementById(id);
-  const state = { kind: new Set(), sym: new Set(), group: new Set(), source: new Set(), coll: new Set(), range: {}, q: "", sort: "name", wip: false };
+  const state = { range: {}, q: "", sort: "name", wip: false };
+  for (const k of FILTER_KEYS) state[k] = new Set();
+  let FACET_LABELS = {};
+  let FAMILIES = {};
+  let THEMES = {};     // main group key -> label (Animals, Plants, Ornament)
+  let SUBJECTS = {};   // subject key -> label, only those reviewed so far
   // Charts from the European books are still being digitised (work in
   // progress); they are left out unless the "Work in progress" switch is on.
   const isWip = (p) => (p.collection || "iceland") !== "iceland";
@@ -72,18 +82,22 @@
 
   const isAsym = (p) => !(p.mirror_lr || p.mirror_tb || p.turn180 || p.turn90 || p.diagonal || p.glide);
   const group = (p) => p.frieze || p.point || "—";
+  // a chart reviewed as "not sure" has subjects but no group: it is reviewed, not unsorted
+  const themes = (p) => (p.themes && p.themes.length ? p.themes : p.subjects && p.subjects.length ? ["unclear"] : ["unsorted"]);
+  const subjects = (p) => (p.subjects && p.subjects.length ? p.subjects : ["unsorted"]);
+  const facet = (k) => (p) => (k === "family" ? p.family || "—" : (p.facets || {})[k] || "—");
 
   // ── filter controls ────────────────────────────────────────────────────
   function chips(el, key, entries) {
     el.innerHTML = "";
-    for (const [value, label, title] of entries) {
+    for (const [value, label, thumb, title] of entries) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip";
       b.dataset.value = value;
       b.setAttribute("aria-pressed", "false");
+      b.innerHTML = (thumb ? `<img src="${BASE}thumb/${thumb}.png" alt="" loading="lazy">` : "") + `${label} <span class="n"></span>`;
       if (title) b.title = title;
-      b.innerHTML = `${label} <span class="n"></span>`;
       b.addEventListener("click", () => {
         state[key].has(value) ? state[key].delete(value) : state[key].add(value);
         update();
@@ -125,9 +139,12 @@
   function passes(p, skip) {
     if (state.q && !p.id.toLowerCase().includes(state.q) && !p.source_label.toLowerCase().includes(state.q)) return false;
     if (skip !== "kind" && state.kind.size && !state.kind.has(p.kind)) return false;
+    if (skip !== "theme" && state.theme.size && !themes(p).some((s) => state.theme.has(s))) return false;
+    if (skip !== "subject" && state.subject.size && !subjects(p).some((s) => state.subject.has(s))) return false;
     if (skip !== "source" && state.source.size && !state.source.has(p.source)) return false;
     if (skip !== "coll" && state.coll.size && !state.coll.has(p.collection || "iceland")) return false;
     if (skip !== "group" && state.group.size && !state.group.has(group(p))) return false;
+    for (const [k] of FACETS) if (skip !== k && state[k].size && !state[k].has(facet(k)(p))) return false;
     if (skip !== "sym") {
       for (const s of state.sym) if (s === "none" ? !isAsym(p) : !p[s]) return false;
     }
@@ -145,6 +162,8 @@
     "density-asc": (a, b) => a.density - b.density,
     pieces: (a, b) => b.pieces - a.pieces,
     float: (a, b) => b.float_fg - a.float_fg,
+    // along the look-alike tree: neighbours look alike (motifs first, then bands)
+    alike: (a, b) => (a.order || 1e9) - (b.order || 1e9),
   };
 
   // counts on each chip show how many patterns it would add, given the other filters
@@ -166,14 +185,20 @@
     for (const p of shown) frag.appendChild(p.card);
     // dense packing keeps wide band tiles from leaving holes in the grid
     grid.style.gridAutoFlow = state.sort === "name" ? "row dense" : "row";
+    // in look-alike order, mark where one family ends and the next begins
+    let last = null;
+    for (const p of shown) { p.card.classList.toggle("family-start", state.sort === "alike" && p.family !== last); p.card.dataset.family = p.family || ""; last = p.family; }
     grid.replaceChildren(frag);
     $("count").textContent = `Showing ${shown.length} of ${data.length} patterns`;
     counts($("f-kind"), "kind", (p) => p.kind);
     counts($("f-source"), "source", (p) => p.source);
+    counts($("f-theme"), "theme", themes);
+    counts($("f-subject"), "subject", subjects);
     counts($("f-coll"), "coll", (p) => p.collection || "iceland");
     counts($("f-group"), "group", group);
+    for (const [k] of FACETS) if ($("f-" + k)) counts($("f-" + k), k, facet(k));
     counts($("f-sym"), "sym", (p) => (isAsym(p) ? ["none"] : SYM.map((s) => s[0]).filter((k) => p[k])));
-    const active = ["kind", "sym", "group", "source", "coll"].reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
+    const active = FILTER_KEYS.reduce((n, k) => n + state[k].size, 0) + (state.q ? 1 : 0);
     $("active-n").textContent = active ? `(${active} on) · ${shown.length} shown` : `· ${shown.length} patterns`;
     saveUrl();
   }
@@ -193,7 +218,7 @@
   // ── URL state (shareable filters) ──────────────────────────────────────
   function saveUrl() {
     const u = new URLSearchParams();
-    for (const k of ["kind", "sym", "group", "source", "coll"]) if (state[k].size) u.set(k, [...state[k]].join(","));
+    for (const k of FILTER_KEYS) if (state[k].size) u.set(k, [...state[k]].join(","));
     if (state.q) u.set("q", state.q);
     if (state.sort !== "name") u.set("sort", state.sort);
     if (state.wip) u.set("wip", "1");
@@ -203,7 +228,7 @@
 
   function loadUrl() {
     const u = new URLSearchParams(location.search);
-    for (const k of ["kind", "sym", "group", "source", "coll"]) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
+    for (const k of FILTER_KEYS) if (u.get(k)) u.get(k).split(",").forEach((v) => state[k].add(v));
     state.q = (u.get("q") || "").toLowerCase();
     state.sort = SORTS[u.get("sort")] ? u.get("sort") : "name";
     state.wip = u.get("wip") === "1";
@@ -254,7 +279,7 @@
     if (!p || !["border", "edging", "vertical band"].includes(current.kind))
       return current.kind === "border" || current.kind === "edging"
         ? layout(3 * w, h, (x, y) => [x % w, y])
-        : layout(3 * w, 3 * h, (x, y) => [x % w, y % h]);
+        : layout(2 * w, 2 * h, (x, y) => [x % w, y % h]);
     const b = inkBounds(m);
     if (along === "x") {
       const end = b.x1 + 1;
@@ -334,6 +359,10 @@
           fact("Motif", p.part ? `${p.part} of ${p.on_page} on this page` : null)) +
       fact("File", `<code>${p.id}</code>`) +
       fact("Type", KIND_LABELS[p.kind]) +
+      fact("Main group", p.themes && p.themes.length ? p.themes.map((k) => THEMES[k] || k).join(", ") : null) +
+      fact("Subject", p.subjects && p.subjects.length ? p.subjects.map((k) => SUBJECTS[k] || k).join(", ") : null) +
+      fact("Look-alike family", p.family ? `${p.family} (${(FAMILIES[p.family] || {}).n || "?"} charts; close family ${p.close})` : null) +
+      fact("Look", p.facets ? ["outline", "stroke", "open", "fit"].map((k) => (FACET_LABELS[k] || {})[p.facets[k]] || p.facets[k]).join(", ") : null) +
       (p.kind === "alphabet"
         ? fact("As a font", p.font_page
             ? `<a href="${p.font_page}" target="_blank" rel="noopener">this alphabet as a TrueType font</a>, from <a href="${p.font_repo}" target="_blank" rel="noopener">Sjónabókarstafróf</a>`
@@ -419,6 +448,12 @@
     };
     $("d-canvas").addEventListener("pointermove", cellAt);
     $("d-canvas").addEventListener("pointerdown", cellAt);
+    // tap the chart to switch the repeat on or off (knots and stars often show only repeated)
+    $("d-canvas").addEventListener("click", () => {
+      view.tile = !view.tile;
+      $("d-tile").checked = view.tile;
+      draw();
+    });
     $("detail").addEventListener("close", () => {
       current = null;
       history.replaceState(null, "", location.pathname + location.search);
@@ -442,16 +477,39 @@
     data = state.wip ? all : all.filter((p) => !isWip(p));
     const kinds = Object.keys(KIND_LABELS).filter((k) => json.kinds[k]);
     chips($("f-kind"), "kind", kinds.map((k) => [k, KIND_LABELS[k]]));
-    chips($("f-sym"), "sym", SYM);
+    chips($("f-sym"), "sym", SYM.map(([k, l, t]) => [k, l, null, t]));
+    THEMES = json.themes || {};
+    if (Object.keys(THEMES).length) {
+      chips($("f-theme"), "theme", [...Object.entries(THEMES), ["unclear", "Not sure"], ["unsorted", "Not yet sorted"]]);
+      $("f-theme-box").hidden = false;
+    }
+    SUBJECTS = json.subjects || {};
+    if (Object.keys(SUBJECTS).length) {
+      chips($("f-subject"), "subject", [...Object.entries(SUBJECTS), ["unsorted", "Not yet sorted"]]);
+      $("f-subject-box").hidden = false;
+    }
+    FACET_LABELS = json.facets || {};
+    FAMILIES = json.families || {};
+    for (const [k] of FACETS) {
+      const box = $("f-" + k + "-box");
+      if (!box) continue;
+      const entries = k === "family"
+        ? Object.entries(FAMILIES).map(([f, v]) => [f, `${f}`, v.example, v.label])
+        : Object.entries(FACET_LABELS[k] || {});
+      if (!entries.length) continue;
+      chips($("f-" + k), k, entries);
+      box.hidden = false;
+    }
+    if (!Object.keys(FAMILIES).length) $("sort").querySelector('option[value="alike"]')?.remove();
     const groups = [...new Set(all.map(group))].sort();
-    chips($("f-group"), "group", groups.map((g) => [g, g, GROUP_INFO[g]]));
+    chips($("f-group"), "group", groups.map((g) => [g, g, null, GROUP_INFO[g]]));
     // source and collection chips follow the charts in play
     const regions = json.regions || [{ region: "iceland", short: "Icelandic manuscripts" }, { region: "europe", short: "European printed books" }];
     const poolChips = () => {
       const sources = [...new Map(data.map((p) => [p.source, p.source_label]))].sort((a, b) => a[1].localeCompare(b[1], "is"));
       chips($("f-source"), "source", sources);
       // tabs by country from gallery/regions.csv (via patterns.json)
-      const colls = regions.map((r) => [r.region, r.short || r.label, r.note])
+      const colls = regions.map((r) => [r.region, r.short || r.label, null, r.note])
         .filter(([c]) => data.some((p) => (p.collection || "iceland") === c));
       chips($("f-coll"), "coll", colls);
       $("f-coll").closest("details").hidden = colls.length < 2;
@@ -461,6 +519,14 @@
     };
     poolChips();
     ranges($("f-range"));
+    // drop filter values from an old link that no chip offers any more
+    for (const k of FILTER_KEYS) {
+      const el = $("f-" + k);
+      if (!el) { state[k].clear(); continue; }
+      const offered = new Set([...el.querySelectorAll(".chip")].map((b) => b.dataset.value));
+      for (const v of [...state[k]]) if (!offered.has(v)) state[k].delete(v);
+    }
+    if (![...$("sort").options].some((o) => o.value === state.sort)) { state.sort = "name"; $("sort").value = "name"; }
     $("wip").addEventListener("change", (e) => {
       state.wip = e.target.checked;
       data = state.wip ? all : all.filter((p) => !isWip(p));
@@ -470,7 +536,7 @@
     $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); update(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
     $("reset").addEventListener("click", () => {
-      for (const k of ["kind", "sym", "group", "source", "coll"]) state[k].clear();
+      for (const k of FILTER_KEYS) state[k].clear();
       state.q = ""; $("q").value = "";
       document.querySelectorAll(".range").forEach((r) => r.reset());
       update();

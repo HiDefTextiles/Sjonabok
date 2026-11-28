@@ -18,6 +18,13 @@ include-after-body:
 </div>
 <label id="wip-row" class="wip-toggle" title="Charts from printed European pattern books. The digitising is still being checked, so they are off by default."><input id="wip" type="checkbox"> Work in progress: European books (<span id="wip-n"></span> charts)</label>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
+<details open id="f-theme-box" hidden><summary>Main group</summary><div id="f-theme" class="chips"></div></details>
+<details id="f-subject-box" hidden><summary>Subject</summary><div id="f-subject" class="chips"></div><small><a href="methods.html">Reviewed by hand, see Methods</a></small></details>
+<details open id="f-family-box" hidden><summary>Look-alike family</summary><div id="f-family" class="chips family-chips"></div><small>Found by the computer without labels; <a href="methods.html#browse">see Methods</a></small></details>
+<details id="f-fit-box" hidden><summary>Fit on 85 needles</summary><div id="f-fit" class="chips"></div></details>
+<details id="f-outline-box" hidden><summary>Outline</summary><div id="f-outline" class="chips"></div></details>
+<details id="f-stroke-box" hidden><summary>Stroke</summary><div id="f-stroke" class="chips"></div></details>
+<details id="f-open-box" hidden><summary>Openness</summary><div id="f-open" class="chips"></div></details>
 <details open><summary>Symmetry</summary><p class="hint">Mirror: two halves match. Turn: same when turned. Glide: flipped and shifted, like footprints. <a href="about.html#symmetry">More, with pictures</a></p><div id="f-sym" class="chips"></div></details>
 <details><summary>Symmetry group</summary><p class="hint">One code for all of a pattern's symmetry: <b>p…</b> for bands, <b>C</b> (turns) or <b>D</b> (turns and mirrors) for motifs. Hover a code for its meaning, or <a href="about.html#symmetry">see the pictures</a>.</p><div id="f-group" class="chips"></div></details>
 <details open><summary>Collection</summary><p class="hint">Where the charts come from: Icelandic manuscripts (Íslensk sjónabók) or printed pattern books from mainland Europe. <a href="about.html#books">About the books</a></p><div id="f-coll" class="chips"></div></details>
@@ -26,6 +33,7 @@ include-after-body:
 <label class="sort">Sort by
 <select id="sort">
 <option value="name">Source and number</option>
+<option value="alike">Look-alike order</option>
 <option value="cells">Size, large first</option>
 <option value="cells-asc">Size, small first</option>
 <option value="density">Density, dense first</option>
@@ -50,10 +58,10 @@ include-after-body:
 <label class="d-chart-only">Zoom <input id="d-zoom" type="range" min="2" max="24" value="8"></label>
 <label class="d-chart-only"><input id="d-grid" type="checkbox" checked> Grid</label>
 <span id="d-colours" class="swatches d-chart-only" aria-label="Colours"></span>
-<label class="d-chart-only" title="Show the pattern repeated, to judge how it tiles"><input id="d-tile" type="checkbox"> Repeat</label>
+<label class="d-chart-only" title="Show the pattern repeated (2 by 2, or 3 along a band), to judge how it tiles. Tapping the chart does the same."><input id="d-tile" type="checkbox"> Repeat</label>
 </div>
 <div class="d-canvas d-chart-only"><canvas id="d-canvas"></canvas></div>
-<p id="d-cell" class="d-cell d-chart-only">Tap or hover a cell to see its row and column.</p>
+<p id="d-cell" class="d-cell d-chart-only">Tap the chart to see it repeated; hover or tap a cell for its row and column.</p>
 <div id="d-original" class="d-original" hidden>
 <div class="d-tools o-tools">
 <label>Page <select id="o-source"></select></label>
