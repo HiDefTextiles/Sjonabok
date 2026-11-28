@@ -31,6 +31,7 @@ python3 books/read.py page.webp outdir --layout symbols --option symbols=3 --sid
 python3 books/read.py --layouts
 python3 books/digitise.py page.webp outdir                         # same as before PR (ruled)
 python3 books/woodcut.py  page.webp outdir                         # same as before PR (woodcut)
+python3 books/read.py alphabet.webp outdir --layout woodcut --option whole_sheet=true
 ```
 
 `--sidecars` also writes `<chart>.json` (meta + provenance) and `<chart>.<layer>.txt`.

@@ -17,3 +17,6 @@ python sjonabok/dataset-gallery/build.py . ../dataset-docs --repository https://
 
 Commit the submodule pin on `main` and the generated site on `docs`. A gallery
 update does not require a dataset release.
+
+Keep a counted alphabet as one sheet. Use Stafróf for individual glyphs.
+Record freehand source pages in the page ledger outside the counted-grid collection.

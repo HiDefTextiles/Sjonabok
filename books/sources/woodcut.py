@@ -143,7 +143,7 @@ class WoodcutGrid:
 
 class WhiteLineWoodcutSource(PatternSource):
     """Black block with the empty cells cut out; one block per page, split
-    into bands at solid black rows. Charts are named <page>_b<k>."""
+    into bands at solid black rows, or retained as one sheet when requested."""
     layout = "woodcut"
     description = "white-line woodcut: black block, empty cells cut out as white squares"
 
@@ -176,9 +176,17 @@ class WhiteLineWoodcutSource(PatternSource):
         if grid is None:
             return []
         self.grid, self.band_spans = grid, grid.bands()
+        whole_sheet = self.options.get("whole_sheet", False)
+        if whole_sheet and self.band_spans:
+            self.band_spans = [(
+                self.band_spans[0][0],
+                self.band_spans[-1][1],
+                min(span[2] for span in self.band_spans),
+                max(span[3] for span in self.band_spans),
+            )]
         out = []
         for i, (ra, rb, cl, cr) in enumerate(self.band_spans, 1):
-            name = f"{self.page_id}_b{i}"
+            name = f"{self.page_id}_sheet" if whole_sheet else f"{self.page_id}_b{i}"
             cells = grid.cells[ra:rb, cl:cr]
             meta = dict(name=name, box=[int(x0), int(y0), int(x1), int(y1)], angle=angle,
                         rows=int(rb - ra), cols=int(cr - cl), pitch_x=round(grid.p, 2),
