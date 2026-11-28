@@ -1,17 +1,19 @@
 # Dataset gallery template
 
 Each dataset repository pins Sjonabok as a Git submodule at `sjonabok`.
-Its static gallery lives in `docs/`, served by GitHub Pages from `main`.
-The build reads the dataset’s own `books/books.csv`, `books/charts.csv`, and
-`patterns/books/*.txt` and uses Sjonabok’s PNG renderer.
+GitHub Pages serves the generated gallery from the root of the dataset repository’s
+`docs` branch. The builder reads the dataset’s source record and text grids, and
+uses Sjonabok’s PNG renderer for previews. Each download is the original TXT grid.
 
-From the dataset checkout, update the submodule and regenerate the gallery:
+From the dataset’s `main` checkout, update the submodule and build into a separate
+checkout of the `docs` branch:
 
 ```sh
-git submodule update --init
+git submodule update --init --remote sjonabok
+git worktree add ../dataset-docs docs
 python -m pip install Pillow numpy
-python sjonabok/dataset-gallery/build.py . docs --repository https://github.com/HiDefTextiles/REPOSITORY
+python sjonabok/dataset-gallery/build.py . ../dataset-docs --repository https://github.com/HiDefTextiles/REPOSITORY
 ```
 
-Commit the regenerated `docs/` alongside changes to grids or source metadata.
-To update the shared design, advance the pinned Sjonabok revision and rebuild.
+Commit the submodule pin on `main` and the generated site on `docs`. A gallery
+update does not require a dataset release.
