@@ -75,16 +75,35 @@ class WoodcutGrid:
         b = np.concatenate([[c[0] - p / 2], (c[1:] + c[:-1]) / 2, [c[-1] + p / 2]])
         return np.clip(np.round(b).astype(int), 0, length - 1)
 
-    def fit(self):
+    @staticmethod
+    def refine_axis(v, other, p0):
+        """As refine, for one axis only (cells that are not square)."""
+        best = (0, p0)
+        for p in np.arange(0.85 * p0, 1.2 * p0, 0.01):
+            r = 0
+            for lo in np.arange(other.min(), other.max(), 200):
+                sel = v[(other >= lo) & (other < lo + 200)]
+                if len(sel) > 10:
+                    r += abs(np.exp(2j * np.pi * sel / p).sum())
+            if r > best[0]:
+                best = (r, p)
+        return float(best[1])
+
+    def fit(self, per_axis=False):
         c = self.squares()
         self.n_squares = len(c)
         if len(c) < 30:
             return None
-        p = self.refine(c, self.pitch(c))
-        self.p = p
+        p0 = self.pitch(c)
+        if per_axis:
+            px, py = self.refine_axis(c[:, 0], c[:, 1], p0), self.refine_axis(c[:, 1], c[:, 0], p0)
+        else:
+            px = py = self.refine(c, p0)
+        p = self.p = (px + py) / 2
+        self.px, self.py = px, py
         H, W = self.light.shape
-        self.xs = self.lines(c[:, 0], p, W)
-        self.ys = self.lines(c[:, 1], p, H)
+        self.xs = self.lines(c[:, 0], px, W)
+        self.ys = self.lines(c[:, 1], py, H)
         s = centre_means(self.light, self.xs, self.ys)
         self.threshold = otsu(s)
         # prints are unevenly inked: compare each cell with the lightest and

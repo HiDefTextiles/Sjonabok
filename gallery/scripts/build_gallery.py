@@ -72,7 +72,8 @@ SOURCE_LABELS = {
     "quentel1529": "Quentel 1529",
     "jobin1600": "Jobin 1600",
     "schoensperger1529": "Schönsperger 1529",
-    "tagliente1530": "Tagliente 1530", "fuerst1660": "Fürst 1660",
+    "tagliente1530": "Tagliente 1530", "fuerst1660": "Fürst 1660", "egenolff1535": "Egenolff 1535", "gulfferich1553": "Gülfferich 1553",
+    "quentel1532": "Quentel 1532", "quentel1544": "Quentel 1544", "latomus1608": "Latomus 1608", "latomus1607": "Latomus 1607", "latomus1622": "Latomus 1622", "martin1599": "Martin 1599", "bassee1599": "Bassée 1599", "beatus1601": "Beatus 1601", "saintelucie1533": "Sainte-Lucie 1533", "troveon1545": "Troveon 1545", "belin1515": "Belin 1515", "lemaistre1565": "Le Maistre 1565", "froelich1759": "Frölich MS 1759", "arnold1825": "Arnold MS 1825", "vanersborg21882": "Vänersborg MS VM21882", "vorsterman1527": "Vorsterman 1527",
 }
 
 # Which collection a source belongs to: the Icelandic manuscripts of
@@ -151,7 +152,7 @@ FONTS, FONTS_MISSING = read_fonts()
 SOURCE_COLORS = dict(zip(SOURCE_LABELS, [
     "#d6336c", "#e8590c", "#d99a00", "#82a31a", "#2f9e44",
     "#0c9a9a", "#1c7ed6", "#3b4cc0", "#7048e8", "#ae3ec9",
-    "#5c5f66", "#868e96", "#343a40", "#495057", "#adb5bd", "#212529", "#6c757d",  # printed books: greys
+    "#5c5f66", "#868e96", "#343a40", "#495057", "#adb5bd", "#212529", "#6c757d", "#3d4046", "#9aa1a8",  # printed books: greys
 ]))
 
 # Plain-language names, written for a band running left to right
@@ -425,8 +426,23 @@ class Pattern:
         return t.shape[1] / t.shape[0]
 
     # ── images ───────────────────────────────────────────────────────────
+    BOOK_PALETTES = {}     # source -> RGBA rows, from books/palettes/<source>.csv
+
+    @classmethod
+    def book_palette(cls, source):
+        """Painted books (one digit per ink) carry their own ink colours."""
+        if source not in cls.BOOK_PALETTES:
+            path = Path(__file__).resolve().parents[2] / "books" / "palettes" / f"{source}.csv"
+            pal = None
+            if path.exists():
+                rows = list(csv.DictReader(open(path, encoding="utf-8")))
+                pal = [(0, 0, 0, 0)] + [tuple(int(r["hex"][i:i + 2], 16) for i in (1, 3, 5)) + (255,) for r in rows]
+            cls.BOOK_PALETTES[source] = pal
+        return cls.BOOK_PALETTES[source]
+
     def rgba(self, zoom):
-        palette = np.array(COLOR_PALETTE, dtype=np.uint8)
+        pal = self.book_palette(self.source)                # painted books carry their own inks
+        palette = np.array(pal or COLOR_PALETTE, dtype=np.uint8)
         shown = self.colours if self.display is self.matrix else self.display
         img = palette[shown]
         return np.kron(img, np.ones((zoom, zoom, 1), dtype=np.uint8))
@@ -905,7 +921,7 @@ class MotifSheet(Sheet):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns")
+    ap.add_argument("txt_dir", help="folder with the 0/1 .txt patterns (0/1/2 for two-ink charts)")
     ap.add_argument("out_dir", help="folder for patterns.json and images")
     ap.add_argument("--manifest", help="repeats.csv (default: next to txt_dir)")
     ap.add_argument("--extra", action="append", default=[],

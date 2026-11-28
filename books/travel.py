@@ -35,7 +35,7 @@ MATCH = 0.8
 SHIFT = 1
 NAME_RE = re.compile(r"^(?P<source>.+?)_(?P<number>\d+)(?:_p(?P<part>\d+))?$")
 EIGHT = np.ones((3, 3), int)
-WHITE_LINE = {"quentel1529", "jobin1600", "tagliente1530", "schoensperger1529"}   # black block, empty cells cut out
+WHITE_LINE = {"quentel1529", "jobin1600", "tagliente1530", "schoensperger1529", "egenolff1535", "gulfferich1553", "quentel1532", "vorsterman1527", "quentel1544", "latomus1608", "martin1599", "bassee1599", "beatus1601", "saintelucie1533", "troveon1545", "belin1515", "lemaistre1565", "latomus1607", "latomus1622"}   # black block, empty cells cut out
 
 # Icelandic museum numbers as gallery file prefixes (as in manuscript_map.R)
 def source_of_id(mid):
@@ -82,7 +82,7 @@ class Chart:
         m = NAME_RE.match(self.name)
         self.source = m["source"] if m else self.name
         rows = [r.strip() for r in self.path.read_text().splitlines() if r.strip()]
-        self.m = np.array([[c == "1" for c in r] for r in rows], bool)
+        self.m = np.array([[c not in "0." for c in r] for r in rows], bool)   # any ink digit is filled
         self.tile = tile
 
     def pieces(self):

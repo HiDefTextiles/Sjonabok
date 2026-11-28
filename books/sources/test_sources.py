@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Self-test on drawn pages (no scans needed):  python3 books/sources/test_sources.py
+"""Source-reader checks:  python3 books/sources/test_sources.py
 
 Draws a known chart in each layout (ruled grid with crosses, white-line
 woodcut, ruled grid with three kinds of mark, line drawing), reads it back
 with the matching PatternSource and checks the 0/1 chart and the interface.
+The issue #9 scan fixture also guards against a motif-pulled grid fit.
 """
 import sys
 import tempfile
@@ -14,6 +15,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sources import LAYOUTS, Chart, Provenance, open_source   # noqa: E402
+from sources.symbols import (cell_features, cluster_page_features,
+                             reconcile_repeated_symbols)  # noqa: E402
 
 RNG = np.random.default_rng(7)
 P = 14                                   # pitch in pixels (woodcut)
@@ -114,6 +117,86 @@ def main():
         len(set(s[sym == k])) == 1 for k in (1, 2, 3)) and len({s[sym == k][0] for k in (1, 2, 3)}) == 3
     good &= check("symbols: 0/1 chart and three mark kinds kept apart",
                   bool(ch) and (ch[0].cells == (sym > 0)).all() and same_partition)
+    frequencies = np.bincount(s.ravel(), minlength=4) if s is not None else np.zeros(4, int)
+    good &= check("symbols: kind IDs ranked by frequency",
+                  bool(np.all(np.diff(frequencies[1:]) <= 0)))
+    sample = np.zeros((6, 6), np.float32)
+    sample[[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]] = 1
+    features = cell_features(sample)
+    good &= check("symbols: rotations and mirrors share one feature",
+                  all(np.array_equal(features, cell_features(image)) for image in
+                      [np.rot90(sample, k) for k in range(4)] +
+                      [np.fliplr(np.rot90(sample, k)) for k in range(4)]))
+
+    repeated = np.tile(np.array([[1, 2, 3]], np.uint8), (1, 10))
+    repeated[0, 5] = 4  # one label error in a strongly repeated sequence
+    true_codes = np.tile(np.array([[1, 2, 3]], np.int32), (1, 10))[0]
+    repeated_features = np.eye(4, 36, dtype=np.float32)[true_codes - 1]
+    repeated_locations = [(0, col) for col in range(repeated.shape[1])]
+    repeat_centres = np.eye(4, 36, dtype=np.float32)
+    corrected = reconcile_repeated_symbols(
+        repeated, repeated_features, repeated_locations, repeat_centres)
+    good &= check("symbols: repeat consensus repairs a noisy repeated mark",
+                  corrected == 1 and repeated[0, 2] == repeated[0, 5] == 3)
+
+    issue9 = Path(__file__).resolve().parents[2] / "patterns/multicolor/issue9-example-1.png"
+    scan = open_source(issue9, layout="symbols", symbols=4)
+    scan_charts = scan.charts()
+    pitch_error = max((float(np.max(np.abs(np.diff(g.ys) - g.py)))
+                       for g in scan._regions if len(g.ys) > 1), default=float("inf"))
+    scan_rows = [chart.cells.shape[0] for chart in scan_charts]
+    good &= check("symbols: issue #9 scan grids align and trim page margins",
+                  len(scan_charts) == 6 and scan_rows == [19, 11, 6, 8, 7, 17]
+                  and pitch_error <= 1.25)
+    good &= check("symbols: issue #9 IDs rank motifs across the full page",
+                  scan._symbol_counts[1:5].tolist() == [3156, 2035, 948, 615])
+    widths = {chart.cells.shape[1] for chart in scan_charts}
+    edges = all(chart.cells[:, 0].any() and chart.cells[:, -1].any() for chart in scan_charts)
+    good &= check("symbols: issue #9 bands share one column grid, no padded columns",
+                  widths == {115} and edges)
+
+    # Each banner repeats; a grid that straddles glyphs breaks the repeat.
+    def repeat_agreement(symbols):
+        best = 0.0
+        for shift in range(3, symbols.shape[1] // 2 + 1):
+            left, right = symbols[:, :-shift], symbols[:, shift:]
+            active = (left > 0) | (right > 0)
+            best = max(best, float(((left == right) & active).sum() / max(1, active.sum())))
+        return best
+    agreement = [repeat_agreement(chart.layers["symbols"]) for chart in scan_charts]
+    good &= check("symbols: issue #9 banners repeat (>= 99.5% of marked cells agree)",
+                  min(agreement) >= 0.995)
+    def at_shift(symbols, shift):
+        left, right = symbols[:, :-shift], symbols[:, shift:]
+        active = (left > 0) | (right > 0)
+        return float(((left == right) & active).sum() / max(1, active.sum()))
+    good &= check("symbols: issue #9 bands 4 and 6 resolve repeated mark IDs",
+                  at_shift(scan_charts[3].layers["symbols"], 45) == 1.0
+                  and at_shift(scan_charts[5].layers["symbols"], 54) == 1.0
+                  and scan._repeat_corrections["issue9-example-1_r6"] > 0
+                  and scan._repeat_corrections["issue9-example-1_r5"] == 0)
+
+    # Same glyphs across bands share IDs; page totals set the rank.
+    motifs = []
+    solid = np.ones((6, 6), np.float32)
+    cross = np.zeros((6, 6), np.float32)
+    cross[np.arange(6), np.arange(6)] = 1
+    cross[np.arange(6), np.arange(5, -1, -1)] = 1
+    dot = np.zeros((6, 6), np.float32); dot[2:4, 2:4] = 1
+    motifs = [cell_features(m) for m in (solid, cross, dot)]
+    group_a = np.concatenate([np.repeat(motifs[i][None, :], n, axis=0)
+                              for i, n in enumerate((180, 100, 50))])
+    group_b = np.concatenate([np.repeat(motifs[i][None, :], n, axis=0)
+                              for i, n in enumerate((30, 180, 150))])
+    ranked, _, page_counts = cluster_page_features([group_a, group_b], 3)
+    expected = {1: 2, 2: 1, 3: 3}  # totals: solid 210, cross 280, dot 200
+    cuts_a = np.cumsum([0, 180, 100, 50])
+    cuts_b = np.cumsum([0, 30, 180, 150])
+    shared = all(set(ranked[0][cuts_a[kind - 1]:cuts_a[kind]]) == {code}
+                 and set(ranked[1][cuts_b[kind - 1]:cuts_b[kind]]) == {code}
+                 for kind, code in expected.items())
+    good &= check("symbols: IDs shared and frequency-ranked across chart bands",
+                  shared and page_counts.tolist() == [280, 210, 200])
 
     names = ("solid", "plus", "hatch", "fwd", "back", "half")
     chars = np.array(list(".#+|/\\F"))

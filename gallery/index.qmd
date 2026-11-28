@@ -1,6 +1,6 @@
 ---
 title: "Sjónabók pattern gallery"
-subtitle: "About 600 Icelandic embroidery patterns and 50 alphabets, digitised as charts, next to charts from printed European pattern books in the public domain. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
+subtitle: "{{< meta counts.charts >}} Icelandic embroidery patterns and {{< meta counts.alphabets >}} alphabets from Íslensk sjónabók, digitised as charts. Charts from printed European pattern books are work in progress; switch them on under Filters. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
 page-layout: full
 toc: false
 include-after-body:
@@ -16,6 +16,7 @@ include-after-body:
 <input id="q" type="search" placeholder="Search by file name, e.g. 5898_246" aria-label="Search patterns">
 <button id="reset" type="button" class="btn btn-sm btn-outline-primary">Reset</button>
 </div>
+<label id="wip-row" class="wip-toggle" title="Charts from printed European pattern books. The digitising is still being checked, so they are off by default."><input id="wip" type="checkbox"> Work in progress: European books (<span id="wip-n"></span> charts)</label>
 <details open><summary>Type</summary><div id="f-kind" class="chips"></div></details>
 <details open id="f-theme-box" hidden><summary>Main group</summary><div id="f-theme" class="chips"></div></details>
 <details id="f-subject-box" hidden><summary>Subject</summary><div id="f-subject" class="chips"></div><small><a href="methods.html">Reviewed by hand, see Methods</a></small></details>

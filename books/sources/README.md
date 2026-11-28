@@ -94,8 +94,18 @@ On the 129 scans of Sibmacher 1597 and 1604, Quentel 1529 and Jobin 1600 all 596
 (charts, check pictures, json) are identical, and all 87 committed charts in `patterns/books`
 come out unchanged.
 
-The two new layouts are prototypes, checked only on drawn pages so far:
-`MultiSymbolPlateSource` scores a cell by its darkest part and cuts between the empty
-level and the lightest mark (Otsu would drop light marks), then groups marks by a coarse
-6x6 picture with k-means (fixed seed). `LineDrawingSource` fills closed outlines and fills a
-cell when ink covers half of it.
+`MultiSymbolPlateSource` remains a prototype; it is tested on the drawn plate and on the
+issue #9 page capture. It uses a low-quantile grid profile so dense marks do not pull the
+fit away from faint ruling. The followed lines are then replaced by one evenly spaced
+lattice per axis (a robust fit, so a heavy major line that pulled the follower a few pixels
+off for a stretch no longer cuts glyphs in half), nudged by at most 1.5 px so its lines run
+through the white gaps between glyphs. Chart bands on one unrotated page share a single
+column lattice, pooled from all bands, so every banner gets the same width. It trims padded
+page rows and columns using the darker motif area (columns page-wide), scores
+a cell by its darkest part and cuts between the empty level and the lightest mark (Otsu
+would drop light marks), then groups marks by a coarse 6x6 picture with k-means (fixed
+seed). It treats rotations and mirrors of a mark as the same shape, shares IDs across
+all chart bands on the page, and ranks them by total frequency, leaving `0` for empty
+cells.
+`LineDrawingSource` is still a prototype checked only on drawn pages. It fills closed
+outlines and fills a cell when ink covers half of it.
