@@ -31,9 +31,11 @@ def build(dataset, output, repository):
         raise ValueError("No text grids found under patterns/books")
 
     previews = output / "previews"
-    previews.mkdir(parents=True, exist_ok=True)
-    for stale in previews.glob("*.png"):
-        stale.unlink()
+    downloads = output / "grids"
+    for directory, extension in ((previews, "*.png"), (downloads, "*.txt")):
+        directory.mkdir(parents=True, exist_ok=True)
+        for stale in directory.glob(extension):
+            stale.unlink()
 
     cards = []
     for grid in patterns:
@@ -43,15 +45,16 @@ def build(dataset, output, repository):
         plate = f"Plate {chart['plate']}" if chart.get("plate") else ""
         status = chart.get("status", "")
         detail = escape(" · ".join(part for part in (plate, status) if part))
-        raw_url = f"{repository}/blob/main/patterns/books/{quote(grid.name)}"
+        shutil.copyfile(grid, downloads / grid.name)
+        download_url = f"grids/{quote(grid.name)}"
         preview_url = f"previews/{quote(filename)}"
         name = escape(grid.stem)
         cards.append(f"""<article class="card">
-  <a class="preview" href="{preview_url}" aria-label="View {name} preview">
+  <div class="preview">
     <img src="{preview_url}" alt="Grid for {name}" loading="lazy">
-  </a>
+  </div>
   <div class="caption">
-    <a href="{escape(raw_url, quote=True)}">{name}</a>
+    <a href="{download_url}" download aria-label="Download {name} as TXT">{name}.txt</a>
     <p>{detail}</p>
   </div>
 </article>""")
