@@ -5,6 +5,10 @@
 
 /*-- scss:defaults --*/
 
+// No Google Fonts: Jost is self-hosted (styles/jost/) and the cosmo theme's
+// Source Sans Pro import is switched off.
+$web-font-path: false;
+
 // HÍ Palette (honnun.hi.is)
 $hi-blue:    #10099F;
 $hi-teal:    #2DD2C0;

@@ -6,6 +6,7 @@ project:
   type: website
   output-dir: _site
   resources:
+    - styles/jost/**
     - img/hi/hi_logo.svg
     - patterns/**
     - js/**
@@ -69,6 +70,7 @@ format:
       - styles/hidef.scss
       - styles/gallery.scss
     css:
+      - styles/jost/jost.css
       - styles/hi-watermark.css
     include-in-header:
       # Cookie consent (Klaro!, as on hi.is) and the Google Tag Manager
@@ -78,10 +80,6 @@ format:
           <meta name="ga-measurement-id" content="GTM-5XPW89B4" data-langs="en is"
             data-privacy-href="/Sjonabok/about.html#privacy">
       - file: consent.html
-      - text: |
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     toc: true
     smooth-scroll: true
     anchor-sections: true

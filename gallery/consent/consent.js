@@ -9,10 +9,10 @@
 //   data-langs          "is" (Icelandic only) or "en is" (browser language picks)
 //   data-services       optional extra services, e.g. "youtube"
 //
-// Categories (as on hi.is):
-//   Vefmælingar / Analytics: Google Analytics (via GTM), YouTube if the site
-//     embeds videos. Off until the visitor accepts.
-//   Útlit / Appearance (required): Google Fonts. Always on.
+// Category (as on hi.is): Vefmælingar / Analytics: Google Analytics (via
+// GTM), and YouTube if the site embeds videos. Off until the visitor accepts.
+// The Jost font is self-hosted (styles/jost/), so there is no Google Fonts
+// entry and no required category.
 // Nothing is sent to Google Analytics before consent: gtm.js is only loaded
 // from onAccept, with Consent Mode analytics granted and ads denied. YouTube
 // iframes carry data-name="youtube" data-src=... (filters/consent-embeds.lua
@@ -86,12 +86,6 @@
       default: false
     });
   }
-  services.push({
-    name: "googleFonts",
-    title: "Google Fonts",
-    purposes: ["styling"],
-    required: true
-  });
 
   var privacyText = {
     is: { name: "persónuverndarsíðunni", text: "Nánar á {privacyPolicy}." },
@@ -128,7 +122,7 @@
         poweredBy: "Keyrt á Klaro!",
         consentNotice: {
           title: "Vafrakökur",
-          description: "Vefurinn vill nota vafrakökur og ytri þjónustur í flokkunum {purposes}. " +
+          description: "Vefurinn vill nota vafrakökur og ytri þjónustur fyrir {purposes}. " +
             "Ekkert slíkt er virkjað fyrr en þú samþykkir og þú getur breytt valinu " +
             "hvenær sem er neðst á síðunni.",
           learnMore: "Stillingar",
@@ -171,8 +165,7 @@
           }
         },
         googleAnalytics: { description: "Telur heimsóknir og sýnir hvaða síður eru lesnar" },
-        youtube: { title: "YouTube", description: "Myndbönd sem spilast á síðunni, frá YouTube (Google)" },
-        googleFonts: { description: "Leturgerðin Jost, sótt frá Google" }
+        youtube: { title: "YouTube", description: "Myndbönd sem spilast á síðunni, frá YouTube (Google)" }
       },
       en: {
         privacyPolicy: privacyText.en,
@@ -227,8 +220,7 @@
           }
         },
         googleAnalytics: { description: "Counts visits and shows which pages are read" },
-        youtube: { title: "YouTube", description: "Videos played on the page, from YouTube (Google)" },
-        googleFonts: { description: "The Jost typeface, loaded from Google" }
+        youtube: { title: "YouTube", description: "Videos played on the page, from YouTube (Google)" }
       }
     },
     services: services
