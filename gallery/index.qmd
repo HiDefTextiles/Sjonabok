@@ -1,6 +1,6 @@
 ---
 title: "Sjónabók pattern gallery"
-subtitle: "About 600 Icelandic embroidery patterns and 50 alphabets from Íslensk sjónabók, digitised as charts. Charts from printed European pattern books are work in progress; switch them on under Filters. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
+subtitle: "{{< meta counts.charts >}} Icelandic embroidery patterns and {{< meta counts.alphabets >}} alphabets from Íslensk sjónabók, digitised as charts. Charts from printed European pattern books are work in progress; switch them on under Filters. Filter by type, symmetry and source, then open a pattern to inspect it cell by cell."
 page-layout: full
 toc: false
 include-after-body:

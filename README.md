@@ -68,10 +68,14 @@ committed. `gallery/scripts/sync-theme.sh` refreshes the shared styles from the 
 
 ### Charts in the repository
 
+<!-- counts -->
+The gallery shows **751** charts from *Íslensk sjónabók*: 600 one-mark charts (`patterns/min/`), 101 multi-mark charts from 43 pages (`patterns/colour/`) and 50 alphabet sheets (`patterns/alphabets/`, 49 of them are fonts). Another 1067 charts from 24 printed European books (`patterns/books/`) are work in progress, hidden unless the *Work in progress* switch is on.
+<!-- /counts -->
+
 Only what cannot be rebuilt is committed: `patterns/min/` and `patterns/repeats.csv`, and the
 colour charts and alphabet sheets described below (`patterns/colour/`, `patterns/alphabets/`).
 
-- `patterns/min/<name>.txt` has one file per pattern (600). A border band whose chart is an exact
+- `patterns/min/<name>.txt` has one file per one-mark pattern. A border band whose chart is an exact
   repeat is stored as **one repeat unit**; every other chart (motifs, and bands that do not repeat
   exactly) is stored as drawn.
 - `patterns/repeats.csv` lists every band: `name, kind, axis, period, status, mismatch, close`. `axis` is `x`
@@ -135,7 +139,7 @@ tab and mainland Europe another; splitting Europe later is a change to that file
 
 ### Seeds: the smallest piece and a symmetry recipe
 
-`patterns/seeds.csv` goes one step further than the repeat units. For every chart (all 600) it stores
+`patterns/seeds.csv` goes one step further than the repeat units. For every one-mark chart (`patterns/min/`) it stores
 the smallest **seed** and a **recipe** of steps that rebuild the full chart from it, cell for cell,
 margins and partial repeats at the band ends included. A square star is one eighth of the star, a
 `p2mm` border is a quarter of one repeat, a chart of one motif drawn several times is one motif.

@@ -324,6 +324,9 @@ dialog.detail {
 }
 .legend-note { font-size: 0.85rem; color: rgba($hi-ink, 0.7); }
 
+// A {{< meta >}} shortcode in a table cell comes out as <td><p>n</p></td>
+td > p:only-child { margin: 0; }
+
 // ── Phones and small tablets ─────────────────────────────────────────────────
 .filter-toggle { display: none; }
 

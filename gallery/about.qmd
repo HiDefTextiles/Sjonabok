@@ -31,10 +31,10 @@ The file name starts with the source: the manuscript or museum number the patter
 for example `thjms5898` for Þjms. 5898 at the National Museum of Iceland. The number after it
 is the page in *Íslensk sjónabók* (2009), so `natmus453_706_p4` is the 4th motif on page 706. A page often holds several motifs; the `_p` numbering is ours, from splitting the page, not from the book.
 
-Some 43 pages draw their charts with several kinds of mark (a filled diamond, a cross, a circled
+Some {{< meta counts.pages >}} pages draw their charts with several kinds of mark (a filled diamond, a cross, a circled
 cross, a round dot, a half-filled cell), which in the manuscripts are different colours or
 stitches. Their files hold one digit per mark instead of `1`: `1` diamond, `2` cross, `3` circled
-cross, `4` dot, `5` half cell; the gallery shows each digit in its own HI colour. The 50 alphabet
+cross, `4` dot, `5` half cell; the gallery shows each digit in its own HI colour. The {{< meta counts.alphabets >}} alphabet
 sheets are kept whole, one chart each, on the [Alphabets](alphabets.html) page; to type with them,
 use the fonts made from the same charts in
 [Sjónabókarstafróf](https://github.com/HiDefTextiles/Sjonabok-stafrof).
@@ -55,30 +55,30 @@ first title follows Jobin. They are one of the routes by which patterns could ha
 
 | Book | Printed | Held by | Charts so far |
 |---|---|---|---|
-| *Eyn New Kunstlichboich* | Peter Quentel, Cologne 1529 (first ed. 1527) | The Met, 20.50.2(1-49) | 26 |
-| *Ein new getruckt model Büchli* | Johann Schönsperger the Younger, Augsburg 1529 | The Met, 18.66.2 | 62 |
-| *Modelbuch aller art nehens und stickens* | Christian Egenolff, Frankfurt 1535 | The Met (scans on [archive.org](https://archive.org/details/Egenolff1535ModelbuchAllerMET)) | 2 |
-| *Modelbuch new aller art nehens und stickens* | Hermann Gülfferich, Frankfurt 1553 (first ed. 1545) | The Met (scans on [archive.org](https://archive.org/details/Gulfferich1553ModelbuchMET)) | 27 |
-| *Eyn newe kunstlich moetdelboech* | Peter Quentel, Cologne 1532 | The Met (scans on [archive.org](https://archive.org/details/Quentel1532EynNeweMET)) | 8 |
-| *Ce est ung tractat de la noble art de leguille* | Willem Vorsterman, Antwerp 1527 | The Met (scans on [archive.org](https://archive.org/details/VostermanAf1527CeEstUngMET)) | 40 |
-| *Eyn new kunstlich Modelbuech* | Peter Quentel, Cologne 1544 | BnF Gallica (copy on [archive.org](https://archive.org/details/quentell-1544-eyn-new-kuenstich-bnfbpt-6k-1510823d)) | 1 |
-| *Schön newes Modelbuch* | Sigismund Latomus, Frankfurt 1608 | The Met, 24.43 (scans on [archive.org](https://archive.org/details/Latomus1608SchonMET)) | 82 |
-| *Schön newes Modelbuch von hundert und achtzig* | Sigismund Latomus, Frankfurt 1607 | Koninklijke Bibliotheek (scans on [archive.org](https://archive.org/details/latomus-1607-schon-newes-modelbuch-kb)) | 47 |
-| *Schön newes Modelbuch von 500* | Sigismund Latomus, Frankfurt 1622 | Clark Art Institute Library, 31962000742191 (scans on [archive.org](https://archive.org/details/MAB31962000742191Images)) | 58 |
-| *Schön neues Modelbuch* | Jost Martin, Strasbourg 1599 | Library of Congress (scans on [archive.org](https://archive.org/details/martin1599schonloc)) | 51 |
-| *New vnd vollkömmlich Modelbuch* | Romanus Beatus for Nicolaus Bassée, Frankfurt 1599 | Württembergische Landesbibliothek (scans on [archive.org](https://archive.org/details/beatus-1549-new-vnd-vollkomich-wlb)) | 43 |
-| *Schön neues Modelbuch* | Beatus heirs and Bitsch, Frankfurt 1601 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB31962000727465Images)) | 54 |
-| *Livre nouveau dict patrons de lingerie* | Pierre de Sainte-Lucie, Lyon 1533 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/sainctelucie1533livrebnfbpt6k15108450)) | 52 |
-| *Patrons de diverses manieres* | Jean Troveon for Pierre de Sainte-Lucie, Lyon 1545 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/troveon1545patronsbnfbtv1b10548006q)) | 1 |
-| *Les Patrons de messire Antoine Belin* | Antoine Belin and Jehan Mayol, Lyon (catalogued 1515) | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/belin15xxsensuyvenbnfbtv1b10548017k)) | 33 |
-| *Recueil de plusieurs pièces de pourtraittures* | Jean Le Maistre and Antoine Voulant, Lyon 1565 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/jeanlemaistre1565recueilbnfbtv1b10548047t)) | 17 |
-| *Modelbuch* (manuscript on point paper) | Johann Tobias Frölich, about 1759 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB.31962000742712Images)) | 48 |
-| *Modelbuch for Tobias Arnold* (manuscript weaving drafts) | Tobias Arnold, 1825 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB.31962000742456Images_201306)) | 65 |
-| Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | 12 |
-| *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | 88 |
-| Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | 35 |
-| Johann Sibmacher, *Newes Modelbuch in Kupffer* | Nuremberg 1604 (first ed. 1601) | The Met, 29.59.3(1-70) | 26 |
-| Rosina Helena Fürst, *Das Neue Modelbuch*, parts I–IV | Paulus Fürst, Nuremberg, about 1660 to 1689 | Clark Art Institute (scans on [archive.org](https://archive.org/details/modelbucht1400frst)); part I also at the Met, 28.45.5 | 189 |
+| *Eyn New Kunstlichboich* | Peter Quentel, Cologne 1529 (first ed. 1527) | The Met, 20.50.2(1-49) | {{< meta counts.books.quentel1529 >}} |
+| *Ein new getruckt model Büchli* | Johann Schönsperger the Younger, Augsburg 1529 | The Met, 18.66.2 | {{< meta counts.books.schoensperger1529 >}} |
+| *Modelbuch aller art nehens und stickens* | Christian Egenolff, Frankfurt 1535 | The Met (scans on [archive.org](https://archive.org/details/Egenolff1535ModelbuchAllerMET)) | {{< meta counts.books.egenolff1535 >}} |
+| *Modelbuch new aller art nehens und stickens* | Hermann Gülfferich, Frankfurt 1553 (first ed. 1545) | The Met (scans on [archive.org](https://archive.org/details/Gulfferich1553ModelbuchMET)) | {{< meta counts.books.gulfferich1553 >}} |
+| *Eyn newe kunstlich moetdelboech* | Peter Quentel, Cologne 1532 | The Met (scans on [archive.org](https://archive.org/details/Quentel1532EynNeweMET)) | {{< meta counts.books.quentel1532 >}} |
+| *Ce est ung tractat de la noble art de leguille* | Willem Vorsterman, Antwerp 1527 | The Met (scans on [archive.org](https://archive.org/details/VostermanAf1527CeEstUngMET)) | {{< meta counts.books.vorsterman1527 >}} |
+| *Eyn new kunstlich Modelbuech* | Peter Quentel, Cologne 1544 | BnF Gallica (copy on [archive.org](https://archive.org/details/quentell-1544-eyn-new-kuenstich-bnfbpt-6k-1510823d)) | {{< meta counts.books.quentel1544 >}} |
+| *Schön newes Modelbuch* | Sigismund Latomus, Frankfurt 1608 | The Met, 24.43 (scans on [archive.org](https://archive.org/details/Latomus1608SchonMET)) | {{< meta counts.books.latomus1608 >}} |
+| *Schön newes Modelbuch von hundert und achtzig* | Sigismund Latomus, Frankfurt 1607 | Koninklijke Bibliotheek (scans on [archive.org](https://archive.org/details/latomus-1607-schon-newes-modelbuch-kb)) | {{< meta counts.books.latomus1607 >}} |
+| *Schön newes Modelbuch von 500* | Sigismund Latomus, Frankfurt 1622 | Clark Art Institute Library, 31962000742191 (scans on [archive.org](https://archive.org/details/MAB31962000742191Images)) | {{< meta counts.books.latomus1622 >}} |
+| *Schön neues Modelbuch* | Jost Martin, Strasbourg 1599 | Library of Congress (scans on [archive.org](https://archive.org/details/martin1599schonloc)) | {{< meta counts.books.martin1599 >}} |
+| *New vnd vollkömmlich Modelbuch* | Romanus Beatus for Nicolaus Bassée, Frankfurt 1599 | Württembergische Landesbibliothek (scans on [archive.org](https://archive.org/details/beatus-1549-new-vnd-vollkomich-wlb)) | {{< meta counts.books.bassee1599 >}} |
+| *Schön neues Modelbuch* | Beatus heirs and Bitsch, Frankfurt 1601 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB31962000727465Images)) | {{< meta counts.books.beatus1601 >}} |
+| *Livre nouveau dict patrons de lingerie* | Pierre de Sainte-Lucie, Lyon 1533 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/sainctelucie1533livrebnfbpt6k15108450)) | {{< meta counts.books.saintelucie1533 >}} |
+| *Patrons de diverses manieres* | Jean Troveon for Pierre de Sainte-Lucie, Lyon 1545 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/troveon1545patronsbnfbtv1b10548006q)) | {{< meta counts.books.troveon1545 >}} |
+| *Les Patrons de messire Antoine Belin* | Antoine Belin and Jehan Mayol, Lyon (catalogued 1515) | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/belin15xxsensuyvenbnfbtv1b10548017k)) | {{< meta counts.books.belin1515 >}} |
+| *Recueil de plusieurs pièces de pourtraittures* | Jean Le Maistre and Antoine Voulant, Lyon 1565 | Bibliothèque nationale de France (scans on [archive.org](https://archive.org/details/jeanlemaistre1565recueilbnfbtv1b10548047t)) | {{< meta counts.books.lemaistre1565 >}} |
+| *Modelbuch* (manuscript on point paper) | Johann Tobias Frölich, about 1759 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB.31962000742712Images)) | {{< meta counts.books.froelich1759 >}} |
+| *Modelbuch for Tobias Arnold* (manuscript weaving drafts) | Tobias Arnold, 1825 | Clark Art Institute Library (scans on [archive.org](https://archive.org/details/MAB.31962000742456Images_201306)) | {{< meta counts.books.arnold1825 >}} |
+| Giovanni Antonio Tagliente, *Essempio di recammi* | Venice 1530 (first ed. 1527) | The Met, 35.75.3(1-55) | {{< meta counts.books.tagliente1530 >}} |
+| *New Künstlichs Modelbuch* | Bernhard Jobin, Strasbourg 1600 (first ed. 1579) | The Met, 19.158(1-48) | {{< meta counts.books.jobin1600 >}} |
+| Johann Sibmacher, *Schön Neues Modelbuch* | Balthasar Caymox, Nuremberg 1597 | The Met, 20.16(1-43) | {{< meta counts.books.sib1597 >}} |
+| Johann Sibmacher, *Newes Modelbuch in Kupffer* | Nuremberg 1604 (first ed. 1601) | The Met, 29.59.3(1-70) | {{< meta counts.books.sib1604 >}} |
+| Rosina Helena Fürst, *Das Neue Modelbuch*, parts I–IV | Paulus Fürst, Nuremberg, about 1660 to 1689 | Clark Art Institute (scans on [archive.org](https://archive.org/details/modelbucht1400frst)); part I also at the Met, 28.45.5 | {{< meta counts.books.fuerst1660 >}} |
 
 More books are listed in [`books/books.csv`](https://github.com/HiDefTextiles/Sjonabok/blob/main/books/books.csv)
 with their places, dates, holders and rights. Fürst is the closest of these books in time to the Icelandic manuscripts; her charts draw outlines solid and fillings hatched, and some plates are drawn on a net turned 45 degrees (read as a square grid here). The Frankfurt books (Egenolff, Gülfferich) were photographed with the page bending, so their
