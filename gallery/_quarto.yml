@@ -12,6 +12,7 @@ project:
     - map/web/**
     - original/**
     - tools/**
+    - consent/**
 
 lang: en
 
@@ -69,13 +70,14 @@ format:
       - styles/gallery.scss
     css:
       - styles/hi-watermark.css
-      - styles/analytics.css
     include-in-header:
-      # Google Tag Manager container shared by the HiDef Textiles sites. Nothing
-      # loads until the visitor accepts the banner. See analytics.html.
+      # Cookie consent (Klaro!, as on hi.is) and the Google Tag Manager
+      # container shared by the HiDef Textiles sites. Nothing is sent to
+      # Google Analytics until the visitor accepts. See consent/consent.js.
       - text: |
-          <meta name="ga-measurement-id" content="GTM-5XPW89B4" data-privacy-href="/Sjonabok/about.html#privacy">
-      - file: analytics.html
+          <meta name="ga-measurement-id" content="GTM-5XPW89B4" data-langs="en is"
+            data-privacy-href="/Sjonabok/about.html#privacy">
+      - file: consent.html
       - text: |
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

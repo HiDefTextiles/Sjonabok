@@ -1,0 +1,20 @@
+<!-- Inlined into every page by _quarto.yml (include-in-header). Loads the
+     cookie consent manager from consent/ (see consent/consent.js). -->
+<script>
+(function () {
+  var off = document.querySelector('meta[name="quarto:offset"]');
+  var base = (off ? off.getAttribute("content") : "./") + "consent/";
+  ["klaro.css", "hidef-klaro.css"].forEach(function (f) {
+    var l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = base + f;
+    document.head.appendChild(l);
+  });
+  ["consent.js", "klaro.js"].forEach(function (f) {
+    var s = document.createElement("script");
+    s.src = base + f;
+    s.async = false;
+    document.head.appendChild(s);
+  });
+})();
+</script>

@@ -341,16 +341,20 @@ same pattern is not matched.
 The gallery is a static website on GitHub Pages. It has no accounts and does not store anything you
 do on a server.
 
-To see which pages are used, we would like to count visits with
-[Google Analytics](https://policies.google.com/technologies/partner-sites), set up through Google
-Tag Manager. It only starts after you
-press **Accept** in the banner at the bottom of the page. Until then no request is sent to Google
-and no analytics cookies are set. If you accept, Google Analytics sets the `_ga` cookies and records
-the pages you open, your browser type and an approximate location (country or city). Google
-Analytics 4 does not store IP addresses, and advertising features are switched off. Your choice is
-kept in your own browser and also applies to the other HiDef Textiles sites on
-hideftextiles.github.io. You can change it any time with **Cookie settings** in the footer.
-When the gallery is shown inside the [HiDef textíll](https://hideftextiles.github.io/) site, it does
-not count visits at all.
+When you first visit, a cookie notice lets you choose which outside services the site may use. It
+works like the one on hi.is and uses the same open-source consent manager,
+[Klaro!](https://github.com/KIProtect/klaro). There are two groups:
+
+- **Analytics** (off until you allow it): [Google Analytics](https://policies.google.com/technologies/partner-sites),
+  loaded through Google Tag Manager, counts visits and shows which pages are read. Until you allow
+  it, nothing is sent to Google Analytics and no `_ga` cookies are set. If you allow it, it records
+  the pages you open, your browser type and an approximate location (country or city). Google
+  Analytics 4 does not store IP addresses, and advertising features are switched off.
+- **Appearance** (required): the Jost typeface is loaded from Google Fonts.
+
+Your choice is kept in your own browser and also applies to the other HiDef Textiles sites on
+hideftextiles.github.io. You can change it any time with **Cookie settings** in the footer. When the
+gallery is shown inside the [HiDef textíll](https://hideftextiles.github.io/) site, it does not
+count visits at all.
 
 Questions about the data go to HiDef Textiles, Háskóli Íslands.
