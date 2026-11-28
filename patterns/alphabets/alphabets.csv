@@ -41,7 +41,7 @@ thjms5898_240,latin,yes,
 thjms5898_306,latin,yes,
 thjmsth_116_582,latin,yes,
 thjmsth_116_588,latin,yes,
-thjmsth_116_628,runes,no,Futhark (runes); not part of the Latin font set
+thjmsth_116_628,runes,yes,Futhark (runes); 12 of 16 runes identified, the rest are not in the font yet
 thjmsth_116_638,latin,yes,
 thjmsth_116_644,latin,yes,
 thjmsth_116_646,latin,yes,
