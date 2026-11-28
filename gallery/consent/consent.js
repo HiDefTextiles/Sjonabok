@@ -171,7 +171,7 @@
           }
         },
         googleAnalytics: { description: "Telur heimsóknir og sýnir hvaða síður eru lesnar" },
-        youtube: { description: "Myndbönd sem spilast á síðunni, frá YouTube (Google)" },
+        youtube: { title: "YouTube", description: "Myndbönd sem spilast á síðunni, frá YouTube (Google)" },
         googleFonts: { description: "Leturgerðin Jost, sótt frá Google" }
       },
       en: {
@@ -227,7 +227,7 @@
           }
         },
         googleAnalytics: { description: "Counts visits and shows which pages are read" },
-        youtube: { description: "Videos played on the page, from YouTube (Google)" },
+        youtube: { title: "YouTube", description: "Videos played on the page, from YouTube (Google)" },
         googleFonts: { description: "The Jost typeface, loaded from Google" }
       }
     },

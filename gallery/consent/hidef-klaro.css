@@ -55,11 +55,19 @@
 .hidef-klaro .cm-list-input.required:checked + .cm-list-label .slider,
 .hidef-klaro .cm-list-input.only-required + .cm-list-label .slider { background-color: #8a86d6 !important; }
 .hidef-klaro .cm-list-input.half-checked:checked + .cm-list-label .slider { background-color: #8a86d6 !important; }
-.hidef-klaro .context-notice {
-  background: #F5F5F5;
-  border: 1px solid #EEEEEE;
-  color: #262626;
+.klaro .context-notice {
+  background: #F5F5F5 !important;
+  border: 1px solid #EEEEEE !important;
+  color: #262626 !important;
+  font-family: "Jost", system-ui, sans-serif;
 }
+.klaro .context-notice p { color: #262626 !important; }
+.klaro .context-notice .cm-btn {
+  border: 2px solid #10099F !important;
+  background: #ffffff !important;
+  color: #10099F !important;
+}
+.klaro .context-notice .cm-btn.cm-btn-success { background: #10099F !important; color: #ffffff !important; }
 /* The footer cookie link only shows when consent is active. */
 .footer-items li:has(> a[href$="#analytics-settings"]) { display: none; }
 html.has-analytics .footer-items li:has(> a[href$="#analytics-settings"]) { display: list-item; }
