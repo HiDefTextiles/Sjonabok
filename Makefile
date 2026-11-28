@@ -119,6 +119,7 @@ reading-examples:
 
 gallery: $(GALLERY_DATA) $(SYMMETRY_SVG) $(COUNTS)
 	cd $(GALLERY) && quarto render
+	python3 dataset-gallery/build.py . $(GALLERY)/_site/motifs --project sjonabok --repository https://github.com/HiDefTextiles/Sjonabok
 
 gallery-preview: $(GALLERY_DATA) $(SYMMETRY_SVG) $(COUNTS)
 	cd $(GALLERY) && quarto preview

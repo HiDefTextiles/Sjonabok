@@ -20,13 +20,46 @@ def read_csv(path):
         return list(csv.DictReader(handle))
 
 
-def build(dataset, output, repository):
-    books = read_csv(dataset / "books/books.csv")
-    if len(books) != 1:
-        raise ValueError("Expected exactly one source record in books/books.csv")
-    book = books[0]
-    charts = {row["name"]: row for row in read_csv(dataset / "books/charts.csv")}
-    patterns = sorted((dataset / "patterns/books").glob("*.txt"))
+def build(dataset, output, repository, project=None):
+    if project == "sjonabok":
+        title = "Sjónabók"
+        fields = (("Collection", "Icelandic manuscript charts and European pattern books"),
+                  ("Format", "Plain-text stitch grids"))
+        source = "https://hideftextiles.github.io/Sjonabok/about.html"
+        directories = ("patterns/min", "patterns/books", "patterns/colour", "patterns/alphabets")
+        charts = {row["name"]: row for row in read_csv(dataset / "books/charts.csv")}
+    elif project == "stafrof":
+        title = "Sjónabókarstafróf"
+        fields = (("Collection", "Alphabet sheets and stitch-chart motifs from Íslensk sjónabók"),
+                  ("Format", "Plain-text stitch grids"))
+        source = "https://hideftextiles.github.io/Sjonabok-stafrof/"
+        directories = ("gallery/fonts/source-page-txt", "gallery/patterns/txt")
+        charts = {}
+    else:
+        books = read_csv(dataset / "books/books.csv")
+        if len(books) != 1:
+            raise ValueError("Expected exactly one source record in books/books.csv")
+        book = books[0]
+        title = book["title"]
+        fields = (
+            ("Author", book["author"]),
+            ("Edition", ", ".join(value for value in (book["place"], book["year"]) if value)),
+            ("Collection", book["holder"]),
+            ("Accession", book["accession"]),
+            ("Rights", book["rights"]),
+            ("Coverage", book["status"]),
+        )
+        source = book["record_url"]
+        directories = ("patterns/books",)
+        charts = {row["name"]: row for row in read_csv(dataset / "books/charts.csv")}
+
+    patterns = sorted(
+        (path for directory in directories for path in (dataset / directory).glob("*.txt")
+         if not path.name.endswith(".marks.txt")),
+        key=lambda path: path.name,
+    )
+    if len({path.name for path in patterns}) != len(patterns):
+        raise ValueError("Motif filenames must be unique within the gallery")
     if not patterns:
         raise ValueError("No text grids found under patterns/books")
 
@@ -59,24 +92,16 @@ def build(dataset, output, repository):
   </div>
 </article>""")
 
-    fields = (
-        ("Author", book["author"]),
-        ("Edition", ", ".join(value for value in (book["place"], book["year"]) if value)),
-        ("Collection", book["holder"]),
-        ("Accession", book["accession"]),
-        ("Rights", book["rights"]),
-        ("Coverage", book["status"]),
-    )
     metadata = "\n".join(
         f"<div><dt>{label}</dt><dd>{escape(value)}</dd></div>"
         for label, value in fields if value
     )
     document = Template((TEMPLATE_DIR / "index.html").read_text(encoding="utf-8"))
     (output / "index.html").write_text(document.substitute(
-        title=escape(book["title"]),
+        title=escape(title),
         count=len(patterns),
         metadata=metadata,
-        source=escape(book["record_url"], quote=True),
+        source=escape(source, quote=True),
         repository=escape(repository, quote=True),
         cards="\n".join(cards),
     ), encoding="utf-8")
@@ -90,5 +115,6 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--repository", required=True)
+    parser.add_argument("--project", choices=("sjonabok", "stafrof"))
     args = parser.parse_args()
-    print(f"Built {build(args.dataset, args.output, args.repository)} previews")
+    print(f"Built {build(args.dataset, args.output, args.repository, args.project)} previews")

@@ -7,6 +7,8 @@ include-after-body:
   - text: <script src="js/gallery.js"></script><script src="js/original.js"></script>
 ---
 
+[Browse and download TXT motifs](motifs/index.html)
+
 ```{=html}
 <div id="gallery" class="gallery">
 <aside class="filters" aria-label="Filters">
