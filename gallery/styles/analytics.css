@@ -1,0 +1,26 @@
+/* Consent banner for analytics.html, in the HÍ look (Jost, HÍ blue buttons). */
+.hidef-consent {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1080;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  color: #262626;
+  border-top: 4px solid #10099F;
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+  font-family: "Jost", system-ui, sans-serif;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+.hidef-consent p { margin: 0; flex: 1 1 18rem; font-size: 0.95rem; }
+.hidef-consent-buttons { display: flex; gap: 0.5rem; margin-left: auto; }
+/* The footer "Cookie settings" link only shows when analytics is switched on. */
+.footer-items li:has(> a[href$="#analytics-settings"]) { display: none; }
+html.has-analytics .footer-items li:has(> a[href$="#analytics-settings"]) { display: list-item; }

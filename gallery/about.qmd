@@ -335,3 +335,20 @@ way to browse, not as a classification.
 Known limits: the repeat length itself is not compared, so a small unit and a large unit with
 the same outline look alike; the 16 × 16 picture loses fine detail; and a filled/empty swap of the
 same pattern is not matched.
+
+## Privacy {#privacy}
+
+The gallery is a static website on GitHub Pages. It has no accounts and does not store anything you
+do on a server.
+
+To see which pages are used, we would like to count visits with
+[Google Analytics](https://policies.google.com/technologies/partner-sites). It only starts after you
+press **Accept** in the banner at the bottom of the page. Until then no request is sent to Google
+and no analytics cookies are set. If you accept, Google Analytics sets the `_ga` cookies and records
+the pages you open, your browser type and an approximate location (country or city). Google
+Analytics 4 does not store IP addresses, and advertising features are switched off. Your choice is
+kept in your own browser, and you can change it any time with **Cookie settings** in the footer.
+When the gallery is shown inside the [HiDef textíll](https://hideftextiles.github.io/) site, it does
+not count visits at all.
+
+Questions about the data go to HiDef Textiles, Háskóli Íslands.

@@ -52,6 +52,8 @@ website:
       Þjóðminjasafn Íslands, 2009), digitised by [HiDef Textiles](https://hideftextiles.github.io/).
       The patterns are centuries old and in the public domain.
     right:
+      - text: "Cookie settings"
+        href: "#analytics-settings"
       - text: "HiDef textíll"
         href: https://hideftextiles.github.io/
       - icon: github
@@ -67,7 +69,14 @@ format:
       - styles/gallery.scss
     css:
       - styles/hi-watermark.css
+      - styles/analytics.css
     include-in-header:
+      # Google Analytics 4 Measurement ID for this site (GA4 property
+      # "Sjonabok gallery"). G-XXXXXXXXXX is a placeholder: while it is there
+      # analytics is off and no banner shows. See analytics.html.
+      - text: |
+          <meta name="ga-measurement-id" content="G-XXXXXXXXXX" data-privacy-href="/Sjonabok/about.html#privacy">
+      - file: analytics.html
       - text: |
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
